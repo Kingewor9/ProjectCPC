@@ -1,0 +1,49 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+* {
+  @apply box-border;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-darkBlue-900 text-grey-200;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-darkBlue-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-grey-700 rounded hover:bg-grey-600;
+}
+
+/* Smooth transitions */
+input,
+select,
+textarea,
+button {
+  @apply transition-all duration-200;
+}
+
+/* Selection */
+::selection {
+  @apply bg-blue-600 text-white;
+}
+
+/* Placeholder */
+::placeholder {
+  @apply text-grey-500;
+}
+
