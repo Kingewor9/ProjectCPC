@@ -16,26 +16,62 @@ from models import user_tasks
 import uuid
 import json
 from models import transactions
+from urllib.parse import parse_qsl
 
 app = Flask(__name__)
 CORS(app)
 
 
-def verify_telegram_auth(data: dict) -> bool:
-    # Telegram login widget verification
-    # data contains hash and user fields; we need to rebuild data_check_string
-    hash_received = data.pop('hash', None)
-    if not hash_received:
-        return False
-    # create data_check_string
-    data_check_arr = []
-    for k in sorted(data.keys()):
-        data_check_arr.append(f"{k}={str(data[k])}")
-    data_check_string = "\n".join(data_check_arr)
-    secret_key = hashlib.sha256(TELEGRAM_BOT_TOKEN.encode()).digest()
-    hmac_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-    return hmac_hash == hash_received
-
+def validate_telegram_webapp_data(init_data: str, bot_token: str) -> dict:
+    """
+    Validate Telegram WebApp initData
+    Returns parsed data if valid, raises exception if invalid
+    """
+    try:
+        # Parse the initData
+        parsed_data = dict(parse_qsl(init_data))
+        
+        # Extract hash
+        data_check_string_hash = parsed_data.pop('hash', None)
+        if not data_check_string_hash:
+            raise ValueError('Hash is missing')
+        
+        # Create data-check-string
+        data_check_arr = [f"{k}={v}" for k, v in sorted(parsed_data.items())]
+        data_check_string = '\n'.join(data_check_arr)
+        
+        # Calculate secret key
+        secret_key = hmac.new(
+            key=b"WebAppData",
+            msg=bot_token.encode(),
+            digestmod=hashlib.sha256
+        ).digest()
+        
+        # Calculate hash
+        calculated_hash = hmac.new(
+            key=secret_key,
+            msg=data_check_string.encode(),
+            digestmod=hashlib.sha256
+        ).hexdigest()
+        
+        # Verify hash
+        if calculated_hash != data_check_string_hash:
+            raise ValueError('Invalid hash')
+        
+        # Check auth_date (data shouldn't be older than 24 hours)
+        auth_date = int(parsed_data.get('auth_date', 0))
+        current_time = int(time.time())
+        if current_time - auth_date > 86400:  # 24 hours
+            raise ValueError('Data is too old')
+        
+        # Parse user data
+        user_data = json.loads(parsed_data.get('user', '{}'))
+        
+        return user_data
+        
+    except Exception as e:
+        print(f"Validation error: {e}")
+        raise
 
 # This should be called by your scheduler when the campaign ends
 def complete_invite_task(campaign_id, user_id):
@@ -141,61 +177,77 @@ def admin_required(f):
     return decorated_function
 
 #Api routes
+
 @app.route('/api/auth/telegram', methods=['POST'])
 def telegram_auth():
     payload = request.json or {}
     
-     # FOR LOCAL TESTING ONLY - Remove in production!
+    # FOR LOCAL TESTING ONLY
     if app.debug and payload.get('test_mode'):
-        telegram_id = payload.get('id', '123456789')
+        telegram_id = str(payload.get('id', '123456789'))
         
-        #create user in DB
         user = upsert_user({
-            'id': str(telegram_id),
+            'id': telegram_id,
             'first_name': payload.get('first_name', 'Test User'),
             'last_name': payload.get('last_name', ''),
             'username': payload.get('username', 'testuser'),
-            'photo_url': None,
+            'photo_url': payload.get('photo_url'),
             'auth_date': int(time.time())
         })
-        token = create_token(str(telegram_id))
+        token = create_token(telegram_id)
         
-         # Return demo user with channels for testing
-        demo_user = {
-            'telegram_id': telegram_id,
-            'first_name': user.get('first_name'),
-            'last_name': user.get('last_name'),
-            'username': user.get('username'),
-            'photo_url': user.get('photo_url'),
-            'name': 'GrowthGuru',
-            'cpcBalance': 11050,
-            'channels': [
-                { 'id': 'c1', 'name': 'Crypto Daily', 'topic': 'Crypto News', 'subs': 12500, 'xPromos': 45, 'status': 'Active', 'avatar': 'https://placehold.co/40x40/000000/FFFFFF?font=inter&text=CR', 'promos': [ { 'id': 'p1', 'name': 'Newbie Crypto Guide', 'link': 'https://t.me/cryptodaily/guide' }, { 'id': 'p2', 'name': 'Latest Market Flash', 'link': 'https://t.me/cryptodaily/flash' } ] },
-                { 'id': 'c2', 'name': 'Quotes & Wisdom', 'topic': 'Quotes', 'subs': 5500, 'xPromos': 12, 'status': 'Paused', 'avatar': 'https://placehold.co/40x40/000000/FFFFFF?font=inter&text=QW', 'promos': [ { 'id': 'p3', 'name': 'Daily Inspiration Shot', 'link': 'https://t.me/quotes/daily' } ] },
-                { 'id': 'c3', 'name': 'Tech Insights', 'topic': 'Technology', 'subs': 21000, 'xPromos': 80, 'status': 'Active', 'avatar': 'https://placehold.co/40x40/000000/FFFFFF?font=inter&text=TI', 'promos': [] }
-            ]
-        }
+        # Get user's channels
+        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
         
-        return jsonify({'ok': True, 'user': demo_user, 'token': token})
+        return jsonify({
+            'ok': True,
+            'user': {
+                **user,
+                'channels': user_channels,
+                'cpcBalance': user.get('cpcBalance', 0)
+            },
+            'token': token
+        })
     
-    # Verify/ Real auth data from Telegram
-    ok = verify_telegram_auth(payload.copy())
-    if not ok:
-        return jsonify({'error': 'invalid auth'}), 400
-    # upsert user and return profile
-    telegram_user = {
-        'id': str(payload.get('id')),
-        'first_name': payload.get('first_name'),
-        'last_name': payload.get('last_name'),
-        'username': payload.get('username'),
-        'photo_url': payload.get('photo_url'),
-        'auth_date': int(payload.get('auth_date'))
-    }
-    user = upsert_user(telegram_user)
-    telegram_id = str(payload.get('id'))
-    token = create_token(telegram_id)
-    return jsonify({'ok': True, 'user': user, 'token': token})
-
+    # Validate initData from Telegram WebApp
+    init_data = payload.get('initData')
+    if init_data:
+        try:
+            # Validate with Telegram
+            user_data = validate_telegram_webapp_data(init_data, TELEGRAM_BOT_TOKEN)
+            
+            telegram_id = str(user_data.get('id'))
+            
+            # Upsert user
+            user = upsert_user({
+                'id': telegram_id,
+                'first_name': user_data.get('first_name'),
+                'last_name': user_data.get('last_name', ''),
+                'username': user_data.get('username', ''),
+                'photo_url': user_data.get('photo_url'),
+                'language_code': user_data.get('language_code', 'en'),
+                'auth_date': int(time.time())
+            })
+            
+            # Create token
+            token = create_token(telegram_id)
+            
+            # Get user's channels
+            user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+            
+            return jsonify({
+                'ok': True,
+                'user': {
+                    **user,
+                    'channels': user_channels,
+                    'cpcBalance': user.get('cpcBalance', 0)
+                },
+                'token': token
+            })
+            
+        except Exception as e:
+            print(f"WebApp validation error: {e}")
+            return jsonify({'error': 'Invalid Telegram data'}), 400
 
 @app.route('/api/me', methods=['GET'])
 @token_required
