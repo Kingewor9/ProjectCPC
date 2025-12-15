@@ -12,6 +12,12 @@ export const useAuth = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+  if (apiService.isAuthenticated() && !user) {
+    fetchUser();
+  }
+}, []);
+
   const fetchUser = async () => {
     try {
       setLoading(true);
