@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { Plus, X, CheckCircle, AlertCircle, Upload } from 'lucide-react';
+import { Plus, X, CheckCircle, AlertCircle} from 'lucide-react';
 
 interface ChannelInfo {
   name: string;
@@ -58,7 +58,13 @@ const TIME_SLOTS = [
 
 export default function AddChannelPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+  if (!loading && !user) {
+    navigate('/login');
+  }
+}, [user, loading, navigate]);
   
   // Step 1: Channel validation
   const [step, setStep] = useState<'validate' | 'configure'>('validate');

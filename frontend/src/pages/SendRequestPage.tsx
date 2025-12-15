@@ -5,7 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { Partner, Channel, Promo, CrossPromoRequest } from '../types';
+import { Partner, CrossPromoRequest } from '../types';
 import { Send, AlertCircle, ExternalLink, Users, Compass } from 'lucide-react';
 
 type PartnerType = 'existing' | 'discover';

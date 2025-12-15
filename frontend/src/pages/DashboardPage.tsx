@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../hooks/useAuth';
-import { TrendingUp, Send, Zap, Users, Edit } from 'lucide-react';
+import { TrendingUp, Send, Zap, Users } from 'lucide-react';
 
 export default function DashboardPage() {
   const navigate = useNavigate();

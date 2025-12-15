@@ -5,7 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { Plus, X, CheckCircle, AlertCircle, Save, Pause, Play } from 'lucide-react';
+import { Plus, X, CheckCircle, Save, Pause, Play } from 'lucide-react';
 
 interface Channel {
   id: string;
