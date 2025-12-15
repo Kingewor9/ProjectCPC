@@ -1246,10 +1246,15 @@ def get_purchase_stats():
         'revenue': revenue[0] if revenue else {'total_cpc': 0, 'total_stars': 0}
     })
     
-
+if __name__ == '__main__':
+    # Initialize database
     ensure_indexes()
     init_mock_partners()
-    start_scheduler()
     
-if __name__ == '__main__':
+    # Only run scheduler locally
+    import os
+    if os.getenv('RENDER') != 'true':
+        start_scheduler()
+    
+    # Local development server
     app.run(host='0.0.0.0', port=5000, debug=True)
