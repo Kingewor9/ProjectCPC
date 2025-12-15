@@ -11,6 +11,7 @@ APP_URL = os.getenv('APP_URL', 'http://localhost:5000')
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key-change-in-production')
 JWT_EXPIRY_HOURS = 24
 ADMIN_TELEGRAM_ID = os.getenv('ADMIN_TELEGRAM_ID', '123456789')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 
 def telegram_secret_key():
