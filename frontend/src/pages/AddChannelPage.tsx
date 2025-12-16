@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+
+
+         import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ErrorAlert from '../components/ErrorAlert';
@@ -61,10 +63,10 @@ export default function AddChannelPage() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-  if (!loading && !user) {
-    navigate('/login');
-  }
-}, [user, loading, navigate]);
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
   
   // Step 1: Channel validation
   const [step, setStep] = useState<'validate' | 'configure'>('validate');
@@ -257,13 +259,13 @@ export default function AddChannelPage() {
       <Layout>
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">Add Your Channel</h1>
-            <p className="text-grey-400">Connect your Telegram channel to start cross-promoting</p>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Add Your Channel</h1>
+            <p className="text-grey-400 text-sm sm:text-base">Connect your Telegram channel to start cross-promoting</p>
           </div>
 
           {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
 
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-8">
+          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 sm:p-8">
             <label className="block text-sm font-medium text-grey-300 mb-3">
               Channel Link or Username
             </label>
@@ -289,43 +291,44 @@ export default function AddChannelPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Configure Your Channel</h1>
-          <p className="text-grey-400">Set up your channel details and preferences</p>
+      {/* Added pb-20 for mobile and md:pb-8 for desktop to account for bottom nav */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">Configure Your Channel</h1>
+          <p className="text-grey-400 text-sm sm:text-base">Set up your channel details and preferences</p>
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
 
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Channel Info Display */}
           {channelInfo && (
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <CheckCircle className="text-green-400" size={24} />
+            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <CheckCircle className="text-green-400" size={20} />
                 Channel Verified
               </h2>
-              <div className="flex items-start gap-4">
+              <div className="flex flex-col sm:flex-row items-start gap-4">
                 <img 
                   src={channelInfo.avatar} 
                   alt={channelInfo.name}
-                  className="w-20 h-20 rounded-lg"
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg"
                 />
-                <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-white">{channelInfo.name}</h3>
-                  <p className="text-grey-400 mb-4">{channelInfo.username}</p>
-                  <div className="grid grid-cols-3 gap-4">
+                <div className="flex-1 w-full">
+                  <h3 className="text-xl sm:text-2xl font-bold text-white">{channelInfo.name}</h3>
+                  <p className="text-grey-400 mb-3 sm:mb-4 text-sm sm:text-base">{channelInfo.username}</p>
+                  <div className="grid grid-cols-3 gap-3 sm:gap-4">
                     <div>
-                      <p className="text-grey-400 text-sm">Subscribers</p>
-                      <p className="text-white font-bold">{channelInfo.subscribers.toLocaleString()}</p>
+                      <p className="text-grey-400 text-xs sm:text-sm">Subscribers</p>
+                      <p className="text-white font-bold text-sm sm:text-base">{channelInfo.subscribers.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-grey-400 text-sm">Avg 24h Views</p>
-                      <p className="text-white font-bold">{channelInfo.avgViews24h.toLocaleString()}</p>
+                      <p className="text-grey-400 text-xs sm:text-sm">Avg 24h Views</p>
+                      <p className="text-white font-bold text-sm sm:text-base">{channelInfo.avgViews24h.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-grey-400 text-sm">Language</p>
-                      <p className="text-white font-bold">{channelInfo.language}</p>
+                      <p className="text-grey-400 text-xs sm:text-sm">Language</p>
+                      <p className="text-white font-bold text-sm sm:text-base">{channelInfo.language}</p>
                     </div>
                   </div>
                 </div>
@@ -334,15 +337,15 @@ export default function AddChannelPage() {
           )}
 
           {/* Topic Selection */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Channel Topic</h2>
+          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-4">Channel Topic</h2>
             <label className="block text-sm font-medium text-grey-300 mb-2">
               Select the topic your channel falls under
             </label>
             <select
               value={selectedTopic}
               onChange={(e) => setSelectedTopic(e.target.value)}
-              className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+              className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
             >
               <option value="">Choose a topic</option>
               {TOPICS.map(topic => (
@@ -352,8 +355,8 @@ export default function AddChannelPage() {
           </div>
 
           {/* Cross Promotion Settings */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-6">Cross Promotion Settings</h2>
+          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Cross Promotion Settings</h2>
             
             {/* Days Selection */}
             <div className="mb-6">
@@ -365,7 +368,7 @@ export default function AddChannelPage() {
                   <button
                     key={day}
                     onClick={() => toggleDay(day)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-all text-sm ${
                       selectedDays.includes(day)
                         ? 'bg-blue-600 text-white'
                         : 'bg-darkBlue-700 text-grey-400 hover:bg-darkBlue-600'
@@ -388,7 +391,7 @@ export default function AddChannelPage() {
                   setPromosPerDay(Number(e.target.value));
                   setSelectedTimeSlots([]);
                 }}
-                className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
               >
                 {[1, 2, 3, 4, 5].map(num => (
                   <option key={num} value={num}>{num}</option>
@@ -403,27 +406,27 @@ export default function AddChannelPage() {
               </label>
               <div className="space-y-3">
                 {Object.entries(priceSettings).map(([hours, settings]) => (
-                  <div key={hours} className="flex items-center gap-4 bg-darkBlue-700 p-4 rounded-lg">
+                  <div key={hours} className="flex items-center gap-2 sm:gap-4 bg-darkBlue-700 p-3 sm:p-4 rounded-lg">
                     <button
                       onClick={() => togglePriceSetting(hours as keyof PriceSettings)}
-                      className={`w-12 h-6 rounded-full transition-all relative ${
+                      className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full transition-all relative flex-shrink-0 ${
                         settings.enabled ? 'bg-blue-600' : 'bg-grey-600'
                       }`}
                     >
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
+                      <div className={`w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full absolute top-0.5 transition-all ${
                         settings.enabled ? 'right-0.5' : 'left-0.5'
                       }`} />
                     </button>
-                    <span className="text-white font-medium w-20">{hours} hours</span>
+                    <span className="text-white font-medium w-16 sm:w-20 text-sm sm:text-base">{hours} hours</span>
                     <input
                       type="number"
                       value={settings.price}
                       onChange={(e) => updatePrice(hours as keyof PriceSettings, Number(e.target.value))}
                       disabled={!settings.enabled}
                       placeholder="Price"
-                      className="flex-1 bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-blue-500"
+                      className="flex-1 bg-darkBlue-600 border border-grey-600 rounded-lg px-3 sm:px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                     />
-                    <span className="text-grey-400">CP</span>
+                    <span className="text-grey-400 text-sm sm:text-base">CP</span>
                   </div>
                 ))}
               </div>
@@ -434,13 +437,13 @@ export default function AddChannelPage() {
               <label className="block text-sm font-medium text-grey-300 mb-3">
                 Available Time Slots (Select {promosPerDay})
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 bg-darkBlue-700 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 bg-darkBlue-700 rounded-lg">
                 {TIME_SLOTS.map(slot => (
                   <button
                     key={slot}
                     onClick={() => toggleTimeSlot(slot)}
                     disabled={!selectedTimeSlots.includes(slot) && selectedTimeSlots.length >= promosPerDay}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                       selectedTimeSlots.includes(slot)
                         ? 'bg-blue-600 text-white'
                         : 'bg-darkBlue-600 text-grey-400 hover:bg-darkBlue-500 disabled:opacity-30 disabled:cursor-not-allowed'
@@ -450,22 +453,22 @@ export default function AddChannelPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-grey-400 text-sm mt-2">
+              <p className="text-grey-400 text-xs sm:text-sm mt-2">
                 Selected: {selectedTimeSlots.length} / {promosPerDay}
               </p>
             </div>
           </div>
 
           {/* Promo Materials */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
+          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-4">
               Promo Materials ({promoMaterials.length}/3)
             </h2>
 
             {promoMaterials.map(promo => (
               <div key={promo.id} className="bg-darkBlue-700 border border-grey-600 rounded-lg p-4 mb-4">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-white font-bold">{promo.name}</h3>
+                  <h3 className="text-white font-bold text-sm sm:text-base">{promo.name}</h3>
                   <button
                     onClick={() => removePromo(promo.id)}
                     className="text-red-400 hover:text-red-300"
@@ -473,8 +476,8 @@ export default function AddChannelPage() {
                     <X size={20} />
                   </button>
                 </div>
-                <p className="text-grey-300 text-sm mb-2">{promo.text}</p>
-                <div className="flex items-center gap-2 text-sm">
+                <p className="text-grey-300 text-xs sm:text-sm mb-2">{promo.text}</p>
+                <div className="flex items-center gap-2 text-xs sm:text-sm">
                   <span className="text-grey-400">CTA:</span>
                   <span className="text-blue-400">{promo.cta}</span>
                 </div>
@@ -484,7 +487,7 @@ export default function AddChannelPage() {
             {!showPromoForm && promoMaterials.length < 3 && (
               <button
                 onClick={() => setShowPromoForm(true)}
-                className="w-full bg-darkBlue-700 border border-grey-600 hover:border-blue-600 text-white font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                className="w-full bg-darkBlue-700 border border-grey-600 hover:border-blue-600 text-white font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
               >
                 <Plus size={20} />
                 Add Promo Material
@@ -492,8 +495,8 @@ export default function AddChannelPage() {
             )}
 
             {showPromoForm && (
-              <div className="bg-darkBlue-700 border border-blue-600/30 rounded-lg p-6 space-y-4">
-                <h3 className="text-white font-bold text-lg mb-4">New Promo</h3>
+              <div className="bg-darkBlue-700 border border-blue-600/30 rounded-lg p-4 sm:p-6 space-y-4">
+                <h3 className="text-white font-bold text-base sm:text-lg mb-4">New Promo</h3>
                 
                 <div>
                   <label className="block text-sm font-medium text-grey-300 mb-2">Promo Name</label>
@@ -501,7 +504,7 @@ export default function AddChannelPage() {
                     type="text"
                     value={newPromo.name}
                     onChange={(e) => setNewPromo({...newPromo, name: e.target.value})}
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                   />
                 </div>
 
@@ -511,7 +514,7 @@ export default function AddChannelPage() {
                     value={newPromo.text}
                     onChange={(e) => setNewPromo({...newPromo, text: e.target.value})}
                     rows={3}
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                   />
                 </div>
 
@@ -522,7 +525,7 @@ export default function AddChannelPage() {
                     value={newPromo.image}
                     onChange={(e) => setNewPromo({...newPromo, image: e.target.value})}
                     placeholder="https://example.com/image.jpg"
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                   />
                 </div>
 
@@ -533,7 +536,7 @@ export default function AddChannelPage() {
                     value={newPromo.link}
                     onChange={(e) => setNewPromo({...newPromo, link: e.target.value})}
                     placeholder={`https://t.me/${channelInfo?.username.replace('@', '')}/123`}
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                   />
                 </div>
 
@@ -544,14 +547,14 @@ export default function AddChannelPage() {
                     value={newPromo.cta}
                     onChange={(e) => setNewPromo({...newPromo, cta: e.target.value})}
                     placeholder="Join Now, Subscribe, Register..."
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
                   />
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={handleAddPromo}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 rounded-lg transition-all"
+                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 rounded-lg transition-all text-sm sm:text-base"
                   >
                     Create Promo
                   </button>
@@ -560,7 +563,7 @@ export default function AddChannelPage() {
                       setShowPromoForm(false);
                       setNewPromo({ name: '', text: '', image: '', link: '', cta: '' });
                     }}
-                    className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-all"
+                    className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-all text-sm sm:text-base"
                   >
                     Cancel
                   </button>
@@ -570,16 +573,16 @@ export default function AddChannelPage() {
           </div>
 
           {/* Bot Connection */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
+          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-white">Connect Bot</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-white">Connect Bot</h2>
               <button
                 onClick={() => setBotConnected(!botConnected)}
-                className={`w-12 h-6 rounded-full transition-all relative ${
+                className={`w-10 h-5 sm:w-12 sm:h-6 rounded-full transition-all relative ${
                   botConnected ? 'bg-green-600' : 'bg-grey-600'
                 }`}
               >
-                <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
+                <div className={`w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full absolute top-0.5 transition-all ${
                   botConnected ? 'right-0.5' : 'left-0.5'
                 }`} />
               </button>
@@ -589,7 +592,7 @@ export default function AddChannelPage() {
               <div className="bg-blue-600/10 border border-blue-600/30 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="text-blue-400 flex-shrink-0 mt-1" size={20} />
-                  <div className="text-sm text-grey-300 space-y-2">
+                  <div className="text-xs sm:text-sm text-grey-300 space-y-2">
                     <p className="font-medium text-white">Follow these steps:</p>
                     <ol className="list-decimal list-inside space-y-1">
                       <li>Search for <span className="text-blue-400 font-mono">@cp_grambot</span> on Telegram</li>
@@ -601,8 +604,8 @@ export default function AddChannelPage() {
                 </div>
               </div>
             )}
-          </div>
-
+          </div> 
+          
           {/* Submit Button */}
           <button
             onClick={handleSubmit}
