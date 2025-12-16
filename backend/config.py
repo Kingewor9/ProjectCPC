@@ -7,7 +7,7 @@ load_dotenv()
 MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/growthguru')
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
 BOT_ADMIN_CHAT_ID = os.getenv('BOT_ADMIN_CHAT_ID')
-APP_URL = os.getenv('APP_URL', 'http://localhost:5000')
+VITE_API_URL = os.getenv('VITE_API_URL', 'http://localhost:5000')
 JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key-change-in-production')
 JWT_EXPIRY_HOURS = 24
 ADMIN_TELEGRAM_ID = os.getenv('ADMIN_TELEGRAM_ID', '123456789')
