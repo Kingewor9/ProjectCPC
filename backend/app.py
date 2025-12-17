@@ -166,11 +166,11 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # First check if user is authenticated
-        if not hasattr(request, 'user_id'):
+        if not hasattr(request, 'telegram_id'):
             return jsonify({'error': 'Authentication required'}), 401
         
         # Check if user is admin
-        if request.user_id != ADMIN_TELEGRAM_ID:
+        if request.telegram_id != ADMIN_TELEGRAM_ID:
             return jsonify({'error': 'Admin access required'}), 403
         
         return f(*args, **kwargs)
@@ -256,7 +256,17 @@ def get_me():
     telegram_id = request.telegram_id
     user = users.find_one({'telegram_id': telegram_id}, {'_id': 0})
     if user:
+        # Get user's channels
+        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+        
+        # Add channels to user object
+        user['channels'] = user_channels
+        
         return jsonify(user)
+    
+    # User not found - return error
+    return jsonify({'error': 'User not found'}), 404
+
     # If user not found in DB, return demo user structure (for testing)
     demo_user = {
         'telegram_id': telegram_id,
@@ -1364,7 +1374,7 @@ def moderate_channel(channel_id):
         update_data = {
             'status': new_status,
             'moderated_at': datetime.datetime.utcnow(),
-            'moderated_by': request.user_id,
+            'moderated_by': request.telegram_id,
             'updated_at': datetime.datetime.utcnow()
         }
         
