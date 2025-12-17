@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../hooks/useAuth';
-import { TrendingUp, Send, Zap, Users } from 'lucide-react';
+import { TrendingUp, Send, Zap, Users, Plus } from 'lucide-react';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -121,9 +121,13 @@ export default function DashboardPage() {
             </button>
              <button
       onClick={() => navigate('/add-channel')}
-      className="bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center"
+      className="bg-gradient-to-br from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-3 group"
     >
-      Add Channel
+      <Plus size={24} />
+      <div className="text-left">
+        <p className="text-lg">Add Channel</p>
+        <p className="text-sm text-green-200 group-hover:text-green-100">Connect your channel and unlock growth oppurtunities</p>
+    </div>
     </button>
           </div>
         </div>
