@@ -75,25 +75,43 @@ class ApiService {
       return config;
     });
 
-    // Add response interceptor for error handling
+     // UPDATED: Response interceptor
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
           localStorage.removeItem('authToken');
           localStorage.removeItem('user');
-          window.location.href = '/login';
+          window.location.href = '/'; // FIXED: redirect to root
         }
-        // Reject all errors so they can be caught by the calling function
         return Promise.reject(error);
       }
     );
   }
 
-  // --- Authentication ---
+  // UPDATED: Authentication method
   async authenticateWithTelegram(userData: TelegramUser): Promise<AuthResponse> {
-    const response = await this.api.post('/api/auth/telegram', userData);
-    return response.data;
+    try {
+      console.log('Authenticating with data:', userData); // DEBUG
+      
+      const response = await this.api.post('/api/auth/telegram', userData);
+      
+      console.log('Auth response:', response.data); // DEBUG
+      
+      // Validate response
+      if (!response.data.ok || !response.data.user || !response.data.token) {
+        throw new Error('Invalid response from server');
+      }
+      
+      // Store token (Axios interceptor will use it automatically)
+      this.setToken(response.data.token);
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Auth error:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Authentication failed';
+      throw new Error(errorMessage);
+    }
   }
 
   // --- User ---
