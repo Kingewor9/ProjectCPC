@@ -272,9 +272,87 @@ def get_me():
 
 
 @app.route('/api/partners', methods=['GET'])
+@token_required  # ADDED: Require authentication
 def list_partners():
-    p = list(partners.find({}, {'_id': 0}))
-    return jsonify(p)
+    """Get partner channels - channels the user has cross-promoted with"""
+    user_id = request.user_id  # ADDED: Get authenticated user
+    
+    try:
+        # CHANGED: Get user's completed campaigns to find actual partners
+        user_channels = list(channels.find({'owner_id': user_id}, {'_id': 0}))
+        channel_ids = [ch.get('id') for ch in user_channels]
+        
+        if not channel_ids:
+            # No channels, return empty list
+            return jsonify([])
+        
+        # Find all channels that user has successfully cross-promoted with
+        # Either as sender or receiver
+        completed_requests = list(requests_col.find({
+            'status': 'Accepted',
+            '$or': [
+                {'fromChannelId': {'$in': channel_ids}},
+                {'toChannelId': {'$in': channel_ids}}
+            ]
+        }))
+        
+        # Extract partner channel IDs
+        partner_ids = set()
+        for req in completed_requests:
+            from_id = req.get('fromChannelId')
+            to_id = req.get('toChannelId')
+            
+            # Add the partner channel (not user's own channel)
+            if from_id in channel_ids:
+                partner_ids.add(to_id)
+            if to_id in channel_ids:
+                partner_ids.add(from_id)
+        
+        # Get partner channel details
+        if not partner_ids:
+            return jsonify([])
+        
+        partner_channels = list(channels.find({
+            'id': {'$in': list(partner_ids)},
+            'status': 'approved'
+        }, {'_id': 0}))
+        
+        # Format partners to match expected structure
+        formatted_partners = []
+        for channel in partner_channels:
+            # Build duration prices from price_settings
+            duration_prices = {}
+            price_settings = channel.get('price_settings', {})
+            for hours, settings in price_settings.items():
+                if settings.get('enabled'):
+                    duration_prices[hours] = settings.get('price', 0)
+            
+            partner = {
+                'id': channel.get('id'),
+                'name': channel.get('name'),
+                'topic': channel.get('topic'),
+                'subs': channel.get('subscribers', 0),
+                'lang': channel.get('language', 'en'),
+                'avatar': channel.get('avatar', 'https://placehold.co/60x60'),
+                'acceptedDays': channel.get('selected_days', []),
+                'availableTimeSlots': channel.get('time_slots', []),
+                'durationPrices': duration_prices,
+                'telegram_chat': channel.get('username', ''),
+                'xExchanges': requests_col.count_documents({
+                    'status': 'Accepted',
+                    '$or': [
+                        {'fromChannelId': channel.get('id')},
+                        {'toChannelId': channel.get('id')}
+                    ]
+                })
+            }
+            formatted_partners.append(partner)
+        
+        return jsonify(formatted_partners)
+    
+    except Exception as e:
+        print(f"Error fetching partners: {e}")
+        return jsonify([])
 
 @app.route('/api/channels/all', methods=['GET'])
 @token_required
@@ -282,21 +360,39 @@ def list_all_channels():
     """Get all approved channels (for discovery)"""
     try:
         # Get all approved channels from the channels collection
-        all_channels = list(channels.find({'status': 'approved'}, {'_id': 0}))
+        all_channels_raw = list(channels.find({'status': 'approved'}, {'_id': 0}))
         
-        # Also include partners from the partners collection
-        partner_channels = list(partners.find({}, {'_id': 0}))
+        # Format channels to match expected structure
+        all_channels = []
+        for channel in all_channels_raw:
+            # Build duration prices from price_settings
+            duration_prices = {}
+            price_settings = channel.get('price_settings', {})
+            for hours, settings in price_settings.items():
+                if settings.get('enabled'):
+                    duration_prices[hours] = settings.get('price', 0)
+            
+            formatted_channel = {
+                'id': channel.get('id'),
+                'name': channel.get('name'),
+                'topic': channel.get('topic'),
+                'subs': channel.get('subscribers', 0),
+                'lang': channel.get('language', 'en'),
+                'avatar': channel.get('avatar', 'https://placehold.co/60x60'),
+                'acceptedDays': channel.get('selected_days', []),
+                'availableTimeSlots': channel.get('time_slots', []),
+                'durationPrices': duration_prices,
+                'telegram_chat': channel.get('username', ''),
+                'xExchanges': 0  # Can calculate if needed
+            }
+            all_channels.append(formatted_channel)
         
-        # Combine both lists
-        combined = all_channels + partner_channels
-        
-        return jsonify(combined)
+        return jsonify(all_channels)
     
     except Exception as e:
         print(f"Error fetching all channels: {e}")
-        return jsonify({'error': 'Failed to fetch channels'}), 500
-
-
+        return jsonify([])
+    
 @app.route('/api/requests', methods=['GET'])
 def list_requests():
     r = list(requests_col.find({}, {'_id': 0}))
