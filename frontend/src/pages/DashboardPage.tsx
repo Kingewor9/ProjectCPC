@@ -126,7 +126,7 @@ export default function DashboardPage() {
       <Plus size={24} />
       <div className="text-left">
         <p className="text-lg">Add Channel</p>
-        <p className="text-sm text-green-200 group-hover:text-green-100">Connect your channel and unlock growth oppurtunities</p>
+        <p className="text-sm text-green-200 group-hover:text-green-100">Connect your telegram channel</p>
     </div>
     </button>
           </div>
