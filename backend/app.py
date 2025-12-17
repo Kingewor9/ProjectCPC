@@ -74,13 +74,13 @@ def validate_telegram_webapp_data(init_data: str, bot_token: str) -> dict:
         raise
 
 # This should be called by your scheduler when the campaign ends
-def complete_invite_task(campaign_id, user_id):
+def complete_invite_task(campaign_id, telegram_id):
     """Complete an invite task and reward the user"""
     try:
         # Add reward to user balance
         reward = 5000
         users.update_one(
-            {'telegram_id': user_id},
+            {'telegram_id': telegram_id},
             {
                 '$inc': {'cpcBalance': reward},
                 '$set': {'updated_at': datetime.datetime.utcnow()}
@@ -89,31 +89,31 @@ def complete_invite_task(campaign_id, user_id):
         
         # Mark invite task as fully completed
         user_tasks.update_one(
-            {'user_id': user_id},
+            {'telegram_id': telegram_id},
             {'$set': {'invite_users': True}}
         )
         
-        print(f"Invite task completed for user {user_id}, rewarded {reward} CP")
+        print(f"Invite task completed for user {telegram_id}, rewarded {reward} CP")
         
         # Notify user
         if BOT_ADMIN_CHAT_ID:
             send_message(
                 BOT_ADMIN_CHAT_ID,
                 f"✅ Invite task completed!\n"
-                f"User {user_id} earned {reward} CP Coins"
+                f"User {telegram_id} earned {reward} CP Coins"
             )
         
     except Exception as e:
         print(f"Error completing invite task: {e}")
         
-def generate_telegram_invoice(user_id, transaction_id, cpc_amount, stars_cost):
+def generate_telegram_invoice(telegram_id, transaction_id, cpc_amount, stars_cost):
     """Generate a Telegram Stars invoice using Bot API"""
     try:
         # Create invoice using sendInvoice
         api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendInvoice"
         
         payload = {
-            'chat_id': user_id,
+            'chat_id': telegram_id,
             'title': f'Purchase {cpc_amount} CP Coins',
             'description': f'Buy {cpc_amount} CP Coins for use in Growth Guru cross-promotions',
             'payload': transaction_id,  # Our unique transaction ID
@@ -253,13 +253,13 @@ def telegram_auth():
 @token_required
 def get_me():
     # Return the authenticated user's profile from database
-    user_id = request.user_id
-    user = users.find_one({'telegram_id': user_id}, {'_id': 0})
+    telegram_id = request.telegram_id
+    user = users.find_one({'telegram_id': telegram_id}, {'_id': 0})
     if user:
         return jsonify(user)
     # If user not found in DB, return demo user structure (for testing)
     demo_user = {
-        'telegram_id': user_id,
+        'telegram_id': telegram_id,
         'name': 'GrowthGuru',
         'cpcBalance': 11050,
         'channels': [
@@ -275,11 +275,11 @@ def get_me():
 @token_required  # ADDED: Require authentication
 def list_partners():
     """Get partner channels - channels the user has cross-promoted with"""
-    user_id = request.user_id  # ADDED: Get authenticated user
+    telegram_id = request.telegram_id  # ADDED: Get authenticated user
     
     try:
         # CHANGED: Get user's completed campaigns to find actual partners
-        user_channels = list(channels.find({'owner_id': user_id}, {'_id': 0}))
+        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
         channel_ids = [ch.get('id') for ch in user_channels]
         
         if not channel_ids:
@@ -504,7 +504,7 @@ def validate_channel():
 @token_required
 def create_channel():
     """Save a new channel configuration"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     data = request.json or {}
     
     # Validate required fields
@@ -540,7 +540,7 @@ def create_channel():
     try:
         # Add channel to database
         channel_id = add_user_channel(
-            user_id=user_id,
+            telegram_id=telegram_id,
             channel_info=data['channel_info'],
             topic=data['topic'],
             selected_days=data['selected_days'],
@@ -557,7 +557,7 @@ def create_channel():
                 BOT_ADMIN_CHAT_ID, 
                 f"🆕 New channel submitted for moderation:\n"
                 f"Channel: {channel_name}\n"
-                f"Owner: {user_id}\n"
+                f"Owner: {telegram_id}\n"
                 f"Topic: {data['topic']}"
             )
         
@@ -575,10 +575,10 @@ def create_channel():
 @token_required
 def get_user_channels():
     """Get all channels for the authenticated user"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
-        user_channels = list(channels.find({'owner_id': user_id}, {'_id': 0}))
+        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
         return jsonify(user_channels)
     except Exception as e:
         print(f"Error fetching channels: {e}")
@@ -588,10 +588,10 @@ def get_user_channels():
 @token_required
 def get_channel(channel_id):
     """Get a specific channel by ID"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
-        channel = channels.find_one({'id': channel_id, 'owner_id': user_id}, {'_id': 0})
+        channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id}, {'_id': 0})
         
         if not channel:
             return jsonify({'error': 'Channel not found'}), 404
@@ -605,12 +605,12 @@ def get_channel(channel_id):
 @token_required
 def update_channel(channel_id):
     """Update a channel configuration"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     data = request.json or {}
     
     try:
         # Check if channel exists and belongs to user
-        channel = channels.find_one({'id': channel_id, 'owner_id': user_id})
+        channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
         
         if not channel:
             return jsonify({'error': 'Channel not found'}), 404
@@ -627,7 +627,7 @@ def update_channel(channel_id):
         if update_fields:
             update_fields['updated_at'] = datetime.datetime.utcnow()
             channels.update_one(
-                {'id': channel_id, 'owner_id': user_id},
+                {'id': channel_id, 'owner_id': telegram_id},
                 {'$set': update_fields}
             )
         
@@ -641,10 +641,10 @@ def update_channel(channel_id):
 @token_required
 def delete_channel(channel_id):
     """Delete a channel"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
-        result = channels.delete_one({'id': channel_id, 'owner_id': user_id})
+        result = channels.delete_one({'id': channel_id, 'owner_id': telegram_id})
         
         if result.deleted_count == 0:
             return jsonify({'error': 'Channel not found'}), 404
@@ -659,7 +659,7 @@ def delete_channel(channel_id):
 @token_required
 def update_channel_status_route(channel_id):
     """Update channel status (pause/activate)"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     data = request.json or {}
     new_status = data.get('status')
     
@@ -668,7 +668,7 @@ def update_channel_status_route(channel_id):
     
     try:
         # Check if channel exists and belongs to user
-        channel = channels.find_one({'id': channel_id, 'owner_id': user_id})
+        channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
         
         if not channel:
             return jsonify({'error': 'Channel not found'}), 404
@@ -679,7 +679,7 @@ def update_channel_status_route(channel_id):
         
         # Update status
         channels.update_one(
-            {'id': channel_id, 'owner_id': user_id},
+            {'id': channel_id, 'owner_id': telegram_id},
             {'$set': {'status': new_status, 'updated_at': datetime.datetime.utcnow()}}
         )
         
@@ -697,11 +697,11 @@ def update_channel_status_route(channel_id):
 @token_required
 def get_tasks():
     """Get available tasks for the user"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
         # Get user's completed tasks
-        completed_tasks = user_tasks.find_one({'user_id': user_id}) or {}
+        completed_tasks = user_tasks.find_one({'user_id': telegram_id}) or {}
         
         # Define available tasks
         tasks = [
@@ -745,11 +745,11 @@ def get_tasks():
 @token_required
 def claim_welcome_bonus():
     """Claim the welcome bonus"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
         # Check if already claimed
-        task_record = user_tasks.find_one({'user_id': user_id})
+        task_record = user_tasks.find_one({'user_id': telegram_id})
         
         if task_record and task_record.get('welcome_bonus'):
             return jsonify({'error': 'Welcome bonus already claimed'}), 400
@@ -757,7 +757,7 @@ def claim_welcome_bonus():
         # Update user balance
         reward = 500
         users.update_one(
-            {'telegram_id': user_id},
+            {'telegram_id': telegram_id},
             {
                 '$inc': {'cpcBalance': reward},
                 '$set': {'updated_at': datetime.datetime.utcnow()}
@@ -766,7 +766,7 @@ def claim_welcome_bonus():
         
         # Mark task as completed
         user_tasks.update_one(
-            {'user_id': user_id},
+            {'user_id': telegram_id},
             {
                 '$set': {
                     'welcome_bonus': True,
@@ -791,12 +791,11 @@ def claim_welcome_bonus():
 @token_required
 def verify_channel_join():
     """Verify user joined the news channel"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
         # Check if already completed
-        task_record = user_tasks.find_one({'user_id': user_id})
-        
+        task_record = user_tasks.find_one({'user_id': telegram_id})
         if task_record and task_record.get('join_channel'):
             return jsonify({'error': 'Channel join already verified'}), 400
         
@@ -808,7 +807,7 @@ def verify_channel_join():
                 api_url, 
                 params={
                     'chat_id': '@cpgram_news',
-                    'user_id': user_id
+                    'user_id': telegram_id
                 },
                 timeout=10
             )
@@ -825,7 +824,7 @@ def verify_channel_join():
                         # User is a member, reward them
                         reward = 250
                         users.update_one(
-                            {'telegram_id': user_id},
+                            {'telegram_id': telegram_id},
                             {
                                 '$inc': {'cpcBalance': reward},
                                 '$set': {'updated_at': datetime.datetime.utcnow()}
@@ -834,7 +833,7 @@ def verify_channel_join():
                         
                         # Mark task as completed
                         user_tasks.update_one(
-                            {'user_id': user_id},
+                            {'user_id': telegram_id},
                             {
                                 '$set': {
                                     'join_channel': True,
@@ -869,7 +868,7 @@ def verify_channel_join():
 @token_required
 def create_invite_task():
     """Create an invite task for a channel"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     data = request.json or {}
     channel_id = data.get('channel_id')
     
@@ -878,13 +877,13 @@ def create_invite_task():
     
     try:
         # Check if task already completed for this channel
-        task_record = user_tasks.find_one({'user_id': user_id})
+        task_record = user_tasks.find_one({'user_id': telegram_id})
         
         if task_record and task_record.get(f'invite_users_{channel_id}'):
             return jsonify({'error': 'Invite task already completed for this channel'}), 400
         
         # Verify channel belongs to user
-        channel = channels.find_one({'id': channel_id, 'owner_id': user_id})
+        channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
         
         if not channel:
             return jsonify({'error': 'Channel not found'}), 404
@@ -916,7 +915,7 @@ def create_invite_task():
         invite_campaign = {
             'type': 'invite_task',
             'channel_id': channel_id,
-            'user_id': user_id,
+            'user_id': telegram_id,
             'telegram_chat_id': channel.get('telegram_id'),
             'status': 'scheduled',
             'start_at': start_at,
@@ -938,7 +937,7 @@ def create_invite_task():
         
         # Mark task as in progress (will be completed when post is deleted)
         user_tasks.update_one(
-            {'user_id': user_id},
+            {'user_id': telegram_id},
             {
                 '$set': {
                     f'invite_users_{channel_id}': True,
@@ -954,7 +953,7 @@ def create_invite_task():
             send_message(
                 BOT_ADMIN_CHAT_ID,
                 f"📢 Invite task created\n"
-                f"User: {user_id}\n"
+                f"User: {telegram_id}\n"
                 f"Channel: {channel.get('name')}\n"
                 f"Scheduled: {start_at.strftime('%Y-%m-%d %H:%M UTC')}"
             )
@@ -989,7 +988,7 @@ def get_exchange_rate():
 @token_required
 def initiate_purchase():
     """Initiate a CP Coin purchase with Telegram Stars"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     data = request.json or {}
     cpc_amount = data.get('cpc_amount')
     
@@ -1015,7 +1014,7 @@ def initiate_purchase():
         # Create transaction record
         transaction = {
             'transaction_id': transaction_id,
-            'user_id': user_id,
+            'user_id': telegram_id,
             'cpc_amount': cpc_amount,
             'stars_cost': stars_cost,
             'status': 'PENDING',
@@ -1027,7 +1026,7 @@ def initiate_purchase():
         
         # Generate Telegram Stars invoice
         invoice_result = generate_telegram_invoice(
-            user_id=user_id,
+            user_id=telegram_id,
             transaction_id=transaction_id,
             cpc_amount=cpc_amount,
             stars_cost=stars_cost
@@ -1102,7 +1101,7 @@ def telegram_webhook():
                 total_amount = successful_payment.get('total_amount')  # In Stars
                 currency = successful_payment.get('currency')
                 
-                user_id = str(message.get('from', {}).get('id'))
+                telegram_id = str(message.get('from', {}).get('id'))
                 
                 # Find transaction
                 transaction = transactions.find_one({'transaction_id': transaction_id})
@@ -1112,7 +1111,7 @@ def telegram_webhook():
                     return jsonify({'ok': True})  # Still return ok to Telegram
                 
                 # Verify transaction belongs to user
-                if transaction['user_id'] != user_id:
+                if transaction['user_id'] != telegram_id:
                     print(f"User mismatch for transaction {transaction_id}")
                     return jsonify({'ok': True})
                 
@@ -1138,7 +1137,7 @@ def telegram_webhook():
                 # Credit user's account
                 cpc_amount = transaction['cpc_amount']
                 users.update_one(
-                    {'telegram_id': user_id},
+                    {'telegram_id': telegram_id},
                     {
                         '$inc': {'cpcBalance': cpc_amount},
                         '$set': {'updated_at': datetime.datetime.utcnow()}
@@ -1147,7 +1146,7 @@ def telegram_webhook():
                 
                 # Notify user
                 send_message(
-                    user_id,
+                    telegram_id,
                     f"✅ Payment Successful!\n\n"
                     f"You have received {cpc_amount} CP Coins.\n"
                     f"Transaction ID: {transaction_id}\n\n"
@@ -1159,7 +1158,7 @@ def telegram_webhook():
                     send_message(
                         BOT_ADMIN_CHAT_ID,
                         f"💰 New Purchase\n\n"
-                        f"User: {user_id}\n"
+                        f"User: {telegram_id}\n"
                         f"Amount: {cpc_amount} CP\n"
                         f"Stars: {total_amount}\n"
                         f"Transaction: {transaction_id}"
@@ -1182,12 +1181,12 @@ def telegram_webhook():
 @token_required
 def get_user_transactions():
     """Get user's transaction history"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
         user_transactions = list(
             transactions.find(
-                {'user_id': user_id},
+                {'user_id': telegram_id},
                 {'_id': 0}
             ).sort('created_at', -1).limit(50)
         )
@@ -1203,11 +1202,11 @@ def get_user_transactions():
 @token_required
 def get_transaction(transaction_id):
     """Get a specific transaction"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
         transaction = transactions.find_one(
-            {'transaction_id': transaction_id, 'user_id': user_id},
+            {'transaction_id': transaction_id, 'user_id': telegram_id},
             {'_id': 0}
         )
         
@@ -1240,11 +1239,11 @@ def update_campaign_stats(campaign_id, impressions=0, clicks=0):
 @token_required
 def get_analytics():
     """Get analytics data for the authenticated user"""
-    user_id = request.user_id
+    telegram_id = request.telegram_id
     
     try:
         # Get user's channels
-        user_channels = list(channels.find({'owner_id': user_id}, {'_id': 0}))
+        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
         channel_ids = [ch.get('id') for ch in user_channels]
         
         if not channel_ids:
