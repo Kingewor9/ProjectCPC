@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../hooks/useAuth';
-import { TrendingUp, Send, Zap, Users, Plus } from 'lucide-react';
+import { TrendingUp, Send, Zap, Users, Plus, Shield } from 'lucide-react';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -129,6 +129,20 @@ export default function DashboardPage() {
         <p className="text-sm text-green-200 group-hover:text-green-100">Connect your telegram channel</p>
     </div>
     </button>
+
+{/*Admin Panel Button only visible to admins*/}
+    {user?.telegram_id === 'YOUR_ADMIN_TELEGRAM_ID' && (
+      <button
+        onClick={() => navigate('/admin/moderate-channels')}
+        className="bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-3 group"
+      >
+        <Shield size={24} />
+        <div className="text-left">
+          <p className="text-lg">Admin Panel</p>
+          <p className="text-sm text-purple-200 group-hover:text-purple-100">Moderate channels & users</p>
+        </div>
+      </button>
+    )}
           </div>
         </div>
 
