@@ -4,10 +4,7 @@ import apiService from '../services/api';
 import { User } from '../types';
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
