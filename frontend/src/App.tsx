@@ -29,7 +29,7 @@ function App() {
         {/* Protected routes */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         <Route path="/cp-coins" element={<ProtectedRoute><CPCoinsPage /></ProtectedRoute>} />
-        <Route path="/send-requests" element={<ProtectedRoute><SendRequestPage /></ProtectedRoute>} />
+        <Route path="/send-request" element={<ProtectedRoute><SendRequestPage /></ProtectedRoute>} />
         <Route path="/requests" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
         <Route path="/campaigns" element={<ProtectedRoute><CampaignsPage /></ProtectedRoute>} />
         <Route path="/partners" element={<ProtectedRoute><PartnersPage /></ProtectedRoute>} />
