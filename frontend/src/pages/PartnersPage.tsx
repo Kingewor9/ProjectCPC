@@ -26,10 +26,11 @@ export default function PartnersPage() {
       try {
         setLoading(true);
         const data = await apiService.listPartners();
-        setPartners(data);
+        setPartners(data || []);
       } catch (err) {
         setError('Failed to load partners');
         console.error('Error loading partners:', err);
+        setPartners([]);
       } finally {
         setLoading(false);
       }
@@ -188,13 +189,24 @@ export default function PartnersPage() {
           ))}
         </div>
 
-        {filteredPartners.length === 0 && (
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-12 text-center">
-            <Users size={40} className="mx-auto mb-4 text-grey-600" />
-            <p className="text-grey-400 text-lg">No partners found</p>
-          </div>
-        )}
-      </div>
-    </Layout>
-  );
+  {filteredPartners.length === 0 && !loading && (
+  <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-12 text-center">
+    <Users size={40} className="mx-auto mb-4 text-grey-600" />
+    <h2 className="text-2xl font-bold text-white mb-2">No Partners Yet</h2>
+    <p className="text-grey-400 mb-4">
+      {selectedTopic 
+        ? `No partners found in ${selectedTopic} category` 
+        : 'Start cross-promoting to build your partner network'}
+    </p>
+    <button
+      onClick={() => navigate('/send-request')}
+      className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all"
+    >
+      Send Your First Promotion
+    </button>
+  </div>
+)}
+</div>
+</Layout>
+ );
 }

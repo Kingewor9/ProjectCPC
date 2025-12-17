@@ -46,6 +46,13 @@ export default function SendRequestPage() {
       return;
     }
 
+     // ADDED: Check if user has any channels
+  if (!user.channels || user.channels.length === 0) {
+    setError('You need to add a channel before sending promotions');
+    setLoading(false);
+    return;
+  }
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -136,6 +143,27 @@ export default function SendRequestPage() {
       </Layout>
     );
   }
+
+  // ADDED: Show empty state if no channels
+if (!user.channels || user.channels.length === 0) {
+  return (
+    <Layout>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-12 text-center">
+          <Send size={48} className="mx-auto mb-4 text-grey-600" />
+          <h2 className="text-2xl font-bold text-white mb-2">No Channels Found</h2>
+          <p className="text-grey-400 mb-6">You need to add a channel before you can send promotions</p>
+          <button
+            onClick={() => navigate('/add-channel')}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all"
+          >
+            Add Your First Channel
+          </button>
+        </div>
+      </div>
+        </Layout>
+  );
+}
 
   return (
     <Layout>
