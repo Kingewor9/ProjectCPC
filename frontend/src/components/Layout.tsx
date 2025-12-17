@@ -13,7 +13,7 @@ export default function Layout({ children, showSidebar = true }: LayoutProps) {
       <Header />
       <div className="flex">
         {showSidebar && <Sidebar />}
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
