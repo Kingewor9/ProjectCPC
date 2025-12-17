@@ -157,7 +157,7 @@ def generate_telegram_invoice(user_id, transaction_id, cpc_amount, stars_cost):
     except Exception as e:
         print(f"Error generating invoice: {e}")
         return {'ok': False, 'error': str(e)}
-
+    
 
 #Admin decoratorfor admin only
 def admin_required(f):
@@ -1123,6 +1123,92 @@ def get_transaction(transaction_id):
     except Exception as e:
         print(f"Error fetching transaction: {e}")
         return jsonify({'error': 'Failed to fetch transaction'}), 500
+
+def update_campaign_stats(campaign_id, impressions=0, clicks=0):
+    """Update campaign statistics"""
+    try:
+        campaigns.update_one(
+            {'id': campaign_id},
+            {
+                '$inc': {
+                    'impressions': impressions,
+                    'clicks': clicks
+                },
+                '$set': {'updated_at': datetime.datetime.utcnow()}
+            }
+        )
+    except Exception as e:
+        print(f"Error updating campaign stats: {e}")
+    
+@app.route('/api/analytics', methods=['GET'])
+@token_required
+def get_analytics():
+    """Get analytics data for the authenticated user"""
+    user_id = request.user_id
+    
+    try:
+        # Get user's channels
+        user_channels = list(channels.find({'owner_id': user_id}, {'_id': 0}))
+        channel_ids = [ch.get('id') for ch in user_channels]
+        
+        if not channel_ids:
+            # No channels, return zeros
+            return jsonify({
+                'totalImpressions': 0,
+                'engagementRate': 0,
+                'newSubscribers': 0
+            })
+        
+        # Calculate total impressions from completed campaigns
+        # Impressions = sum of all campaign views from user's channels
+        completed_campaigns = list(campaigns.find({
+            'status': {'$in': ['completed', 'finished']},
+            'toChannelId': {'$in': channel_ids}
+        }))
+        
+        total_impressions = 0
+        total_clicks = 0
+        
+        for campaign in completed_campaigns:
+            # Get channel subscribers as proxy for impressions
+            channel_id = campaign.get('toChannelId')
+            channel = channels.find_one({'id': channel_id})
+            if channel:
+                subscribers = channel.get('subscribers', 0)
+                # Estimate impressions as a percentage of subscribers
+                estimated_impressions = int(subscribers * 0.15)  # 15% view rate estimate
+                total_impressions += estimated_impressions
+                
+                # Estimate clicks as a percentage of impressions
+                estimated_clicks = int(estimated_impressions * 0.08)  # 8% CTR estimate
+                total_clicks += estimated_clicks
+        
+        # Calculate engagement rate
+        engagement_rate = 0
+        if total_impressions > 0:
+            engagement_rate = round((total_clicks / total_impressions) * 100, 1)
+        
+        # Calculate new subscribers gained from cross-promos
+        # This is an estimate based on successful campaigns
+        new_subscribers = 0
+        successful_campaigns = campaigns.count_documents({
+            'status': {'$in': ['completed', 'finished']},
+            'fromChannelId': {'$in': channel_ids}
+        })
+        
+        # Estimate: each successful campaign brings ~20-50 new subscribers
+        # This is a rough estimate that should be replaced with actual tracking
+        new_subscribers = successful_campaigns * 35  # Average of 35 new subs per campaign
+        
+        return jsonify({
+            'totalImpressions': total_impressions,
+            'engagementRate': engagement_rate,
+            'newSubscribers': new_subscribers
+        })
+    
+    except Exception as e:
+        print(f"Error fetching analytics: {e}")
+        return jsonify({'error': 'Failed to fetch analytics'}), 500
     
 #API routes for admin functionalities  
 @app.route('/api/admin/channels', methods=['GET'])
@@ -1256,7 +1342,34 @@ def get_admin_stats():
     except Exception as e:
         print(f"Error fetching admin stats: {e}")
         return jsonify({'error': 'Failed to fetch statistics'}), 500
+
+@app.route('/api/admin/analytics', methods=['GET'])
+@token_required
+@admin_required
+def get_admin_analytics():
+    """Get platform-wide analytics (Admin only)"""
+    try:
+        total_channels = channels.count_documents({'status': 'approved'})
+        total_campaigns = campaigns.count_documents({})
+        completed_campaigns = campaigns.count_documents({'status': {'$in': ['completed', 'finished']}})
+        
+        # Total platform impressions
+        all_campaigns = list(campaigns.find({'status': {'$in': ['completed', 'finished']}}))
+        platform_impressions = sum(c.get('impressions', 0) for c in all_campaigns)
+        platform_clicks = sum(c.get('clicks', 0) for c in all_campaigns)
+        
+        return jsonify({
+            'totalChannels': total_channels,
+            'totalCampaigns': total_campaigns,
+            'completedCampaigns': completed_campaigns,
+            'platformImpressions': platform_impressions,
+            'platformClicks': platform_clicks
+        })
     
+    except Exception as e:
+        print(f"Error fetching admin analytics: {e}")
+        return jsonify({'error': 'Failed to fetch analytics'}), 500
+   
 @app.route('/api/admin/reset-invite-tasks', methods=['POST'])
 @token_required
 @admin_required
