@@ -262,6 +262,9 @@ def get_me():
         # Add channels to user object
         user['channels'] = user_channels
         
+        # Add isAdmin flag
+        user['isAdmin'] = telegram_id == ADMIN_TELEGRAM_ID
+        
         return jsonify(user)
     
     # User not found - return error
