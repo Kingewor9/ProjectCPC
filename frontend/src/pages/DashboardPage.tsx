@@ -131,7 +131,7 @@ export default function DashboardPage() {
     </button>
 
 {/*Admin Panel Button only visible to admins*/}
-    {user?.telegram_id === 'ADMIN_TELEGRAM_ID' && (
+    {user?.isAdmin && (
       <button
         onClick={() => navigate('/admin/moderate-channels')}
         className="bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-3 group"
