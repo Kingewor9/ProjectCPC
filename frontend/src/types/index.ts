@@ -7,6 +7,7 @@ export interface TelegramUser {
   photo_url?: string;
   auth_date: number;
   hash: string;
+  isAdmin: boolean;
 }
 
 export interface User {
