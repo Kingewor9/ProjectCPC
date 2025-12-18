@@ -4,18 +4,47 @@ import apiService from '../services/api';
 import { User } from '../types';
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    // Initialize from localStorage
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const navigate = useNavigate();
 
+  // Fetch user on mount only
   useEffect(() => {
-  if (apiService.isAuthenticated() && !user) {
-    fetchUser();
-  }
-}, []);
+    const initializeAuth = async () => {
+      if (apiService.isAuthenticated() && !user) {
+        try {
+          setLoading(true);
+          const userData = await apiService.getMe();
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        } catch (err) {
+          console.error('Failed to fetch user:', err);
+          apiService.clearAuth();
+          setUser(null);
+        } finally {
+          setLoading(false);
+          setInitialized(true);
+        }
+      } else {
+        setInitialized(true);
+      }
+    };
+
+    initializeAuth();
+  }, []); // Run only once on mount
 
   const fetchUser = async () => {
+    if (!apiService.isAuthenticated()) {
+      setUser(null);
+      return;
+    }
+    
     try {
       setLoading(true);
       const userData = await apiService.getMe();
@@ -25,6 +54,8 @@ export const useAuth = () => {
     } catch (err) {
       setError('Failed to fetch user data');
       console.error('Auth error:', err);
+      apiService.clearAuth();
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -58,11 +89,11 @@ export const useAuth = () => {
 
   return {
     user,
-    loading,
+    loading: loading || !initialized,
     error,
     fetchUser,
     login,
     logout,
-    isAuthenticated: !!user && apiService.isAuthenticated(),
+    isAuthenticated: !!user && !!localStorage.getItem('authToken'),
   };
 };
