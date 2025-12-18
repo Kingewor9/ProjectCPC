@@ -18,6 +18,7 @@ export interface User {
   photo_url?: string;
   cpcBalance: number;
   channels: Channel[];
+  isAdmin?: boolean;
 }
 
 export interface Channel {
