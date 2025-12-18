@@ -7,7 +7,6 @@ export interface TelegramUser {
   photo_url?: string;
   auth_date: number;
   hash: string;
-  isAdmin?: boolean;
 }
 
 export interface User {
@@ -19,7 +18,7 @@ export interface User {
   photo_url?: string;
   cpcBalance: number;
   channels: Channel[];
-  isAdmin?: boolean;
+  isAdmin: boolean;
 }
 
 export interface Channel {
