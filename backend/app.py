@@ -204,7 +204,8 @@ def telegram_auth():
             'user': {
                 **user,
                 'channels': user_channels,
-                'cpcBalance': user.get('cpcBalance', 0)
+                'cpcBalance': user.get('cpcBalance', 0),
+                'isAdmin': user.get('isAdmin', False)
             },
             'token': token
         })
@@ -218,7 +219,7 @@ def telegram_auth():
             
             telegram_id = str(user_data.get('id'))
             
-            # Upsert user
+            # Upsert user (upsert_user now sets isAdmin)
             user = upsert_user({
                 'id': telegram_id,
                 'first_name': user_data.get('first_name'),
@@ -240,7 +241,8 @@ def telegram_auth():
                 'user': {
                     **user,
                     'channels': user_channels,
-                    'cpcBalance': user.get('cpcBalance', 0)
+                    'cpcBalance': user.get('cpcBalance', 0),
+                    'isAdmin': user.get('isAdmin', False)
                 },
                 'token': token
             })
@@ -262,8 +264,9 @@ def get_me():
         # Add channels to user object
         user['channels'] = user_channels
         
-        # Add isAdmin flag
-        user['isAdmin'] = telegram_id == ADMIN_TELEGRAM_ID
+        # Ensure isAdmin flag is set (from database, not computed)
+        if 'isAdmin' not in user:
+            user['isAdmin'] = str(telegram_id) == str(ADMIN_TELEGRAM_ID)
         
         return jsonify(user)
     

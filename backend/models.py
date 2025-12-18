@@ -59,8 +59,14 @@ def init_mock_partners():
 
 def upsert_user(telegram_user):
     # telegram_user: dict with keys: id, first_name, last_name, username, photo_url
-    users.update_one({'telegram_id': telegram_user['id']}, {'$set': telegram_user, '$setOnInsert': {'created_at': datetime.datetime.utcnow()}}, upsert=True)
-    return users.find_one({'telegram_id': telegram_user['id']}, {'_id': 0})
+    from config import ADMIN_TELEGRAM_ID
+    
+    telegram_id = telegram_user['id']
+    # Set isAdmin based on ADMIN_TELEGRAM_ID
+    telegram_user['isAdmin'] = str(telegram_id) == str(ADMIN_TELEGRAM_ID)
+    
+    users.update_one({'telegram_id': telegram_id}, {'$set': telegram_user, '$setOnInsert': {'created_at': datetime.datetime.utcnow()}}, upsert=True)
+    return users.find_one({'telegram_id': telegram_id}, {'_id': 0})
 
 def validate_channel_with_telegram(username, bot_token):
     """
