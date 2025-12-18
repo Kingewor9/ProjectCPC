@@ -1,14 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import LoadingSpinner from './LoadingSpinner';
 
 export default function TelegramAuth() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const authAttemptedRef = useRef(false);
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
+    // Prevent multiple auth attempts
+    if (authAttemptedRef.current) return;
+    authAttemptedRef.current = true;
+
     const initTelegramAuth = async () => {
       try {
         const script = document.createElement('script');
@@ -59,15 +71,18 @@ export default function TelegramAuth() {
                 // If stored user doesn't match current Telegram user, clear storage
                 if (storedUser.telegram_id !== String(tgUser.id)) {
                   console.log('User mismatch detected, clearing session');
-                  localStorage.clear();
+                  localStorage.removeItem('authToken');
+                  localStorage.removeItem('user');
                 }
               } else {
                 // Invalid token, clear it
-                localStorage.clear();
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
               }
             } catch (err) {
               console.log('Error checking stored user:', err);
-              localStorage.clear();
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('user');
             }
           }
 
@@ -78,10 +93,11 @@ export default function TelegramAuth() {
             const result = await login({ initData });
             
             console.log('Login successful:', result);
-            navigate('/dashboard');
+            navigate('/dashboard', { replace: true });
           } catch (error: any) {
             console.error('Login failed:', error);
             setError(error.message || 'Login failed');
+            authAttemptedRef.current = false; // Allow retry
           }
         };
 
@@ -94,6 +110,7 @@ export default function TelegramAuth() {
       } catch (err) {
         console.error('Init error:', err);
         setError('Failed to initialize');
+        authAttemptedRef.current = false; // Allow retry
       }
     };
 
@@ -110,15 +127,16 @@ export default function TelegramAuth() {
 
       try {
         await login(testUser);
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
       } catch (error: any) {
         console.error('Test login failed:', error);
         setError(error.message || 'Test login failed');
+        authAttemptedRef.current = false; // Allow retry
       }
     };
 
     initTelegramAuth();
-  }, [login, navigate]);
+  }, []); // Empty dependency array - run only once on mount
 
   if (error) {
     return (
