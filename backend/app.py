@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from models import ensure_indexes, init_mock_partners, upsert_user, partners, requests_col, campaigns, users
 from scheduler import start_scheduler, check_and_post_campaigns, cleanup_finished_campaigns
-from bot import send_message
+from bot import send_message, send_open_button_message
 from config import STARS_PER_CPC, TELEGRAM_BOT_TOKEN, BOT_ADMIN_CHAT_ID, APP_URL
 from auth import create_token, verify_token, token_required
 from time_utils import parse_day_time_to_utc, calculate_end_time
@@ -17,6 +17,54 @@ import uuid
 import json
 from models import transactions
 from urllib.parse import parse_qsl
+
+
+# Helper functions for matching durations and finding next available slot
+def find_best_duration(channel_doc, requested_hours):
+    try:
+        # channel may store durationPrices or price_settings
+        durations_map = channel_doc.get('durationPrices') or channel_doc.get('price_settings') or {}
+        durations = []
+        for k in durations_map.keys():
+            try:
+                durations.append(int(k))
+            except Exception:
+                continue
+        if not durations:
+            return int(requested_hours or 8)
+        durations = sorted(set(durations))
+        req = int(requested_hours or 0)
+        if req in durations:
+            return req
+        # find highest duration <= requested
+        lower = [d for d in durations if d <= req]
+        if lower:
+            return max(lower)
+        # otherwise return the maximum available
+        return max(durations)
+    except Exception:
+        return int(requested_hours or 8)
+
+
+def find_next_slot_for_channel(channel_doc):
+    # Try to use channel's configured acceptedDays/availableTimeSlots or selected_days/time_slots
+    days = channel_doc.get('acceptedDays') or channel_doc.get('selected_days') or []
+    slots = channel_doc.get('availableTimeSlots') or channel_doc.get('time_slots') or []
+    now = datetime.datetime.utcnow()
+    candidates = []
+    for d in days:
+        for s in slots:
+            try:
+                dt = parse_day_time_to_utc(d, s)
+                if dt <= now:
+                    dt = dt + datetime.timedelta(days=7)
+                candidates.append(dt)
+            except Exception:
+                continue
+    if candidates:
+        return min(candidates)
+    # fallback: schedule 1 hour from now
+    return now + datetime.timedelta(hours=1)
 
 app = Flask(__name__)
 CORS(app)
@@ -436,50 +484,136 @@ def create_request():
     # store a string id for easy frontend references
     str_id = str(res.inserted_id)
     requests_col.update_one({'_id': res.inserted_id}, {'$set': {'id': str_id}})
-    # notify the recipient (channel owner) via bot if we have chat id stored
-    to_owner_chat = None
-    # simplistic lookup: find a partner or user channel owner
-    # For demo, notify admin
-    if BOT_ADMIN_CHAT_ID:
-        send_message(BOT_ADMIN_CHAT_ID, f"New cross-promo request from {req['fromChannel']} to {req['toChannel']}")
+    # notify the recipient channel owner via bot with an Open button (if channel exists)
+    try:
+        to_channel = channels.find_one({'id': req.get('toChannelId')})
+        if to_channel and to_channel.get('owner_id'):
+            owner_chat = to_channel.get('owner_id')
+            text = (
+                f"📨 New cross-promo request\n\nFrom: {req['fromChannel']}\nTo: {req['toChannel']}\n"
+                f"Duration: {req.get('duration')} hrs\nScheduled: {req.get('daySelected')} {req.get('timeSelected')}"
+            )
+            try:
+                send_open_button_message(owner_chat, text)
+            except Exception:
+                # fallback to simple message
+                send_message(owner_chat, text)
+        # also notify admin for monitoring
+        if BOT_ADMIN_CHAT_ID:
+            send_message(BOT_ADMIN_CHAT_ID, f"New cross-promo request from {req['fromChannel']} to {req['toChannel']}")
+    except Exception:
+        if BOT_ADMIN_CHAT_ID:
+            send_message(BOT_ADMIN_CHAT_ID, f"New cross-promo request (failed to notify owner) from {req['fromChannel']} to {req['toChannel']}")
     return jsonify({'ok': True, 'id': str_id})
 
 
 @app.route('/api/request/<req_id>/accept', methods=['POST'])
 def accept_request(req_id):
     body = request.json or {}
-    # mark request accepted, schedule campaign
-    # Find by string id field
+    # mark request accepted and schedule paired campaigns for both channels
     req = requests_col.find_one({'id': req_id})
     if not req:
         return jsonify({'error': 'not found'}), 404
+
+    # record acceptance
     requests_col.update_one({'id': req_id}, {'$set': {'status': 'Accepted', 'accepted_at': datetime.datetime.utcnow()}})
 
-    # schedule campaign (convert selected day/time to next occurrence)
-    day = req.get('daySelected', 'Monday')
-    time_slot = req.get('timeSelected', '09:00 - 10:00 UTC')
-    duration_hours = req.get('duration', 8)
-    
-    start_at = parse_day_time_to_utc(day, time_slot)
-    end_at = calculate_end_time(start_at, duration_hours)
-    
-    camp = {
-        'request_id': req['_id'],
-        'chat_id': body.get('chat_id') or BOT_ADMIN_CHAT_ID,
-        'promo': req.get('promo'),
-        'duration_hours': duration_hours,
-        'status': 'scheduled',
-        'start_at': start_at,
-        'end_at': end_at,
-        'created_at': datetime.datetime.utcnow()
-    }
-    cid = campaigns.insert_one(camp)
-    camp_str_id = str(cid.inserted_id)
-    campaigns.update_one({'_id': cid.inserted_id}, {'$set': {'id': camp_str_id}})
-    # notify requester
+    # selected_promo is the promo chosen by the acceptor to display on the requester's channel
+    selected_promo = body.get('selected_promo') or {}
+
+    # fetch channel docs
+    from_ch = channels.find_one({'id': req.get('fromChannelId')})
+    to_ch = channels.find_one({'id': req.get('toChannelId')})
+
+    now = datetime.datetime.utcnow()
+
+    created_campaign_ids = []
+
+    try:
+        # 1) Schedule posting of acceptor's selected promo on requester's channel (post on A)
+        if from_ch:
+            day = req.get('daySelected') or (from_ch.get('acceptedDays') or (from_ch.get('selected_days') or ['Monday']))[0]
+            time_slot = req.get('timeSelected') or (from_ch.get('availableTimeSlots') or (from_ch.get('time_slots') or ['09:00 - 10:00 UTC']))[0]
+            start_a = parse_day_time_to_utc(day, time_slot)
+            duration_a = find_best_duration(from_ch, req.get('duration'))
+            end_a = calculate_end_time(start_a, duration_a)
+            chat_a = from_ch.get('telegram_id') or BOT_ADMIN_CHAT_ID
+
+            promo_for_a = selected_promo or req.get('promo') or {}
+
+            camp_a = {
+                'request_id': req['_id'],
+                'fromChannelId': req.get('fromChannelId'),
+                'toChannelId': req.get('toChannelId'),
+                'chat_id': chat_a,
+                'promo': promo_for_a,
+                'duration_hours': duration_a,
+                'status': 'scheduled',
+                'start_at': start_a,
+                'end_at': end_a,
+                'created_at': datetime.datetime.utcnow()
+            }
+            r = campaigns.insert_one(camp_a)
+            cid_a = str(r.inserted_id)
+            campaigns.update_one({'_id': r.inserted_id}, {'$set': {'id': cid_a}})
+            created_campaign_ids.append(cid_a)
+
+        # 2) Schedule posting of requester's promo on acceptor's channel (post on B)
+        if to_ch:
+            start_b = find_next_slot_for_channel(to_ch)
+            duration_b = find_best_duration(to_ch, req.get('duration'))
+            end_b = calculate_end_time(start_b, duration_b)
+            chat_b = to_ch.get('telegram_id') or BOT_ADMIN_CHAT_ID
+
+            promo_for_b = req.get('promo') or {}
+
+            camp_b = {
+                'request_id': req['_id'],
+                'fromChannelId': req.get('fromChannelId'),
+                'toChannelId': req.get('toChannelId'),
+                'chat_id': chat_b,
+                'promo': promo_for_b,
+                'duration_hours': duration_b,
+                'status': 'scheduled',
+                'start_at': start_b,
+                'end_at': end_b,
+                'created_at': datetime.datetime.utcnow()
+            }
+            r2 = campaigns.insert_one(camp_b)
+            cid_b = str(r2.inserted_id)
+            campaigns.update_one({'_id': r2.inserted_id}, {'$set': {'id': cid_b}})
+            created_campaign_ids.append(cid_b)
+
+        # Update request with acceptance metadata
+        requests_col.update_one({'id': req_id}, {'$set': {'accepted_by': body.get('accepted_by'), 'selected_promo': selected_promo}})
+
+        # Notify original requester (owner of from_ch) about acceptance
+        try:
+            if from_ch and from_ch.get('owner_id'):
+                owner_a = from_ch.get('owner_id')
+                msg = f"✅ Your cross-promo request {req_id} was accepted by {to_ch.get('name') if to_ch else req.get('toChannel')}!"
+                send_open_button_message(owner_a, msg)
+        except Exception:
+            pass
+
+        # Notify acceptor
+        try:
+            if to_ch and to_ch.get('owner_id'):
+                owner_b = to_ch.get('owner_id')
+                msgb = f"✅ You accepted request {req_id}. Promo scheduled."
+                send_open_button_message(owner_b, msgb)
+        except Exception:
+            pass
+
+    except Exception as e:
+        print(f"Error scheduling paired campaigns: {e}")
+        return jsonify({'error': 'Failed to schedule campaigns'}), 500
+
+    # notify admin for monitoring
     if BOT_ADMIN_CHAT_ID:
-        send_message(BOT_ADMIN_CHAT_ID, f"Your request {req_id} was accepted and scheduled.")
-    return jsonify({'ok': True, 'campaign_id': camp_str_id})
+        send_message(BOT_ADMIN_CHAT_ID, f"Request {req_id} accepted; scheduled campaigns: {', '.join(created_campaign_ids)}")
+
+    return jsonify({'ok': True, 'campaign_ids': created_campaign_ids})
 
 
 @app.route('/api/campaigns', methods=['GET'])

@@ -1,7 +1,8 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 from models import campaigns, requests_col
-from bot import send_message, delete_message
+from bot import send_message, send_photo, delete_message
+from config import APP_URL
 import logging
 
 s = BackgroundScheduler()
@@ -22,10 +23,16 @@ def check_and_post_campaigns():
             # camp should contain: chat_id, promo (text, image, link, cta), duration_hours, message_id
             chat_id = camp.get('chat_id')
             promo = camp.get('promo', {})
+            # Build message text and CTA/button
+            text = f"<b>{promo.get('name')}</b>\n{promo.get('text')}\n{promo.get('link')}\n\nPowered by #Cpgram"
+            cta_text = promo.get('cta') or 'Open'
+            reply_markup = {'inline_keyboard': [[{'text': cta_text, 'url': APP_URL}]]}
+
             if promo.get('image'):
-                res = send_message(chat_id, f"<b>{promo.get('name')}</b>\n{promo.get('text')}\n{promo.get('link')}")
+                res = send_photo(chat_id, promo.get('image'), caption=text, reply_markup=reply_markup)
             else:
-                res = send_message(chat_id, f"<b>{promo.get('name')}</b>\n{promo.get('text')}\n{promo.get('link')}")
+                res = send_message(chat_id, text, reply_markup=reply_markup)
+
             if res and res.get('result'):
                 message_id = res['result']['message_id']
                 campaigns.update_one({'_id': camp['_id']}, {'$set': {'status': 'running', 'message_id': message_id, 'posted_at': datetime.utcnow()}})
