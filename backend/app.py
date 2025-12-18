@@ -1042,7 +1042,7 @@ def initiate_purchase():
         
         # Generate Telegram Stars invoice
         invoice_result = generate_telegram_invoice(
-            user_id=telegram_id,
+            telegram_id=telegram_id,
             transaction_id=transaction_id,
             cpc_amount=cpc_amount,
             stars_cost=stars_cost
