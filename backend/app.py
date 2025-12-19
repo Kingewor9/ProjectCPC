@@ -63,8 +63,59 @@ def find_next_slot_for_channel(channel_doc):
                 continue
     if candidates:
         return min(candidates)
-    # fallback: schedule 1 hour from now
+    # fallback: schedule 1 hour from now if no candidates found
     return now + datetime.timedelta(hours=1)
+
+
+# Normalize channel document for frontend consumption
+def _normalize_channel_for_frontend(ch):
+    try:
+        status_raw = (ch.get('status') or '').lower()
+        if status_raw in ['approved', 'active', 'approved ']:
+            status = 'Active'
+        elif status_raw in ['paused', 'pause']:
+            status = 'Paused'
+        elif status_raw in ['pending', 'pending ']:
+            status = 'Pending'
+        elif status_raw in ['rejected']:
+            status = 'Rejected'
+        else:
+            status = (ch.get('status') or '').capitalize() or 'Pending'
+
+        # Map promo materials to frontend promos shape
+        raw_promos = ch.get('promoMaterials') or ch.get('promos') or []
+        promos = []
+        for p in raw_promos:
+            promos.append({
+                'id': p.get('id'),
+                'name': p.get('name'),
+                'link': p.get('link'),
+                'text': p.get('text'),
+                'image': p.get('image'),
+                'cta': p.get('cta')
+            })
+
+        return {
+            'id': ch.get('id'),
+            'name': ch.get('name'),
+            'topic': ch.get('topic'),
+            'subs': ch.get('subscribers', 0),
+            'xPromos': ch.get('xExchanges', 0),
+            'status': status,
+            'avatar': ch.get('avatar'),
+            'promos': promos
+        }
+    except Exception:
+        return {
+            'id': ch.get('id'),
+            'name': ch.get('name'),
+            'topic': ch.get('topic'),
+            'subs': ch.get('subscribers', 0),
+            'xPromos': ch.get('xExchanges', 0),
+            'status': 'Pending',
+            'avatar': ch.get('avatar'),
+            'promos': []
+        }
 
 app = Flask(__name__)
 CORS(app)
@@ -244,8 +295,9 @@ def telegram_auth():
         })
         token = create_token(telegram_id)
         
-        # Get user's channels
-        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+        # Get user's channels and normalize for frontend
+        user_channels_raw = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+        user_channels = [_normalize_channel_for_frontend(ch) for ch in user_channels_raw]
         
         return jsonify({
             'ok': True,
@@ -281,8 +333,9 @@ def telegram_auth():
             # Create token
             token = create_token(telegram_id)
             
-            # Get user's channels
-            user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+            # Get user's channels and normalize for frontend
+            user_channels_raw = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+            user_channels = [_normalize_channel_for_frontend(ch) for ch in user_channels_raw]
             
             return jsonify({
                 'ok': True,
@@ -306,9 +359,10 @@ def get_me():
     telegram_id = request.telegram_id
     user = users.find_one({'telegram_id': telegram_id}, {'_id': 0})
     if user:
-        # Get user's channels
-        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
-        
+        # Get user's channels and normalize for frontend
+        user_channels_raw = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+        user_channels = [_normalize_channel_for_frontend(ch) for ch in user_channels_raw]
+
         # Add channels to user object
         user['channels'] = user_channels
         
@@ -728,7 +782,8 @@ def get_user_channels():
     telegram_id = request.telegram_id
     
     try:
-        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+        user_channels_raw = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+        user_channels = [_normalize_channel_for_frontend(ch) for ch in user_channels_raw]
         return jsonify(user_channels)
     except Exception as e:
         print(f"Error fetching channels: {e}")
