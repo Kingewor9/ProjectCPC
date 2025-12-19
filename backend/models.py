@@ -25,9 +25,9 @@ def ensure_indexes():
     channels.create_index('id', unique=True)
     channels.create_index('owner_id')
     channels.create_index('status')
-    user_tasks.create_index('user_id', unique=True)
+    user_tasks.create_index('telegram_id', unique=True)
     transactions.create_index('transaction_id', unique=True)
-    transactions.create_index('user_id')
+    transactions.create_index('telegram_id')
     transactions.create_index('status')
 
 
@@ -147,7 +147,7 @@ def validate_channel_with_telegram(username, bot_token):
         return None
 
 
-def add_user_channel(user_id, channel_info, topic, selected_days, promos_per_day, 
+def add_user_channel(telegram_id, channel_info, topic, selected_days, promos_per_day, 
                      price_settings, time_slots, promo_materials):
     """
     Add a new channel to the database
@@ -163,7 +163,7 @@ def add_user_channel(user_id, channel_info, topic, selected_days, promos_per_day
     
     channel_doc = {
         'id': channel_id,
-        'owner_id': user_id,
+        'owner_id': telegram_id,
         'name': channel_info.get('name'),
         'username': channel_info.get('username'),
         'telegram_id': channel_info.get('telegram_id'),
@@ -187,21 +187,20 @@ def add_user_channel(user_id, channel_info, topic, selected_days, promos_per_day
     return channel_id
 
 
-def get_user_channels_list(user_id):
+def get_user_channels_list(telegram_id):
     """
     Get all channels for a specific user
     """
-    return list(channels.find({'owner_id': user_id}, {'_id': 0}))
+    return list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
 
-
-def get_channel_by_id(channel_id, user_id=None):
+def get_channel_by_id(channel_id, telegram_id=None):
     """
     Get a specific channel by ID
-    Optionally filter by user_id to ensure ownership
+    Optionally filter by telegram_id to ensure ownership
     """
     query = {'id': channel_id}
-    if user_id:
-        query['owner_id'] = user_id
+    if telegram_id:
+        query['owner_id'] = telegram_id
     
     return channels.find_one(query, {'_id': 0})
 
