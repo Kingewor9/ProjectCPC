@@ -58,7 +58,7 @@ const TIME_SLOTS = [
 
 export default function AddChannelPage() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, fetchUser } = useAuth();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -242,6 +242,12 @@ export default function AddChannelPage() {
       const result = await apiService.submitChannel(channelData as any);
       
       if (result.ok) {
+        // Refresh user data so dashboard shows the newly submitted channel
+        try {
+          await fetchUser();
+        } catch (e) {
+          // Ignore fetch errors; still navigate to dashboard
+        }
         alert('Channel submitted successfully! Your channel will be moderated within 48-72 hours.');
         navigate('/dashboard');
       }
@@ -290,7 +296,7 @@ export default function AddChannelPage() {
   return (
     <Layout>
       {/* Added pb-20 for mobile and md:pb-8 for desktop to account for bottom nav */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-24 md:pb-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-32 md:pb-8">
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">Configure Your Channel</h1>
           <p className="text-grey-400 text-sm sm:text-base">Set up your channel details and preferences</p>
@@ -302,7 +308,7 @@ export default function AddChannelPage() {
           {/* Channel Info Display */}
           {channelInfo && (
             <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-4 sm:p-6">
-              <h2 className="text-lg sm:text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <h2 className="text-base sm:text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
                 <CheckCircle className="text-green-400" size={20} />
                 Channel Verified
               </h2>
@@ -435,13 +441,13 @@ export default function AddChannelPage() {
               <label className="block text-sm font-medium text-grey-300 mb-3">
                 Available Time Slots (Select {promosPerDay})
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 bg-darkBlue-700 rounded-lg">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 bg-darkBlue-700 rounded-lg">
                 {TIME_SLOTS.map(slot => (
                   <button
                     key={slot}
                     onClick={() => toggleTimeSlot(slot)}
                     disabled={!selectedTimeSlots.includes(slot) && selectedTimeSlots.length >= promosPerDay}
-                    className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                    className={`px-2 py-2 rounded-lg text-[11px] sm:text-xs md:text-sm font-medium transition-all ${
                       selectedTimeSlots.includes(slot)
                         ? 'bg-blue-600 text-white'
                         : 'bg-darkBlue-600 text-grey-400 hover:bg-darkBlue-500 disabled:opacity-30 disabled:cursor-not-allowed'
