@@ -5,8 +5,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { CrossPromoRequest } from '../types';
-import { Clock, CheckCircle, Zap } from 'lucide-react';
+import { CrossPromoRequest, Channel, Promo } from '../types';
+import { Clock, CheckCircle, Zap, X } from 'lucide-react';
 
 export default function RequestsPage() {
   const navigate = useNavigate();
@@ -15,6 +15,9 @@ export default function RequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<CrossPromoRequest | null>(null);
+  const [selectedPromo, setSelectedPromo] = useState<Promo | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -38,15 +41,33 @@ export default function RequestsPage() {
     fetchRequests();
   }, [user, navigate]);
 
-  const handleAcceptRequest = async (requestId: string) => {
+  const openAcceptModal = (request: CrossPromoRequest) => {
+    setSelectedRequest(request);
+    setSelectedPromo(null);
+    setShowAcceptModal(true);
+  };
+
+  const closeAcceptModal = () => {
+    setShowAcceptModal(false);
+    setSelectedRequest(null);
+    setSelectedPromo(null);
+  };
+
+  const handleConfirmAccept = async () => {
+    if (!selectedRequest || !selectedPromo) {
+      setError('Please select a promo');
+      return;
+    }
+
     try {
-      setAccepting(requestId);
-      await apiService.acceptRequest(requestId);
+      setAccepting(selectedRequest.id!);
+      await apiService.acceptRequest(selectedRequest.id!, selectedPromo);
       
       // Update request status locally
       setRequests(requests.map(r => 
-        r.id === requestId ? { ...r, status: 'Accepted' } : r
+        r.id === selectedRequest.id ? { ...r, status: 'Accepted' } : r
       ));
+      closeAcceptModal();
     } catch (err) {
       setError('Failed to accept request');
       console.error('Error accepting request:', err);
@@ -62,6 +83,11 @@ export default function RequestsPage() {
       </Layout>
     );
   }
+
+  // Get the channel that the request is being sent TO (the current user's channel)
+  const getRecipientChannel = (request: CrossPromoRequest): Channel | undefined => {
+    return user.channels.find(ch => ch.id === request.toChannelId);
+  };
 
   const pendingRequests = requests.filter(r => r.status === 'Pending');
   const acceptedRequests = requests.filter(r => r.status === 'Accepted');
@@ -139,7 +165,7 @@ export default function RequestsPage() {
                   {/* Actions */}
                   <div className="flex gap-3">
                     <button
-                      onClick={() => handleAcceptRequest(request.id!)}
+                      onClick={() => openAcceptModal(request)}
                       disabled={accepting === request.id}
                       className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
@@ -236,6 +262,82 @@ export default function RequestsPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Accept Modal */}
+        {showAcceptModal && selectedRequest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">Choose Your Promo</h2>
+                <button
+                  onClick={closeAcceptModal}
+                  className="text-grey-400 hover:text-white transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-grey-300 mb-4">
+                  {selectedRequest.fromChannel} is offering to post on your channel {selectedRequest.toChannel}. 
+                  Choose which of your promos they will post:
+                </p>
+
+                {/* Get the recipient channel */}
+                {getRecipientChannel(selectedRequest) ? (
+                  <div className="space-y-3">
+                    {getRecipientChannel(selectedRequest)!.promos.length === 0 ? (
+                      <div className="bg-yellow-600/10 border border-yellow-600/30 rounded-lg p-4 text-center">
+                        <p className="text-yellow-300 text-sm">
+                          No promos available for {selectedRequest.toChannel}. Please add promos to this channel first.
+                        </p>
+                      </div>
+                    ) : (
+                      getRecipientChannel(selectedRequest)!.promos.map((promo) => (
+                        <button
+                          key={promo.id}
+                          onClick={() => setSelectedPromo(promo)}
+                          className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                            selectedPromo?.id === promo.id
+                              ? 'border-blue-500 bg-blue-600/10'
+                              : 'border-grey-600 bg-darkBlue-700 hover:border-grey-500'
+                          }`}
+                        >
+                          <p className="text-white font-bold">{promo.name}</p>
+                          {promo.text && <p className="text-grey-400 text-sm mt-1">{promo.text}</p>}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-4 text-center">
+                    <p className="text-red-300 text-sm">
+                      Channel not found. This request may be invalid.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={closeAcceptModal}
+                  className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmAccept}
+                  disabled={!selectedPromo || accepting === selectedRequest.id}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={18} />
+                  {accepting === selectedRequest.id ? 'Confirming...' : 'Confirm Accept'}
+                </button>
+              </div>
             </div>
           </div>
         )}

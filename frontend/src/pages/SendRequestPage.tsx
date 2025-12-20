@@ -97,13 +97,30 @@ export default function SendRequestPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!fromChannel || !selectedPromo || !toPartner) {
+    if (!user || !fromChannel || !selectedPromo || !toPartner) {
       setError('Please fill in all required fields');
       return;
     }
 
     if (!partnerType) {
       setError('Please select a partner type');
+      return;
+    }
+
+    // Validate channel status
+    if (fromChannel.status !== 'Active') {
+      setError(`Your channel "${fromChannel.name}" status is ${fromChannel.status}. Only approved channels can send cross-promotion requests.`);
+      return;
+    }
+
+    // Validate CP coins balance
+    if (user.cpcBalance <= 0) {
+      setError('You have 0 CP coins balance. Please top up your account to send cross-promotion requests.');
+      return;
+    }
+
+    if (user.cpcBalance < cpcCost) {
+      setError(`Insufficient balance. You need ${cpcCost} CPC but have ${user.cpcBalance}.`);
       return;
     }
 
@@ -194,8 +211,12 @@ if (!user.channels || user.channels.length === 0) {
                   className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                 >
                   {user.channels.map((channel) => (
-                    <option key={channel.id} value={channel.id}>
-                      {channel.name} ({channel.subs.toLocaleString()} subs)
+                    <option 
+                      key={channel.id} 
+                      value={channel.id}
+                      disabled={channel.status !== 'Active'}
+                    >
+                      {channel.name} ({channel.subs.toLocaleString()} subs) - {channel.status}
                     </option>
                   ))}
                 </select>
@@ -237,6 +258,24 @@ if (!user.channels || user.channels.length === 0) {
               </div>
             )}
           </div>
+
+          {/* Channel Status Warning */}
+          {fromChannel && fromChannel.status !== 'Active' && (
+            <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-4">
+              <p className="text-red-300 font-medium">
+                ⚠️ Your channel "{fromChannel.name}" status is {fromChannel.status}. Only approved channels can send cross-promotion requests.
+              </p>
+            </div>
+          )}
+
+          {/* Balance Warning */}
+          {user.cpcBalance === 0 && (
+            <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-4">
+              <p className="text-red-300 font-medium">
+                ⚠️ You have 0 CP coins balance. Please top up your account to send cross-promotion requests.
+              </p>
+            </div>
+          )}
 
           {/* Partner Type Selection */}
           <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
@@ -355,6 +394,26 @@ if (!user.channels || user.channels.length === 0) {
                           ))}
                         </div>
                       </div>
+                      <div>
+                        <span className="text-grey-400 text-sm">Available Time Slots:</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {toPartner.availableTimeSlots.map((slot) => (
+                            <span key={slot} className="bg-green-600/20 text-green-300 text-xs px-2 py-1 rounded">
+                              {slot}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-grey-400 text-sm">Available Durations (CPC Cost):</span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {Object.entries(toPartner.durationPrices).map(([hours, cost]) => (
+                            <span key={hours} className="bg-purple-600/20 text-purple-300 text-xs px-2 py-1 rounded">
+                              {hours}h - {cost} CPC
+                            </span>
+                          ))}
+                        </div>
+                      </div>
 
                       {/* View Channel Button */}
                       <a
@@ -459,7 +518,14 @@ if (!user.channels || user.channels.length === 0) {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={submitting || user.cpcBalance < cpcCost || !selectedPromo || !toPartner}
+                disabled={
+                  submitting || 
+                  user.cpcBalance <= 0 || 
+                  user.cpcBalance < cpcCost || 
+                  !selectedPromo || 
+                  !toPartner ||
+                  fromChannel?.status !== 'Active'
+                }
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-grey-600 disabled:to-grey-700 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2"
               >
                 <Send size={20} />
