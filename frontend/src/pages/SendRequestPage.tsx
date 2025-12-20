@@ -66,9 +66,17 @@ export default function SendRequestPage() {
         const partnersData = await apiService.listPartners();
         setExistingPartners(partnersData);
         
-        // Set default from channel
+        // CHANGED: Select first APPROVED/ACTIVE channel instead of just first channel
         if (user.channels.length > 0) {
-          setFromChannelId(user.channels[0].id);
+          const activeChannel = user.channels.find(
+            ch => ch.status === 'Active' || ch.status.toLowerCase() === 'approved'
+          );
+          if (activeChannel) {
+            setFromChannelId(activeChannel.id);
+          } else {
+            // No active channels, still set first one but user will see warning
+            setFromChannelId(user.channels[0].id);
+          }
         }
       } catch (err) {
         setError('Failed to load channels');
@@ -81,13 +89,28 @@ export default function SendRequestPage() {
     fetchData();
   }, [user, navigate]);
 
-  // Reset channel selection when partner type changes
+  // CHANGED: Set initial values when partner is selected
   useEffect(() => {
-    setToChannelId('');
-    setDaySelected('Monday');
-    setTimeSelected('09:00 - 10:00 UTC');
-    setDuration('8');
-  }, [partnerType]);
+    if (toPartner) {
+      // Set first accepted day
+      const firstDay = toPartner.acceptedDays?.[0];
+      if (firstDay) {
+        setDaySelected(firstDay);
+      }
+      
+      // Set first time slot
+      const firstSlot = toPartner.availableTimeSlots?.[0];
+      if (firstSlot) {
+        setTimeSelected(firstSlot);
+      }
+      
+      // Set first available duration
+      const durations = Object.keys(toPartner.durationPrices || {});
+      if (durations.length > 0) {
+        setDuration(durations[0]);
+      }
+    }
+  }, [toPartner]);
 
   // Auto-select first available channel when filtered list changes
   useEffect(() => {
@@ -393,6 +416,8 @@ export default function SendRequestPage() {
                           <p className="text-white font-medium">{toPartner.lang}</p>
                         </div>
                       </div>
+                      
+                      {/* CHANGED: Only show accepted days */}
                       <div>
                         <span className="text-grey-400 text-sm">Accepted Days:</span>
                         <div className="flex flex-wrap gap-2 mt-1">
@@ -403,25 +428,11 @@ export default function SendRequestPage() {
                           ))}
                         </div>
                       </div>
+
+                      {/* ADDED: Cross-promotions per day */}
                       <div>
-                        <span className="text-grey-400 text-sm">Available Time Slots:</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {(toPartner?.availableTimeSlots || []).map((slot) => (
-                            <span key={slot} className="bg-green-600/20 text-green-300 text-xs px-2 py-1 rounded">
-                              {slot}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-grey-400 text-sm">Available Durations (CPC Cost):</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {Object.entries(toPartner?.durationPrices || {}).map(([hours, cost]) => (
-                            <span key={hours} className="bg-purple-600/20 text-purple-300 text-xs px-2 py-1 rounded">
-                              {hours}h - {cost} CPC
-                            </span>
-                          ))}
-                        </div>
+                        <span className="text-grey-400 text-sm">Cross-Promotions Per Day:</span>
+                        <p className="text-white font-medium">{toPartner.promosPerDay || 1}</p>
                       </div>
 
                       {/* View Channel Button */}
