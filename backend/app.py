@@ -46,6 +46,23 @@ def find_best_duration(channel_doc, requested_hours):
         return int(requested_hours or 8)
 
 
+def find_least_duration(channel_doc):
+    """Find the least (minimum) duration that a channel supports"""
+    try:
+        durations_map = channel_doc.get('durationPrices') or channel_doc.get('price_settings') or {}
+        durations = []
+        for k in durations_map.keys():
+            try:
+                durations.append(int(k))
+            except Exception:
+                continue
+        if not durations:
+            return 2  # default fallback
+        return min(durations)
+    except Exception:
+        return 2  # default fallback
+
+
 def find_next_slot_for_channel(channel_doc):
     # Try to use channel's configured acceptedDays/availableTimeSlots or selected_days/time_slots
     days = channel_doc.get('acceptedDays') or channel_doc.get('selected_days') or []
@@ -63,62 +80,42 @@ def find_next_slot_for_channel(channel_doc):
                 continue
     if candidates:
         return min(candidates)
-    # fallback: schedule 1 hour from now if no candidates found
-    return now + datetime.timedelta(hours=1)
+    return now + datetime.timedelta(days=1)
 
-
-# Normalize channel document for frontend consumption
-def _normalize_channel_for_frontend(ch):
-    try:
-        status_raw = (ch.get('status') or '').lower()
-        if status_raw in ['approved', 'active', 'approved ']:
-            status = 'Active'
-        elif status_raw in ['paused', 'pause']:
-            status = 'Paused'
-        elif status_raw in ['pending', 'pending ']:
-            status = 'Pending'
-        elif status_raw in ['rejected']:
-            status = 'Rejected'
-        else:
-            status = (ch.get('status') or '').capitalize() or 'Pending'
-
-        # Map promo materials to frontend promos shape
-        raw_promos = ch.get('promoMaterials') or ch.get('promos') or []
-        promos = []
-        for p in raw_promos:
-            promos.append({
-                'id': p.get('id'),
-                'name': p.get('name'),
-                'link': p.get('link'),
-                'text': p.get('text'),
-                'image': p.get('image'),
-                'cta': p.get('cta')
-            })
-
-        return {
-            'id': ch.get('id'),
-            'name': ch.get('name'),
-            'topic': ch.get('topic'),
-            'subs': ch.get('subscribers', 0),
-            'xPromos': ch.get('xExchanges', 0),
-            'status': status,
-            'avatar': ch.get('avatar'),
-            'promos': promos
-        }
-    except Exception:
-        return {
-            'id': ch.get('id'),
-            'name': ch.get('name'),
-            'topic': ch.get('topic'),
-            'subs': ch.get('subscribers', 0),
-            'xPromos': ch.get('xExchanges', 0),
-            'status': 'Pending',
-            'avatar': ch.get('avatar'),
-            'promos': []
-        }
 
 app = Flask(__name__)
 CORS(app)
+
+
+def _normalize_channel_for_frontend(channel):
+    """Normalize channel document for frontend consumption"""
+    # Build duration prices from price_settings
+    duration_prices = {}
+    price_settings = channel.get('price_settings', {})
+    for hours, settings in price_settings.items():
+        if settings.get('enabled'):
+            duration_prices[hours] = settings.get('price', 0)
+    
+    return {
+        'id': channel.get('id'),
+        'name': channel.get('name'),
+        'topic': channel.get('topic'),
+        'subs': channel.get('subscribers', 0),
+        'lang': channel.get('language', 'en'),
+        'avatar': channel.get('avatar', 'https://placehold.co/60x60'),
+        'status': channel.get('status'),
+        'acceptedDays': channel.get('selected_days', []),
+        'availableTimeSlots': channel.get('time_slots', []),
+        'durationPrices': duration_prices,
+        'telegram_chat': channel.get('username', ''),
+        'xExchanges': requests_col.count_documents({
+            'status': 'Accepted',
+            '$or': [
+                {'fromChannelId': channel.get('id')},
+                {'toChannelId': channel.get('id')}
+            ]
+        })
+    }
 
 
 def validate_telegram_webapp_data(init_data: str, bot_token: str) -> dict:
@@ -518,9 +515,40 @@ def list_requests():
 
 
 @app.route('/api/request', methods=['POST'])
+@token_required
 def create_request():
     data = request.json
-    # expected fields: fromChannelId, toChannelId, daySelected, timeSelected, duration, cpcCost, promo
+    telegram_id = request.telegram_id
+    
+    # Validate channel status (must be approved/active, not pending or rejected)
+    from_channel = channels.find_one({'id': data.get('fromChannelId')})
+    if not from_channel:
+        return jsonify({'error': 'Channel not found'}), 404
+    
+    status_raw = (from_channel.get('status') or '').lower()
+    if status_raw in ['pending', 'rejected']:
+        return jsonify({'error': f'Channel status is {status_raw}. Only approved channels can send cross-promotion requests.'}), 403
+    
+    # Validate user has sufficient CP coins balance
+    user = users.find_one({'telegram_id': telegram_id})
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    current_balance = user.get('cpcBalance', 0)
+    cpc_cost = data.get('cpcCost', 0)
+    
+    if current_balance <= 0:
+        return jsonify({'error': 'You have 0 CP coins balance. Please top up your account to send cross-promotion requests.'}), 403
+    
+    if current_balance < cpc_cost:
+        return jsonify({'error': f'Insufficient balance. You need {cpc_cost} CPC but have {current_balance}.'}), 403
+    
+    # Deduct the cost from user's balance
+    users.update_one(
+        {'telegram_id': telegram_id},
+        {'$inc': {'cpcBalance': -cpc_cost}}
+    )
+    
     req = {
         'fromChannel': data.get('fromChannel'),
         'fromChannelId': data.get('fromChannelId'),
@@ -562,45 +590,55 @@ def create_request():
 
 
 @app.route('/api/request/<req_id>/accept', methods=['POST'])
+@token_required
 def accept_request(req_id):
+    telegram_id = request.telegram_id
     body = request.json or {}
     # mark request accepted and schedule paired campaigns for both channels
     req = requests_col.find_one({'id': req_id})
     if not req:
         return jsonify({'error': 'not found'}), 404
 
+    # Get recipient channel (the one accepting the request)
+    to_ch = channels.find_one({'id': req.get('toChannelId')})
+    if not to_ch:
+        return jsonify({'error': 'Recipient channel not found'}), 404
+    
+    # Verify user is the owner of the recipient channel
+    if to_ch.get('owner_id') != telegram_id:
+        return jsonify({'error': 'You do not have permission to accept this request'}), 403
+
     # record acceptance
     requests_col.update_one({'id': req_id}, {'$set': {'status': 'Accepted', 'accepted_at': datetime.datetime.utcnow()}})
 
-    # selected_promo is the promo chosen by the acceptor to display on the requester's channel
+    # selected_promo is the promo chosen by the acceptor (to be posted on requester's channel)
     selected_promo = body.get('selected_promo') or {}
 
     # fetch channel docs
     from_ch = channels.find_one({'id': req.get('fromChannelId')})
-    to_ch = channels.find_one({'id': req.get('toChannelId')})
 
     now = datetime.datetime.utcnow()
-
     created_campaign_ids = []
 
     try:
-        # 1) Schedule posting of acceptor's selected promo on requester's channel (post on A)
+        # 1) Schedule posting of acceptor's selected promo on requester's channel
+        # This is User B's promo posted on User A's channel
+        # Use the day, time, and least duration that User A (requester) supports
         if from_ch:
             day = req.get('daySelected') or (from_ch.get('acceptedDays') or (from_ch.get('selected_days') or ['Monday']))[0]
             time_slot = req.get('timeSelected') or (from_ch.get('availableTimeSlots') or (from_ch.get('time_slots') or ['09:00 - 10:00 UTC']))[0]
             start_a = parse_day_time_to_utc(day, time_slot)
-            duration_a = find_best_duration(from_ch, req.get('duration'))
+            # Use the least duration that the requester (User A) supports
+            duration_a = find_least_duration(from_ch)
             end_a = calculate_end_time(start_a, duration_a)
             chat_a = from_ch.get('telegram_id') or BOT_ADMIN_CHAT_ID
-
-            promo_for_a = selected_promo or req.get('promo') or {}
 
             camp_a = {
                 'request_id': req['_id'],
                 'fromChannelId': req.get('fromChannelId'),
                 'toChannelId': req.get('toChannelId'),
                 'chat_id': chat_a,
-                'promo': promo_for_a,
+                'promo': selected_promo,
                 'duration_hours': duration_a,
                 'status': 'scheduled',
                 'start_at': start_a,
@@ -612,10 +650,12 @@ def accept_request(req_id):
             campaigns.update_one({'_id': r.inserted_id}, {'$set': {'id': cid_a}})
             created_campaign_ids.append(cid_a)
 
-        # 2) Schedule posting of requester's promo on acceptor's channel (post on B)
+        # 2) Schedule posting of requester's promo on acceptor's channel at the next available slot
+        # This is User A's promo posted on User B's channel
         if to_ch:
             start_b = find_next_slot_for_channel(to_ch)
-            duration_b = find_best_duration(to_ch, req.get('duration'))
+            # Use the least duration that the acceptor (User B) supports
+            duration_b = find_least_duration(to_ch)
             end_b = calculate_end_time(start_b, duration_b)
             chat_b = to_ch.get('telegram_id') or BOT_ADMIN_CHAT_ID
 
@@ -639,7 +679,7 @@ def accept_request(req_id):
             created_campaign_ids.append(cid_b)
 
         # Update request with acceptance metadata
-        requests_col.update_one({'id': req_id}, {'$set': {'accepted_by': body.get('accepted_by'), 'selected_promo': selected_promo}})
+        requests_col.update_one({'id': req_id}, {'$set': {'accepted_by': telegram_id, 'selected_promo': selected_promo}})
 
         # Notify original requester (owner of from_ch) about acceptance
         try:

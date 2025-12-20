@@ -12,7 +12,7 @@ JWT_SECRET = os.getenv('JWT_SECRET', 'your-secret-key-change-in-production')
 JWT_EXPIRY_HOURS = 24
 ADMIN_TELEGRAM_ID = os.getenv('ADMIN_TELEGRAM_ID', '123456789')
 APP_URL = os.getenv('APP_URL', 'http://localhost:3000')
-BOT_URL = os.getenv('BOT_URL', 'http://localhost:3000')
+BOT_URL = os.getenv('BOT_URL', APP_URL)  # Fall back to APP_URL if BOT_URL not set
 
 
 def telegram_secret_key():
