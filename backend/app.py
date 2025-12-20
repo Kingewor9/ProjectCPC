@@ -1596,18 +1596,23 @@ def moderate_channel(channel_id):
 
         try:
             if owner_id:
+                # Ensure owner_id is converted to string for Telegram API
+                owner_chat_id = str(owner_id)
                 try:
-                    send_open_button_message(owner_id, message)
-                except Exception:
-                    send_message(owner_id, message)
+                    send_open_button_message(owner_chat_id, message)
+                except Exception as e:
+                    print(f"Failed to send with button, trying without: {e}")
+                    send_message(owner_chat_id, message)
             else:
                 # Owner id not available, notify admin
                 if BOT_ADMIN_CHAT_ID:
                     send_message(BOT_ADMIN_CHAT_ID, message)
-        except Exception:
+        except Exception as e:
             # Last-resort: notify admin about moderation event
+            print(f"Error notifying user of moderation: {e}")
             if BOT_ADMIN_CHAT_ID:
                 send_message(BOT_ADMIN_CHAT_ID, f"[Moderation] {channel_name} was {status_text} (failed to notify owner)")
+
         
         return jsonify({
             'ok': True,

@@ -16,7 +16,14 @@ def send_message(chat_id, text, parse_mode='HTML', reply_markup=None):
         r = requests.post(url, json=payload, timeout=10)
         r.raise_for_status()
         return r.json()
+    except requests.exceptions.HTTPError as e:
+        logging.error(f'Failed to send message to chat_id {chat_id}')
+        logging.error(f'Status code: {e.response.status_code}')
+        logging.error(f'Response: {e.response.text}')
+        logging.exception('HTTPError details')
+        return None
     except Exception as e:
+        logging.error(f'Failed to send message to chat_id {chat_id}')
         logging.exception('Failed to send message')
         return None
 
