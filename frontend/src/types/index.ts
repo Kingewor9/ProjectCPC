@@ -56,6 +56,7 @@ export interface Partner {
   durationPrices: Record<string, number>;
   telegram_chat: string;
   telegram_user_id?: string;
+  promosPerDay?: number;
 }
 
 // Request Types
