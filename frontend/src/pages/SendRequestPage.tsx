@@ -47,16 +47,16 @@ export default function SendRequestPage() {
       return;
     }
 
-     // ADDED: Check if user has any channels
-  if (!user.channels || user.channels.length === 0) {
-    setError('You need to add a channel before sending promotions');
-    setLoading(false);
-    return;
-  }
+    // Check if user has any channels - this will trigger the empty state render below
+    if (!user.channels || user.channels.length === 0) {
+      setLoading(false);
+      return; // Don't fetch data if no channels
+    }
 
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null); // Clear any previous errors
         
         // Fetch all channels (for discover)
         const allData = await apiService.listAllChannels();
@@ -66,7 +66,8 @@ export default function SendRequestPage() {
         const partnersData = await apiService.listPartners();
         setExistingPartners(partnersData);
         
-        if (user?.channels.length > 0) {
+        // Set default from channel
+        if (user.channels.length > 0) {
           setFromChannelId(user.channels[0].id);
         }
       } catch (err) {
@@ -154,7 +155,8 @@ export default function SendRequestPage() {
     }
   };
 
-  if (loading || !user) {
+  // Show loading spinner while fetching data
+  if (loading) {
     return (
       <Layout>
         <LoadingSpinner />
@@ -162,27 +164,33 @@ export default function SendRequestPage() {
     );
   }
 
-  // ADDED: Show empty state if no channels
-if (!user.channels || user.channels.length === 0) {
-  return (
-    <Layout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-12 text-center">
-          <Send size={48} className="mx-auto mb-4 text-grey-600" />
-          <h2 className="text-2xl font-bold text-white mb-2">No Channels Found</h2>
-          <p className="text-grey-400 mb-6">You need to add a channel before you can send promotions</p>
-          <button
-            onClick={() => navigate('/add-channel')}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all"
-          >
-            Add Your First Channel
-          </button>
-        </div>
-      </div>
-        </Layout>
-  );
-}
+  // Redirect to login if no user
+  if (!user) {
+    return null;
+  }
 
+  // Show empty state if no channels
+  if (!user.channels || user.channels.length === 0) {
+    return (
+      <Layout>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-12 text-center">
+            <Send size={48} className="mx-auto mb-4 text-grey-600" />
+            <h2 className="text-2xl font-bold text-white mb-2">No Channels Found</h2>
+            <p className="text-grey-400 mb-6">You need to add a channel before you can send promotions</p>
+            <button
+              onClick={() => navigate('/add-channel')}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all"
+            >
+              Add Your First Channel
+            </button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Main form render - user has channels
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -211,7 +219,7 @@ if (!user.channels || user.channels.length === 0) {
                   }}
                   className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                 >
-                  {(user.channels || []).map((channel) => (
+                  {user.channels.map((channel) => (
                     <option 
                       key={channel.id} 
                       value={channel.id}
@@ -476,7 +484,7 @@ if (!user.channels || user.channels.length === 0) {
                   <label className="block text-sm font-medium text-grey-300 mb-2">
                     Duration (hours)
                   </label>
-                    <select
+                  <select
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
                     className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
