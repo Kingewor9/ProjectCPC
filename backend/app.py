@@ -1581,23 +1581,33 @@ def moderate_channel(channel_id):
             {'$set': update_data}
         )
         
-        # Notify channel owner
+        # Notify channel owner (try owner first, fall back to admin)
         owner_id = channel.get('owner_id')
-        if owner_id and BOT_ADMIN_CHAT_ID:
-            channel_name = channel.get('name', 'Your channel')
-            status_text = 'approved' if action == 'approve' else 'rejected'
-            message = f"📢 Channel Update\n\n"
-            message += f"Your channel '{channel_name}' has been {status_text}.\n"
-            
-            if reason:
-                message += f"\nReason: {reason}"
-            
-            if action == 'approve':
-                message += f"\n\n✅ Your channel is now live and visible to other users!"
-            
-            # Try to send to owner (if we have their chat_id stored)
-            # For now, we'll notify admin
-            send_message(BOT_ADMIN_CHAT_ID, message)
+        channel_name = channel.get('name', 'Your channel')
+        status_text = 'approved' if action == 'approve' else 'rejected'
+        message = f"📢 Channel Update\n\n"
+        message += f"Your channel '{channel_name}' has been {status_text}.\n"
+
+        if reason:
+            message += f"\nReason: {reason}"
+
+        if action == 'approve':
+            message += f"\n\n✅ Your channel is now live and visible to other users!"
+
+        try:
+            if owner_id:
+                try:
+                    send_open_button_message(owner_id, message)
+                except Exception:
+                    send_message(owner_id, message)
+            else:
+                # Owner id not available, notify admin
+                if BOT_ADMIN_CHAT_ID:
+                    send_message(BOT_ADMIN_CHAT_ID, message)
+        except Exception:
+            # Last-resort: notify admin about moderation event
+            if BOT_ADMIN_CHAT_ID:
+                send_message(BOT_ADMIN_CHAT_ID, f"[Moderation] {channel_name} was {status_text} (failed to notify owner)")
         
         return jsonify({
             'ok': True,
