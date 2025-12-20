@@ -211,13 +211,13 @@ if (!user.channels || user.channels.length === 0) {
                   }}
                   className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                 >
-                  {user.channels.map((channel) => (
+                  {(user.channels || []).map((channel) => (
                     <option 
                       key={channel.id} 
                       value={channel.id}
                       disabled={channel.status !== 'Active'}
                     >
-                      {channel.name} ({channel.subs.toLocaleString()} subs) - {channel.status}
+                      {channel.name} ({(channel.subs || 0).toLocaleString()} subs) - {channel.status}
                     </option>
                   ))}
                 </select>
@@ -234,7 +234,7 @@ if (!user.channels || user.channels.length === 0) {
                     className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                   >
                     <option value="">Select a promo</option>
-                    {fromChannel.promos.map((promo) => (
+                    {(fromChannel?.promos || []).map((promo) => (
                       <option key={promo.id} value={promo.id}>
                         {promo.name}
                       </option>
@@ -388,9 +388,9 @@ if (!user.channels || user.channels.length === 0) {
                       <div>
                         <span className="text-grey-400 text-sm">Accepted Days:</span>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {toPartner.acceptedDays.map((day) => (
+                          {(toPartner?.acceptedDays || []).map((day) => (
                             <span key={day} className="bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded">
-                              {day.slice(0, 3)}
+                              {String(day).slice(0, 3)}
                             </span>
                           ))}
                         </div>
@@ -398,7 +398,7 @@ if (!user.channels || user.channels.length === 0) {
                       <div>
                         <span className="text-grey-400 text-sm">Available Time Slots:</span>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {toPartner.availableTimeSlots.map((slot) => (
+                          {(toPartner?.availableTimeSlots || []).map((slot) => (
                             <span key={slot} className="bg-green-600/20 text-green-300 text-xs px-2 py-1 rounded">
                               {slot}
                             </span>
@@ -408,7 +408,7 @@ if (!user.channels || user.channels.length === 0) {
                       <div>
                         <span className="text-grey-400 text-sm">Available Durations (CPC Cost):</span>
                         <div className="flex flex-wrap gap-2 mt-1">
-                          {Object.entries(toPartner.durationPrices).map(([hours, cost]) => (
+                          {Object.entries(toPartner?.durationPrices || {}).map(([hours, cost]) => (
                             <span key={hours} className="bg-purple-600/20 text-purple-300 text-xs px-2 py-1 rounded">
                               {hours}h - {cost} CPC
                             </span>
@@ -447,7 +447,7 @@ if (!user.channels || user.channels.length === 0) {
                     onChange={(e) => setDaySelected(e.target.value)}
                     className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                   >
-                    {toPartner.acceptedDays.map((day) => (
+                    {(toPartner?.acceptedDays || []).map((day) => (
                       <option key={day} value={day}>
                         {day}
                       </option>
@@ -464,7 +464,7 @@ if (!user.channels || user.channels.length === 0) {
                     onChange={(e) => setTimeSelected(e.target.value)}
                     className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                   >
-                    {toPartner.availableTimeSlots.map((slot) => (
+                    {(toPartner?.availableTimeSlots || []).map((slot) => (
                       <option key={slot} value={slot}>
                         {slot}
                       </option>
@@ -476,12 +476,12 @@ if (!user.channels || user.channels.length === 0) {
                   <label className="block text-sm font-medium text-grey-300 mb-2">
                     Duration (hours)
                   </label>
-                  <select
+                    <select
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
                     className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                   >
-                    {Object.keys(toPartner.durationPrices).map((d) => (
+                    {Object.keys(toPartner?.durationPrices || {}).map((d) => (
                       <option key={d} value={d}>
                         {d} hours
                       </option>
