@@ -383,7 +383,7 @@ def get_me():
             { 'id': 'c3', 'name': 'Tech Insights', 'topic': 'Technology', 'subs': 21000, 'xPromos': 80, 'status': 'Active', 'avatar': 'https://placehold.co/40x40/000000/FFFFFF?font=inter&text=TI', 'promos': [] }
         ]
     }
-    return jsonify(demo_user)
+    #return jsonify(demo_user)
 
 
 @app.route('/api/partners', methods=['GET'])
