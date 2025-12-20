@@ -8,6 +8,7 @@ import apiService from '../services/api';
 import { Partner, CrossPromoRequest } from '../types';
 import { Send, AlertCircle, ExternalLink, Users, Compass } from 'lucide-react';
 
+// Define partner type
 type PartnerType = 'existing' | 'discover';
 
 export default function SendRequestPage() {
