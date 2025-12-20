@@ -109,6 +109,7 @@ def _normalize_channel_for_frontend(channel):
         'durationPrices': duration_prices,
         'telegram_chat': channel.get('username', ''),
         'promos': channel.get('promo_materials', []),
+        'promosPerDay': channel.get('promos_per_day', 1),
         'xExchanges': requests_col.count_documents({
             'status': 'Accepted',
             '$or': [
