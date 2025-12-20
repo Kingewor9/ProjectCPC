@@ -137,8 +137,8 @@ class ApiService {
     return response.data;
   }
 
-  async acceptRequest(requestId: string, chatId?: string): Promise<{ ok: boolean; campaign_id: string }> {
-    const response = await this.api.post(`/api/request/${requestId}/accept`, { chat_id: chatId });
+  async acceptRequest(requestId: string, selectedPromo?: any): Promise<{ ok: boolean; campaign_id: string }> {
+    const response = await this.api.post(`/api/request/${requestId}/accept`, { selected_promo: selectedPromo });
     return response.data;
   }
 
