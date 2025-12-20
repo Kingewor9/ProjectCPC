@@ -1,6 +1,6 @@
 import requests
 import json
-from config import TELEGRAM_BOT_TOKEN, APP_URL
+from config import TELEGRAM_BOT_TOKEN, BOT_URL
 import logging
 
 API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
@@ -36,8 +36,8 @@ def send_photo(chat_id, photo_url, caption=None, parse_mode='HTML', reply_markup
 
 
 def send_open_button_message(chat_id, text, button_text='Open'):
-    """Send a message with an inline URL button that opens the web app (APP_URL)."""
-    keyboard = {'inline_keyboard': [[{'text': button_text, 'url': APP_URL}]]}
+    """Send a message with an inline URL button that opens the mini app (BOT_URL)."""
+    keyboard = {'inline_keyboard': [[{'text': button_text, 'url': BOT_URL}]]}
     return send_message(chat_id, text, reply_markup=keyboard)
 
 
