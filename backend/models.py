@@ -68,6 +68,57 @@ def upsert_user(telegram_user):
     users.update_one({'telegram_id': telegram_id}, {'$set': telegram_user, '$setOnInsert': {'created_at': datetime.datetime.utcnow()}}, upsert=True)
     return users.find_one({'telegram_id': telegram_id}, {'_id': 0})
 
+def get_telegram_file_id_from_chat(chat_id, bot_token):
+    """
+    Get the file_id of a channel's profile photo.
+    This is preferable to storing URLs since file_ids don't expire.
+    Returns tuple: (file_id, telegram_id) or (None, None) if no photo
+    """
+    try:
+        api_url = f"https://api.telegram.org/bot{bot_token}/getChat"
+        response = requests.get(api_url, params={'chat_id': chat_id}, timeout=10)
+        
+        if response.status_code != 200:
+            return None, None
+        
+        data = response.json()
+        if not data.get('ok'):
+            return None, None
+        
+        chat = data.get('result', {})
+        
+        if chat.get('photo'):
+            file_id = chat['photo'].get('big_file_id') or chat['photo'].get('small_file_id')
+            telegram_id = str(chat.get('id'))
+            return file_id, telegram_id
+        
+        return None, str(chat.get('id'))
+    except Exception as e:
+        print(f"Error getting Telegram file_id: {e}")
+        return None, None
+
+
+def get_telegram_file_url_from_file_id(file_id, bot_token):
+    """
+    Convert a Telegram file_id to a download URL.
+    This function is called on-demand to ensure we always have fresh URLs.
+    """
+    try:
+        file_url = f"https://api.telegram.org/bot{bot_token}/getFile"
+        file_response = requests.get(file_url, params={'file_id': file_id}, timeout=10)
+        
+        if file_response.status_code == 200:
+            file_data = file_response.json()
+            if file_data.get('ok'):
+                file_path = file_data['result'].get('file_path')
+                return f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+        
+        return None
+    except Exception as e:
+        print(f"Error getting Telegram file URL: {e}")
+        return None
+
+
 def validate_channel_with_telegram(username, bot_token):
     """
     Validate a Telegram channel using the Bot API
@@ -105,19 +156,18 @@ def validate_channel_with_telegram(username, bot_token):
             if member_data.get('ok'):
                 subscribers = member_data.get('result', 0)
         
-        # Get channel photo
+        # Get channel photo - store file_id instead of direct URL
         avatar = 'https://placehold.co/100x100/0078d4/FFFFFF?font=inter&text=CH'
+        avatar_file_id = None
         if chat.get('photo'):
             # Get the file path for the photo
             file_id = chat['photo'].get('big_file_id') or chat['photo'].get('small_file_id')
             if file_id:
-                file_url = f"https://api.telegram.org/bot{bot_token}/getFile"
-                file_response = requests.get(file_url, params={'file_id': file_id}, timeout=10)
-                if file_response.status_code == 200:
-                    file_data = file_response.json()
-                    if file_data.get('ok'):
-                        file_path = file_data['result'].get('file_path')
-                        avatar = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+                avatar_file_id = file_id
+                # Generate fresh URL from file_id
+                file_url = get_telegram_file_url_from_file_id(file_id, bot_token)
+                if file_url:
+                    avatar = file_url
         
         # Extract language from description or default to English
         language = 'English'  # Default
@@ -133,6 +183,7 @@ def validate_channel_with_telegram(username, bot_token):
             'name': chat.get('title', 'Unknown Channel'),
             'username': chat.get('username', username),
             'avatar': avatar,
+            'avatar_file_id': avatar_file_id,  # Store file_id for later refresh
             'subscribers': subscribers,
             'avgViews24h': avg_views_24h,
             'language': language,
@@ -168,6 +219,7 @@ def add_user_channel(telegram_id, channel_info, topic, selected_days, promos_per
         'username': channel_info.get('username'),
         'telegram_id': channel_info.get('telegram_id'),
         'avatar': channel_info.get('avatar'),
+        'avatar_file_id': channel_info.get('avatar_file_id'),  # Store file_id for refresh
         'subscribers': channel_info.get('subscribers', 0),
         'avgViews24h': channel_info.get('avgViews24h', 0),
         'language': channel_info.get('language', 'English'),

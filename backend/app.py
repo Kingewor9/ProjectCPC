@@ -89,6 +89,8 @@ CORS(app)
 
 def _normalize_channel_for_frontend(channel):
     """Normalize channel document for frontend consumption"""
+    from models import get_telegram_file_url_from_file_id
+    
     # Build duration prices from price_settings
     duration_prices = {}
     price_settings = channel.get('price_settings', {})
@@ -99,6 +101,20 @@ def _normalize_channel_for_frontend(channel):
     # If duration prices still empty, try to build from durationPrices field (backward compat)
     if not duration_prices:
         duration_prices = channel.get('durationPrices', {})
+    
+    # REFRESH AVATAR URL: If we have a file_id, regenerate the URL on each request
+    # This ensures we always have a fresh, valid URL from Telegram
+    avatar_url = channel.get('avatar', 'https://placehold.co/60x60')
+    avatar_file_id = channel.get('avatar_file_id')
+    if avatar_file_id:
+        try:
+            fresh_url = get_telegram_file_url_from_file_id(avatar_file_id, TELEGRAM_BOT_TOKEN)
+            if fresh_url:
+                avatar_url = fresh_url
+        except Exception as e:
+            # If refresh fails, fall back to stored URL
+            print(f"Failed to refresh avatar URL: {e}")
+            pass
             
     # ADDED: Normalize promos to ensure they have all required fields
     raw_promos = channel.get('promo_materials', [])
@@ -139,7 +155,7 @@ def _normalize_channel_for_frontend(channel):
         'topic': channel.get('topic'),
         'subs': channel.get('subscribers', 0),
         'lang': channel.get('language', 'en'),
-        'avatar': channel.get('avatar', 'https://placehold.co/60x60'),
+        'avatar': avatar_url,
         'status': channel.get('status'),
         'acceptedDays': selected_days,
         'availableTimeSlots': time_slots,
