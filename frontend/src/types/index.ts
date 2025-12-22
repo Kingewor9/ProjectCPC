@@ -28,7 +28,7 @@ export interface Channel {
   topic: string;
   subs: number;
   xPromos?: number;
-  status: 'Active' | 'Paused';
+  status: 'Active' | 'Paused' | 'approved' | 'rejected' | 'pending';
   avatar: string;
   promos: Promo[];
 }
@@ -37,7 +37,7 @@ export interface Promo {
   id: string;
   name: string;
   link: string;
-  text?: string;
+  text: string;
   image?: string;
   cta?: string;
 }
