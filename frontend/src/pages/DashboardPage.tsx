@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
 import { TrendingUp, Send, Zap, Users, Plus, Shield } from 'lucide-react';
 
@@ -157,10 +158,11 @@ export default function DashboardPage() {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3 flex-1">
-                    <img
+                    <ChannelAvatar 
                       src={channel.avatar}
                       alt={channel.name}
-                      className="w-12 h-12 rounded-lg"
+                      className="w-12 h-12"
+                      channelName={channel.name}
                     />
                     <div>
                       <h3 className="text-lg font-bold text-white">{channel.name}</h3>

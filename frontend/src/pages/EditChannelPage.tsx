@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { Plus, X, CheckCircle, Save, Pause, Play } from 'lucide-react';
@@ -288,10 +289,11 @@ export default function EditChannelPage() {
           <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Channel Information</h2>
             <div className="flex items-start gap-4">
-              <img 
+              <ChannelAvatar 
                 src={channel.avatar} 
                 alt={channel.name}
-                className="w-20 h-20 rounded-lg"
+                className="w-20 h-20"
+                channelName={channel.name}
               />
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">

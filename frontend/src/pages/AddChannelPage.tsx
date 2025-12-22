@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import ErrorAlert from '../components/ErrorAlert';
+import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { Plus, X, CheckCircle, AlertCircle} from 'lucide-react';
@@ -313,10 +314,11 @@ export default function AddChannelPage() {
                 Channel Verified
               </h2>
               <div className="flex flex-col sm:flex-row items-start gap-4">
-                <img 
+                <ChannelAvatar 
                   src={channelInfo.avatar} 
                   alt={channelInfo.name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg"
+                  className="w-16 h-16 sm:w-20 sm:h-20"
+                  channelName={channelInfo.name}
                 />
                 <div className="flex-1 w-full">
                   <h3 className="text-xl sm:text-2xl font-bold text-white">{channelInfo.name}</h3>

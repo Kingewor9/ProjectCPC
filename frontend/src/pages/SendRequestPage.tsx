@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { Partner, CrossPromoRequest } from '../types';
@@ -412,7 +413,12 @@ export default function SendRequestPage() {
                           <h3 className="text-white font-bold">{toPartner.name}</h3>
                           <p className="text-grey-400 text-sm">{toPartner.topic}</p>
                         </div>
-                        <img src={toPartner.avatar} alt={toPartner.name} className="w-12 h-12 rounded-lg" />
+                        <ChannelAvatar 
+                          src={toPartner.avatar} 
+                          alt={toPartner.name} 
+                          className="w-12 h-12"
+                          channelName={toPartner.name}
+                        />
                       </div>
                       <div className="grid grid-cols-2 text-sm">
                         <div>

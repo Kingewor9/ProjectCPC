@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { Partner } from '../types';
@@ -102,11 +103,14 @@ export default function PartnersPage() {
             >
               {/* Header */}
               <div className="h-32 bg-gradient-to-br from-blue-600/20 to-darkBlue-700 relative">
-                <img
-                  src={partner.avatar}
-                  alt={partner.name}
-                  className="absolute bottom-4 left-4 w-16 h-16 rounded-lg border-2 border-darkBlue-800 group-hover:scale-105 transition-transform"
-                />
+                <div className="absolute bottom-4 left-4 group-hover:scale-105 transition-transform">
+                  <ChannelAvatar
+                    src={partner.avatar}
+                    alt={partner.name}
+                    className="w-16 h-16 border-2 border-darkBlue-800"
+                    channelName={partner.name}
+                  />
+                </div>
               </div>
 
               {/* Content */}

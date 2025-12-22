@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { CheckCircle, XCircle, Eye, Search, Filter, Calendar, Users, TrendingUp } from 'lucide-react';
@@ -280,10 +281,11 @@ export default function AdminModerateChannelsPage() {
                 >
                   <div className="flex items-start gap-6">
                     {/* Channel Avatar */}
-                    <img
+                    <ChannelAvatar
                       src={channel.avatar}
                       alt={channel.name}
-                      className="w-24 h-24 rounded-lg flex-shrink-0"
+                      className="w-24 h-24 flex-shrink-0"
+                      channelName={channel.name}
                     />
 
                     {/* Channel Info */}
