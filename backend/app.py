@@ -602,9 +602,33 @@ def list_all_channels():
         return jsonify([])
     
 @app.route('/api/requests', methods=['GET'])
+@token_required  # ADD authentication
 def list_requests():
-    r = list(requests_col.find({}, {'_id': 0}))
-    return jsonify(r)
+    """Get requests relevant to the authenticated user"""
+    telegram_id = request.telegram_id  # ADD this
+    
+    try:
+        # Get user's channels
+        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+        channel_ids = [ch.get('id') for ch in user_channels]
+        
+        if not channel_ids:
+            # No channels, return empty list
+            return jsonify([])
+        
+        # Get requests where user is either sender OR receiver
+        user_requests = list(requests_col.find({
+            '$or': [
+                {'fromChannelId': {'$in': channel_ids}},  # User sent the request
+                {'toChannelId': {'$in': channel_ids}}      # User received the request
+            ]
+        }, {'_id': 0}))
+        
+        return jsonify(user_requests)
+    
+    except Exception as e:
+        print(f"Error fetching requests: {e}")
+        return jsonify([])
 
 
 @app.route('/api/request', methods=['POST'])
