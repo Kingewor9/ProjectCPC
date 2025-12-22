@@ -98,6 +98,14 @@ export default function EditChannelPage() {
       const data = await apiService.getChannel(channelId!);
       setChannel(data);
 
+      // Check if channel can be edited
+    const channelStatus = data.status?.toLowerCase();
+    if (channelStatus !== 'approved' && channelStatus !== 'active') {
+      setError(`Cannot edit ${channelStatus} channel. Only approved channels can be edited.`);
+      setTimeout(() => navigate('/dashboard'), 3000);
+      return;
+    }
+
       // Initialize edit state
       setSelectedDays(data.acceptedDays || []);
       setPromosPerDay(data.promosPerDay || 1);

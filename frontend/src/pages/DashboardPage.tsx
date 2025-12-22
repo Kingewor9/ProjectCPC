@@ -211,15 +211,29 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {/* Edit Button */}
-                <button
-                  onClick={() => navigate(`/edit-channel/${channel.id}`)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-all"
-                >
-                  Edit Channel
-                </button>
-              </div>
-            ))}
+                {/* Edit Button - Only for approved channels */}
+{(channel.status === 'Active' || channel.status.toLowerCase() === 'approved') && (
+  <button
+    onClick={(e) => {
+      e.preventDefault();
+      navigate(`/edit-channel/${channel.id}`);
+    }}
+    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-all"
+  >
+    Edit Channel
+  </button>
+)}
+
+{/* Show status message for non-active channels */}
+{channel.status !== 'Active' && channel.status.toLowerCase() !== 'approved' && (
+  <div className="w-full bg-grey-700 text-grey-400 font-medium py-2 rounded-lg text-center text-sm">
+    {channel.status === 'pending' && '⏳ Pending Approval'}
+    {channel.status === 'rejected' && '❌ Rejected'}
+    {channel.status === 'Paused' && '⏸️ Paused - Activate to Edit'}
+  </div>
+)}          
+</div>
+ ))}
             </div>
             </div>
                 </div>
