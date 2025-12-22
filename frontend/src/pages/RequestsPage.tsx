@@ -94,6 +94,16 @@ export default function RequestsPage() {
   const acceptedRequests = requests.filter(r => r.status === 'Accepted');
   const rejectedRequests = requests.filter(r => r.status === 'Rejected');
 
+  // Helper to check if request is incoming (user is recipient)
+const isIncomingRequest = (request: CrossPromoRequest): boolean => {
+  return user.channels.some(ch => ch.id === request.toChannelId);
+};
+
+// Helper to check if request is outgoing (user is sender)
+const isOutgoingRequest = (request: CrossPromoRequest): boolean => {
+  return user.channels.some(ch => ch.id === request.fromChannelId);
+};
+
   return (
     <Layout>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -125,17 +135,21 @@ export default function RequestsPage() {
                   className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 hover:border-yellow-600/50 transition-all"
                 >
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    {/* From */}
-                    <div>
-                      <p className="text-grey-400 text-sm font-medium mb-2">FROM</p>
-                      <p className="text-white font-bold text-lg">{request.fromChannel}</p>
-                    </div>
+              {/* From */}
+                <div>
+                 <p className="text-grey-400 text-sm font-medium mb-2">
+                 FROM {isOutgoingRequest(request) && <span className="text-blue-400">(You)</span>}
+                 </p>
+                 <p className="text-white font-bold text-lg">{request.fromChannel}</p>
+                </div>
 
-                    {/* To */}
-                    <div>
-                      <p className="text-grey-400 text-sm font-medium mb-2">TO</p>
-                      <p className="text-white font-bold text-lg">{request.toChannel}</p>
-                    </div>
+              {/* To */}
+                <div>
+                 <p className="text-grey-400 text-sm font-medium mb-2">
+                 TO {isIncomingRequest(request) && <span className="text-green-400">(You)</span>}
+                 </p>
+                 <p className="text-white font-bold text-lg">{request.toChannel}</p>
+                </div>
 
                     {/* Details */}
                     <div>
@@ -163,29 +177,36 @@ export default function RequestsPage() {
                     </a>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => openAcceptModal(request)}
-                      disabled={accepting === request.id}
-                      className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      <CheckCircle size={18} />
-                      {accepting === request.id ? 'Accepting...' : 'Accept Request'}
-                    </button>
-                    <button
-                      className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-colors"
-                    >
-                      Decline
-                    </button>
-                  </div>
-                </div>
-              ))}
+        {/* Actions - Only show Accept for incoming requests */}
+        <div className="flex gap-3">
+          {isIncomingRequest(request) ? (
+            <>
+              <button
+                onClick={() => openAcceptModal(request)}
+                disabled={accepting === request.id}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle size={18} />
+                {accepting === request.id ? 'Accepting...' : 'Accept Request'}
+              </button>
+              <button
+                className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-colors"
+              >
+                Decline
+              </button>
+            </>
+          ) : (
+            <div className="flex-1 text-center py-2 text-grey-400 text-sm">
+              Awaiting response from {request.toChannel}
             </div>
           )}
         </div>
+      </div>
+    ))}
+  </div>
+)}
 
-        {/* Accepted Requests */}
+{/* Accepted Requests */}
         {acceptedRequests.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">
@@ -342,6 +363,7 @@ export default function RequestsPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </Layout>
   );
