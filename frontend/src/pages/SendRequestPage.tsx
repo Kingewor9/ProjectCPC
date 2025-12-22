@@ -69,7 +69,7 @@ export default function SendRequestPage() {
         // CHANGED: Select first APPROVED/ACTIVE channel instead of just first channel
         if (user.channels.length > 0) {
           const activeChannel = user.channels.find(
-            ch => ch.status === 'Active' || ch.status.toLowerCase() === 'approved'
+            ch => (ch.status || '').toLowerCase() === 'active' || (ch.status || '').toLowerCase() === 'approved'
           );
           if (activeChannel) {
             setFromChannelId(activeChannel.id);
@@ -133,7 +133,7 @@ export default function SendRequestPage() {
     }
 
     // Validate channel status
-    if (fromChannel.status !== 'Active') {
+    if ((fromChannel.status || '').toLowerCase() !== 'active') {
       setError(`Your channel "${fromChannel.name}" status is ${fromChannel.status}. Only approved channels can send cross-promotion requests.`);
       return;
     }
@@ -246,7 +246,7 @@ export default function SendRequestPage() {
                     <option 
                       key={channel.id} 
                       value={channel.id}
-                      disabled={channel.status !== 'Active'}
+                      disabled={(channel.status || '').toLowerCase() !== 'active'}
                     >
                       {channel.name} ({(channel.subs || 0).toLocaleString()} subs) - {channel.status}
                     </option>
@@ -259,18 +259,26 @@ export default function SendRequestPage() {
                   <label className="block text-sm font-medium text-grey-300 mb-2">
                     Promo to Share
                   </label>
-                  <select
-                    value={selectedPromoId}
-                    onChange={(e) => setSelectedPromoId(e.target.value)}
-                    className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="">Select a promo</option>
-                    {(fromChannel?.promos || []).map((promo) => (
-                      <option key={promo.id} value={promo.id}>
-                        {promo.name}
-                      </option>
-                    ))}
-                  </select>
+                  {(!fromChannel.promos || fromChannel.promos.length === 0) ? (
+                    <div className="bg-yellow-600/10 border border-yellow-600/30 rounded-lg p-4 text-center">
+                      <p className="text-yellow-300 text-sm">
+                        No promos found for this channel. Please add promos in the channel settings.
+                      </p>
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedPromoId}
+                      onChange={(e) => setSelectedPromoId(e.target.value)}
+                      className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="">Select a promo</option>
+                      {fromChannel.promos.map((promo) => (
+                        <option key={promo.id} value={promo.id}>
+                          {promo.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
             </div>
@@ -292,7 +300,7 @@ export default function SendRequestPage() {
           </div>
 
           {/* Channel Status Warning */}
-          {fromChannel && fromChannel.status !== 'Active' && (
+          {fromChannel && (fromChannel.status || '').toLowerCase() !== 'active' && (
             <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-4">
               <p className="text-red-300 font-medium">
                 ⚠️ Your channel "{fromChannel.name}" status is {fromChannel.status}. Only approved channels can send cross-promotion requests.
@@ -456,58 +464,69 @@ export default function SendRequestPage() {
           {partnerType && toPartner && (
             <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
               <h2 className="text-xl font-bold text-white mb-4">Schedule</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">
-                    Day
-                  </label>
-                  <select
-                    value={daySelected}
-                    onChange={(e) => setDaySelected(e.target.value)}
-                    className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                  >
-                    {(toPartner?.acceptedDays || []).map((day) => (
-                      <option key={day} value={day}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
+              
+              {(!toPartner.acceptedDays || toPartner.acceptedDays.length === 0) ||
+               (!toPartner.availableTimeSlots || toPartner.availableTimeSlots.length === 0) ||
+               (!toPartner.durationPrices || Object.keys(toPartner.durationPrices).length === 0) ? (
+                <div className="bg-yellow-600/10 border border-yellow-600/30 rounded-lg p-6 text-center">
+                  <p className="text-yellow-300 text-sm">
+                    This channel's schedule information is not fully configured. Please contact the channel owner.
+                  </p>
                 </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-grey-300 mb-2">
+                      Day
+                    </label>
+                    <select
+                      value={daySelected}
+                      onChange={(e) => setDaySelected(e.target.value)}
+                      className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    >
+                      {toPartner.acceptedDays.map((day) => (
+                        <option key={day} value={day}>
+                          {day}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">
-                    Time Slot
-                  </label>
-                  <select
-                    value={timeSelected}
-                    onChange={(e) => setTimeSelected(e.target.value)}
-                    className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                  >
-                    {(toPartner?.availableTimeSlots || []).map((slot) => (
-                      <option key={slot} value={slot}>
-                        {slot}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-grey-300 mb-2">
+                      Time Slot
+                    </label>
+                    <select
+                      value={timeSelected}
+                      onChange={(e) => setTimeSelected(e.target.value)}
+                      className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    >
+                      {toPartner.availableTimeSlots.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {slot}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">
-                    Duration (hours)
-                  </label>
-                  <select
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
-                  >
-                    {Object.keys(toPartner?.durationPrices || {}).map((d) => (
-                      <option key={d} value={d}>
-                        {d} hours
-                      </option>
-                    ))}
-                  </select>
+                  <div>
+                    <label className="block text-sm font-medium text-grey-300 mb-2">
+                      Duration (hours)
+                    </label>
+                    <select
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                      className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    >
+                      {Object.keys(toPartner.durationPrices).map((d) => (
+                        <option key={d} value={d}>
+                          {d} hours
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -544,7 +563,7 @@ export default function SendRequestPage() {
                   user.cpcBalance < cpcCost || 
                   !selectedPromo || 
                   !toPartner ||
-                  fromChannel?.status !== 'Active'
+                  (fromChannel?.status || '').toLowerCase() !== 'active'
                 }
                 className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-grey-600 disabled:to-grey-700 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2"
               >
