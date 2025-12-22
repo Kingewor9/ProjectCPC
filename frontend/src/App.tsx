@@ -38,7 +38,7 @@ function App() {
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
         <Route path="/admin/moderate-channels" element={<ProtectedRoute><AdminModerateChannelsPage /></ProtectedRoute>} />
         <Route path="/buy-coins" element={<ProtectedRoute><BuyCoinsPage /></ProtectedRoute>} />
-        <Route path="/edit-channel" element={<ProtectedRoute><EditChannelPage /></ProtectedRoute>} />
+        <Route path="/edit-channel/:channelId" element={<ProtectedRoute><EditChannelPage /></ProtectedRoute>} />
         <Route path="/add-channel" element={<ProtectedRoute><AddChannelPage /></ProtectedRoute>} />
         {/* ... other routes */}
         
