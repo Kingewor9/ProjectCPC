@@ -95,9 +95,17 @@ def _normalize_channel_for_frontend(channel):
     for hours, settings in price_settings.items():
         if settings.get('enabled'):
             duration_prices[hours] = settings.get('price', 0)
+    
+    # If duration prices still empty, try to build from durationPrices field (backward compat)
+    if not duration_prices:
+        duration_prices = channel.get('durationPrices', {})
             
     # ADDED: Normalize promos to ensure they have all required fields
     raw_promos = channel.get('promo_materials', [])
+    # Also check promoMaterials for backward compatibility
+    if not raw_promos:
+        raw_promos = channel.get('promoMaterials', [])
+    
     normalized_promos = []
     for idx, promo in enumerate(raw_promos):
         normalized_promo = {
@@ -110,6 +118,21 @@ def _normalize_channel_for_frontend(channel):
         }
         normalized_promos.append(normalized_promo)
     
+    # Get selected days (handle both snake_case and camelCase)
+    selected_days = channel.get('selected_days', [])
+    if not selected_days:
+        selected_days = channel.get('acceptedDays', [])
+    
+    # Get time slots (handle both snake_case and camelCase)
+    time_slots = channel.get('time_slots', [])
+    if not time_slots:
+        time_slots = channel.get('availableTimeSlots', [])
+    
+    # Get promos per day (handle both snake_case and camelCase)
+    promos_per_day = channel.get('promos_per_day', 1)
+    if promos_per_day == 1:
+        promos_per_day = channel.get('promosPerDay', 1)
+    
     return {
         'id': channel.get('id'),
         'name': channel.get('name'),
@@ -118,12 +141,12 @@ def _normalize_channel_for_frontend(channel):
         'lang': channel.get('language', 'en'),
         'avatar': channel.get('avatar', 'https://placehold.co/60x60'),
         'status': channel.get('status'),
-        'acceptedDays': channel.get('selected_days', []),
-        'availableTimeSlots': channel.get('time_slots', []),
+        'acceptedDays': selected_days,
+        'availableTimeSlots': time_slots,
         'durationPrices': duration_prices,
         'telegram_chat': channel.get('username', ''),
         'promos': normalized_promos,
-        'promosPerDay': channel.get('promos_per_day', 1),
+        'promosPerDay': promos_per_day,
         'xExchanges': requests_col.count_documents({
             'status': 'Accepted',
             '$or': [
@@ -458,6 +481,23 @@ def list_partners():
                 if settings.get('enabled'):
                     duration_prices[hours] = settings.get('price', 0)
             
+            # If no duration prices, try durationPrices field (backward compatibility)
+            if not duration_prices:
+                duration_prices = channel.get('durationPrices', {})
+            
+            # Get accepted days (handle both snake_case and camelCase)
+            accepted_days = channel.get('selected_days', [])
+            if not accepted_days:
+                accepted_days = channel.get('acceptedDays', [])
+            
+            # Get available time slots (handle both snake_case and camelCase)
+            available_time_slots = channel.get('time_slots', [])
+            if not available_time_slots:
+                available_time_slots = channel.get('availableTimeSlots', [])
+            
+            # Get promos per day (handle both snake_case and camelCase)
+            promos_per_day = channel.get('promos_per_day', channel.get('promosPerDay', 1))
+            
             partner = {
                 'id': channel.get('id'),
                 'name': channel.get('name'),
@@ -465,10 +505,11 @@ def list_partners():
                 'subs': channel.get('subscribers', 0),
                 'lang': channel.get('language', 'en'),
                 'avatar': channel.get('avatar', 'https://placehold.co/60x60'),
-                'acceptedDays': channel.get('selected_days', []),
-                'availableTimeSlots': channel.get('time_slots', []),
+                'acceptedDays': accepted_days,
+                'availableTimeSlots': available_time_slots,
                 'durationPrices': duration_prices,
                 'telegram_chat': channel.get('username', ''),
+                'promosPerDay': promos_per_day,
                 'xExchanges': requests_col.count_documents({
                     'status': 'Accepted',
                     '$or': [
@@ -503,6 +544,41 @@ def list_all_channels():
                 if settings.get('enabled'):
                     duration_prices[hours] = settings.get('price', 0)
             
+            # If no duration prices, try durationPrices field (backward compatibility)
+            if not duration_prices:
+                duration_prices = channel.get('durationPrices', {})
+            
+            # Normalize promos
+            raw_promos = channel.get('promo_materials', [])
+            # Also check promoMaterials for backward compatibility
+            if not raw_promos:
+                raw_promos = channel.get('promoMaterials', [])
+            
+            normalized_promos = []
+            for idx, promo in enumerate(raw_promos):
+                normalized_promo = {
+                    'id': promo.get('id') or f"promo_{idx+1}",
+                    'name': promo.get('name', 'Untitled'),
+                    'text': promo.get('text', promo.get('description', '')),
+                    'link': promo.get('link', ''),
+                    'image': promo.get('image', ''),
+                    'cta': promo.get('cta', '')
+                }
+                normalized_promos.append(normalized_promo)
+            
+            # Get accepted days (handle both snake_case and camelCase)
+            accepted_days = channel.get('selected_days', [])
+            if not accepted_days:
+                accepted_days = channel.get('acceptedDays', [])
+            
+            # Get available time slots (handle both snake_case and camelCase)
+            available_time_slots = channel.get('time_slots', [])
+            if not available_time_slots:
+                available_time_slots = channel.get('availableTimeSlots', [])
+            
+            # Get promos per day (handle both snake_case and camelCase)
+            promos_per_day = channel.get('promos_per_day', channel.get('promosPerDay', 1))
+            
             formatted_channel = {
                 'id': channel.get('id'),
                 'name': channel.get('name'),
@@ -510,10 +586,11 @@ def list_all_channels():
                 'subs': channel.get('subscribers', 0),
                 'lang': channel.get('language', 'en'),
                 'avatar': channel.get('avatar', 'https://placehold.co/60x60'),
-                'acceptedDays': channel.get('selected_days', []),
-                'availableTimeSlots': channel.get('time_slots', []),
+                'acceptedDays': accepted_days,
+                'availableTimeSlots': available_time_slots,
                 'durationPrices': duration_prices,
                 'telegram_chat': channel.get('username', ''),
+                'promosPerDay': promos_per_day,
                 'xExchanges': 0  # Can calculate if needed
             }
             all_channels.append(formatted_channel)

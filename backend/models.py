@@ -172,11 +172,11 @@ def add_user_channel(telegram_id, channel_info, topic, selected_days, promos_per
         'avgViews24h': channel_info.get('avgViews24h', 0),
         'language': channel_info.get('language', 'English'),
         'topic': topic,
-        'acceptedDays': selected_days,
-        'promosPerDay': promos_per_day,
-        'durationPrices': duration_prices,
-        'availableTimeSlots': time_slots,
-        'promoMaterials': promo_materials,
+        'selected_days': selected_days,
+        'promos_per_day': promos_per_day,
+        'price_settings': price_settings,
+        'time_slots': time_slots,
+        'promo_materials': promo_materials,
         'status': 'pending',  # pending, approved, rejected
         'xExchanges': 0,  # Count of completed exchanges
         'created_at': datetime.datetime.utcnow(),
