@@ -95,6 +95,20 @@ def _normalize_channel_for_frontend(channel):
     for hours, settings in price_settings.items():
         if settings.get('enabled'):
             duration_prices[hours] = settings.get('price', 0)
+            
+    # ADDED: Normalize promos to ensure they have all required fields
+    raw_promos = channel.get('promo_materials', [])
+    normalized_promos = []
+    for idx, promo in enumerate(raw_promos):
+        normalized_promo = {
+            'id': promo.get('id') or f"promo_{idx+1}",
+            'name': promo.get('name', 'Untitled'),
+            'text': promo.get('text', promo.get('description', '')),
+            'link': promo.get('link', ''),
+            'image': promo.get('image', ''),
+            'cta': promo.get('cta', '')
+        }
+        normalized_promos.append(normalized_promo)
     
     return {
         'id': channel.get('id'),
@@ -108,7 +122,7 @@ def _normalize_channel_for_frontend(channel):
         'availableTimeSlots': channel.get('time_slots', []),
         'durationPrices': duration_prices,
         'telegram_chat': channel.get('username', ''),
-        'promos': channel.get('promo_materials', []),
+        'promos': normalized_promos,
         'promosPerDay': channel.get('promos_per_day', 1),
         'xExchanges': requests_col.count_documents({
             'status': 'Accepted',
@@ -213,7 +227,7 @@ def generate_telegram_invoice(telegram_id, transaction_id, cpc_amount, stars_cos
         payload = {
             'chat_id': telegram_id,
             'title': f'Purchase {cpc_amount} CP Coins',
-            'description': f'Buy {cpc_amount} CP Coins for use in Growth Guru cross-promotions',
+            'description': f'Buy {cpc_amount} CP Coins for use in CP Gram cross-promotions',
             'payload': transaction_id,  # Our unique transaction ID
             'provider_token': '',  # Empty for Stars
             'currency': 'XTR',  # Stars currency code
@@ -776,6 +790,22 @@ def create_channel():
         return jsonify({'error': 'At least one promo material is required'}), 400
     if len(promo_materials) > 3:
         return jsonify({'error': 'Maximum 3 promo materials allowed'}), 400
+    
+    # ADDED: Ensure each promo has required fields with proper structure
+    processed_promos = []
+    for idx, promo in enumerate(promo_materials):
+     processed_promo = {
+        'id': promo.get('id') or f"promo_{idx+1}",  # Generate ID if missing
+        'name': promo.get('name', 'Untitled'),
+        'text': promo.get('text', promo.get('description', '')),  # text or description
+        'link': promo.get('link', ''),
+        'image': promo.get('image', ''),
+        'cta': promo.get('cta', '')
+    }
+    processed_promos.append(processed_promo)
+
+    # Replace promo_materials with processed version
+    data['promo_materials'] = processed_promos
     
     # Validate time slots match promos_per_day
     time_slots = data.get('time_slots', [])
