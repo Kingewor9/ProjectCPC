@@ -244,6 +244,16 @@ async createInviteTask(channelId: string): Promise<any> {
   return response.data;
 }
 
+async previewPromo(channelId: string, promoId: string): Promise<any> {
+  const response = await this.api.post(
+    `/channels/${channelId}/preview-promo`,
+    { promo_id: promoId }
+  );
+
+  return response.data;
+}
+
+
 // Purchase / Transactions endpoints
 
 async getExchangeRate(): Promise<any> {
