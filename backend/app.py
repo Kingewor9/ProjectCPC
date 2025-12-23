@@ -89,7 +89,7 @@ CORS(app)
 
 def _normalize_channel_for_frontend(channel):
     """Normalize channel document for frontend consumption"""
-    from models import get_telegram_file_url_from_file_id
+    from models import get_telegram_file_url_from_file_id, refresh_channel_subscribers_from_telegram
     
     # Build duration prices from price_settings
     duration_prices = {}
@@ -114,6 +114,19 @@ def _normalize_channel_for_frontend(channel):
         except Exception as e:
             # If refresh fails, fall back to stored URL
             print(f"Failed to refresh avatar URL: {e}")
+            pass
+    
+    # REFRESH SUBSCRIBER COUNT: Get live data from Telegram
+    current_subscribers = channel.get('subscribers', 0)
+    telegram_channel_id = channel.get('telegram_id')
+    if telegram_channel_id:
+        try:
+            fresh_subscribers = refresh_channel_subscribers_from_telegram(telegram_channel_id, TELEGRAM_BOT_TOKEN)
+            if fresh_subscribers is not None:
+                current_subscribers = fresh_subscribers
+        except Exception as e:
+            print(f"Failed to refresh subscriber count: {e}")
+            # Fall back to stored count if refresh fails
             pass
             
     # ADDED: Normalize promos to ensure they have all required fields
@@ -149,14 +162,23 @@ def _normalize_channel_for_frontend(channel):
     if promos_per_day == 1:
         promos_per_day = channel.get('promosPerDay', 1)
     
+    # Determine display status: Approved channels show as Active only if not paused
+    status = channel.get('status', 'pending')
+    is_paused = channel.get('is_paused', False)
+    display_status = status
+    if status == 'approved' and not is_paused:
+        display_status = 'Active'
+    elif status == 'approved' and is_paused:
+        display_status = 'Paused'
+    
     return {
         'id': channel.get('id'),
         'name': channel.get('name'),
         'topic': channel.get('topic'),
-        'subs': channel.get('subscribers', 0),
+        'subs': current_subscribers,
         'lang': channel.get('language', 'en'),
         'avatar': avatar_url,
-        'status': channel.get('status'),
+        'status': display_status,
         'acceptedDays': selected_days,
         'availableTimeSlots': time_slots,
         'durationPrices': duration_prices,
@@ -545,71 +567,14 @@ def list_partners():
 @app.route('/api/channels/all', methods=['GET'])
 @token_required
 def list_all_channels():
-    """Get all approved channels (for discovery)"""
+    """Get all approved active channels (for discovery)"""
     try:
         # Get all approved channels from the channels collection
-        all_channels_raw = list(channels.find({'status': 'approved'}, {'_id': 0}))
+        # Filter to show only approved channels that are not paused
+        all_channels_raw = list(channels.find({'status': 'approved', 'is_paused': False}, {'_id': 0}))
         
-        # Format channels to match expected structure
-        all_channels = []
-        for channel in all_channels_raw:
-            # Build duration prices from price_settings
-            duration_prices = {}
-            price_settings = channel.get('price_settings', {})
-            for hours, settings in price_settings.items():
-                if settings.get('enabled'):
-                    duration_prices[hours] = settings.get('price', 0)
-            
-            # If no duration prices, try durationPrices field (backward compatibility)
-            if not duration_prices:
-                duration_prices = channel.get('durationPrices', {})
-            
-            # Normalize promos
-            raw_promos = channel.get('promo_materials', [])
-            # Also check promoMaterials for backward compatibility
-            if not raw_promos:
-                raw_promos = channel.get('promoMaterials', [])
-            
-            normalized_promos = []
-            for idx, promo in enumerate(raw_promos):
-                normalized_promo = {
-                    'id': promo.get('id') or f"promo_{idx+1}",
-                    'name': promo.get('name', 'Untitled'),
-                    'text': promo.get('text', promo.get('description', '')),
-                    'link': promo.get('link', ''),
-                    'image': promo.get('image', ''),
-                    'cta': promo.get('cta', '')
-                }
-                normalized_promos.append(normalized_promo)
-            
-            # Get accepted days (handle both snake_case and camelCase)
-            accepted_days = channel.get('selected_days', [])
-            if not accepted_days:
-                accepted_days = channel.get('acceptedDays', [])
-            
-            # Get available time slots (handle both snake_case and camelCase)
-            available_time_slots = channel.get('time_slots', [])
-            if not available_time_slots:
-                available_time_slots = channel.get('availableTimeSlots', [])
-            
-            # Get promos per day (handle both snake_case and camelCase)
-            promos_per_day = channel.get('promos_per_day', channel.get('promosPerDay', 1))
-            
-            formatted_channel = {
-                'id': channel.get('id'),
-                'name': channel.get('name'),
-                'topic': channel.get('topic'),
-                'subs': channel.get('subscribers', 0),
-                'lang': channel.get('language', 'en'),
-                'avatar': channel.get('avatar', 'https://placehold.co/60x60'),
-                'acceptedDays': accepted_days,
-                'availableTimeSlots': available_time_slots,
-                'durationPrices': duration_prices,
-                'telegram_chat': channel.get('username', ''),
-                'promosPerDay': promos_per_day,
-                'xExchanges': 0  # Can calculate if needed
-            }
-            all_channels.append(formatted_channel)
+        # Use the standard normalization function which now includes live subscriber refresh
+        all_channels = [_normalize_channel_for_frontend(ch) for ch in all_channels_raw]
         
         return jsonify(all_channels)
     
@@ -661,6 +626,10 @@ def create_request():
     status_raw = (from_channel.get('status') or '').lower()
     if status_raw in ['pending', 'rejected']:
         return jsonify({'error': f'Channel status is {status_raw}. Only approved channels can send cross-promotion requests.'}), 403
+    
+    # Check if channel is paused
+    if from_channel.get('is_paused', False):
+        return jsonify({'error': 'Your channel is currently paused. Please activate it to send cross-promotion requests.'}), 403
     
     # Validate user has sufficient CP coins balance
     user = users.find_one({'telegram_id': telegram_id})
@@ -1086,6 +1055,43 @@ def update_channel_status_route(channel_id):
     except Exception as e:
         print(f"Error updating channel status: {e}")
         return jsonify({'error': 'Failed to update channel status'}), 500
+
+
+@app.route('/api/channels/<channel_id>/pause', methods=['PUT'])
+@token_required
+def pause_channel(channel_id):
+    """Pause or unpause an approved channel"""
+    telegram_id = request.telegram_id
+    data = request.json or {}
+    is_paused = data.get('is_paused', True)
+    
+    try:
+        # Check if channel exists and belongs to user
+        channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
+        
+        if not channel:
+            return jsonify({'error': 'Channel not found'}), 404
+        
+        # Only approved channels can be paused/unpaused
+        if channel.get('status') != 'approved':
+            return jsonify({'error': 'Only approved channels can be paused'}), 400
+        
+        # Update pause status
+        channels.update_one(
+            {'id': channel_id, 'owner_id': telegram_id},
+            {'$set': {'is_paused': is_paused, 'updated_at': datetime.datetime.utcnow()}}
+        )
+        
+        status_msg = 'paused' if is_paused else 'activated'
+        return jsonify({
+            'ok': True, 
+            'message': f'Channel {status_msg} successfully',
+            'is_paused': is_paused
+        })
+    
+    except Exception as e:
+        print(f"Error updating channel pause status: {e}")
+        return jsonify({'error': 'Failed to update channel pause status'}), 500
     
 @app.route('/api/tasks', methods=['GET'])
 @token_required

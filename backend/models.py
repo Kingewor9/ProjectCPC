@@ -119,6 +119,26 @@ def get_telegram_file_url_from_file_id(file_id, bot_token):
         return None
 
 
+def refresh_channel_subscribers_from_telegram(telegram_id, bot_token):
+    """
+    Fetch the current subscriber count from Telegram API for a channel.
+    Returns the current subscriber count or None if fetch fails.
+    """
+    try:
+        api_url = f"https://api.telegram.org/bot{bot_token}/getChatMemberCount"
+        response = requests.get(api_url, params={'chat_id': telegram_id}, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('ok'):
+                return data.get('result', 0)
+        
+        return None
+    except Exception as e:
+        print(f"Error refreshing channel subscribers: {e}")
+        return None
+
+
 def validate_channel_with_telegram(username, bot_token):
     """
     Validate a Telegram channel using the Bot API
@@ -230,6 +250,7 @@ def add_user_channel(telegram_id, channel_info, topic, selected_days, promos_per
         'time_slots': time_slots,
         'promo_materials': promo_materials,
         'status': 'pending',  # pending, approved, rejected
+        'is_paused': False,  # User pause control - approved channels show as active only if not paused
         'xExchanges': 0,  # Count of completed exchanges
         'created_at': datetime.datetime.utcnow(),
         'updated_at': datetime.datetime.utcnow()
