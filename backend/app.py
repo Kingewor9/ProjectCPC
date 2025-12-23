@@ -1738,17 +1738,24 @@ def preview_promo(channel_id):
         return jsonify({'error': 'Promo ID is required'}), 400
     
     try:
+        print(f"[DEBUG] preview_promo called: channel_id={channel_id}, telegram_id={telegram_id}, promo_id={promo_id}")
         # Check if channel exists and belongs to user
         channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
-        
         if not channel:
+            # Attempt to fetch channel without owner filter for debugging
+            fallback = channels.find_one({'id': channel_id})
+            if fallback:
+                print(f"[DEBUG] Channel found but owner mismatch. DB owner_id={fallback.get('owner_id')}")
+            else:
+                print("[DEBUG] Channel not found in database for id:", channel_id)
             return jsonify({'error': 'Channel not found'}), 404
         
         # Find the promo material
         promo_materials = channel.get('promo_materials', [])
+        print(f"[DEBUG] promo_materials count={len(promo_materials)} ids={[p.get('id') for p in promo_materials]}")
         promo = next((p for p in promo_materials if p.get('id') == promo_id), None)
-        
         if not promo:
+            print(f"[DEBUG] Promo with id={promo_id} not found for channel={channel_id}")
             return jsonify({'error': 'Promo not found'}), 404
         
         # Send preview to user via bot
