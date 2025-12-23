@@ -474,6 +474,37 @@ export default function AdminModerateChannelsPage() {
               </div>
 
               <div className="space-y-6">
+                {/* Basic Info - Always Show */}
+                <div className="bg-darkBlue-700 p-4 rounded-lg">
+                  <h4 className="text-white font-bold mb-3">Channel Information</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-grey-400 text-xs mb-1">Channel Name</p>
+                      <p className="text-white font-bold">{selectedChannel.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-grey-400 text-xs mb-1">Username</p>
+                      <p className="text-white font-bold">@{selectedChannel.username}</p>
+                    </div>
+                    <div>
+                      <p className="text-grey-400 text-xs mb-1">Topic</p>
+                      <p className="text-white font-bold">{selectedChannel.topic}</p>
+                    </div>
+                    <div>
+                      <p className="text-grey-400 text-xs mb-1">Language</p>
+                      <p className="text-white font-bold">{selectedChannel.language}</p>
+                    </div>
+                    <div>
+                      <p className="text-grey-400 text-xs mb-1">Subscribers</p>
+                      <p className="text-white font-bold">{selectedChannel.subscribers.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-grey-400 text-xs mb-1">Status</p>
+                      <p className="text-white font-bold">{selectedChannel.status.toUpperCase()}</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Prices */}
                 {selectedChannel.durationPrices && Object.keys(selectedChannel.durationPrices).length > 0 && (
                   <div>
