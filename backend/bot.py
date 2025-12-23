@@ -58,3 +58,39 @@ def delete_message(chat_id, message_id):
     except Exception as e:
         logging.exception('Failed to delete message')
         return None
+
+def send_promo_preview(chat_id, promo_name, promo_text, promo_link, promo_image, promo_cta):
+    """Send a promo preview showing how it will look when posted"""
+    try:
+        # Build the caption/text
+        caption = f"🎯 <b>Preview: {promo_name}</b>\n\n{promo_text}"
+        
+        # Create inline keyboard with CTA button
+        keyboard = None
+        if promo_link and promo_cta:
+            keyboard = {
+                'inline_keyboard': [[
+                    {'text': promo_cta, 'url': promo_link}
+                ]]
+            }
+        
+        # Send with image if available, otherwise just text
+        if promo_image:
+            return send_photo(
+                chat_id=chat_id,
+                photo_url=promo_image,
+                caption=caption,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        else:
+            return send_message(
+                chat_id=chat_id,
+                text=caption,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+    
+    except Exception as e:
+        logging.exception(f'Failed to send promo preview to {chat_id}')
+        return None

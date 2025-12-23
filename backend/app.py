@@ -1705,6 +1705,54 @@ def get_analytics():
         print(f"Error fetching analytics: {e}")
         return jsonify({'error': 'Failed to fetch analytics'}), 500
     
+@app.route('/api/channels/<channel_id>/preview-promo', methods=['POST'])
+@token_required
+def preview_promo(channel_id):
+    """Send a preview of a promo material to the channel owner"""
+    telegram_id = request.telegram_id
+    data = request.json or {}
+    promo_id = data.get('promo_id')
+    
+    if not promo_id:
+        return jsonify({'error': 'Promo ID is required'}), 400
+    
+    try:
+        # Check if channel exists and belongs to user
+        channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
+        
+        if not channel:
+            return jsonify({'error': 'Channel not found'}), 404
+        
+        # Find the promo material
+        promo_materials = channel.get('promo_materials', [])
+        promo = next((p for p in promo_materials if p.get('id') == promo_id), None)
+        
+        if not promo:
+            return jsonify({'error': 'Promo not found'}), 404
+        
+        # Send preview to user via bot
+        from bot import send_promo_preview
+        result = send_promo_preview(
+            chat_id=telegram_id,
+            promo_name=promo.get('name', 'Untitled'),
+            promo_text=promo.get('text', ''),
+            promo_link=promo.get('link', ''),
+            promo_image=promo.get('image', ''),
+            promo_cta=promo.get('cta', 'Learn More')
+        )
+        
+        if result:
+            return jsonify({
+                'ok': True,
+                'message': 'Preview sent to your Telegram!'
+            })
+        else:
+            return jsonify({'error': 'Failed to send preview'}), 500
+    
+    except Exception as e:
+        print(f"Error sending promo preview: {e}")
+        return jsonify({'error': 'Failed to send preview'}), 500
+    
 #API routes for admin functionalities  
 @app.route('/api/admin/channels', methods=['GET'])
 @token_required
