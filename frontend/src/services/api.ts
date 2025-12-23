@@ -246,7 +246,7 @@ async createInviteTask(channelId: string): Promise<any> {
 
 async previewPromo(channelId: string, promoId: string): Promise<any> {
   const response = await this.api.post(
-    `/channels/${channelId}/preview-promo`,
+    `/api/channels/${channelId}/preview-promo`,
     { promo_id: promoId }
   );
 
