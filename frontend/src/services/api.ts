@@ -186,6 +186,11 @@ class ApiService {
   return response.data;
 }
 
+  async pauseChannel(channelId: string, is_paused: boolean): Promise<any> {
+    const response = await this.api.put(`/api/channels/${channelId}/pause`, { is_paused });
+    return response.data;
+  }
+
   async deleteChannel(channelId: string): Promise<any> {
     const response = await this.api.delete(`/api/channels/${channelId}`);
     return response.data;
