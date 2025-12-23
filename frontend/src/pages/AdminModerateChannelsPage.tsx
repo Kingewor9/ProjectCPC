@@ -8,6 +8,24 @@ import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { CheckCircle, XCircle, Eye, Search, Filter, Calendar, Users, TrendingUp } from 'lucide-react';
 
+// Helper functions to safely handle potentially undefined/null values
+const safeArray = <T,>(value: any): T[] => {
+  return Array.isArray(value) ? value : [];
+};
+
+const safeNumber = (value: any): number => {
+  const num = Number(value);
+  return isNaN(num) ? 0 : num;
+};
+
+const safeString = (value: any): string => {
+  return value ? String(value) : '';
+};
+
+const safeObject = (value: any): { [key: string]: any } => {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+};
+
 interface Channel {
   id: string;
   name: string;
@@ -77,10 +95,36 @@ export default function AdminModerateChannelsPage() {
   const fetchChannels = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await apiService.getAllChannels();
-      setChannels(data.channels || []);
-      setOwners(data.owners || {});
+      
+      // Validate and normalize channel data
+      const validatedChannels = safeArray<Channel>(data?.channels).map(channel => ({
+        ...channel,
+        name: safeString(channel.name),
+        username: safeString(channel.username),
+        telegram_id: safeString(channel.telegram_id),
+        avatar: safeString(channel.avatar),
+        subscribers: safeNumber(channel.subscribers),
+        avgViews24h: safeNumber(channel.avgViews24h),
+        language: safeString(channel.language),
+        topic: safeString(channel.topic),
+        acceptedDays: safeArray<string>(channel.acceptedDays),
+        promosPerDay: safeNumber(channel.promosPerDay),
+        durationPrices: safeObject(channel.durationPrices),
+        availableTimeSlots: safeArray<string>(channel.availableTimeSlots),
+        promoMaterials: safeArray<Channel['promoMaterials'][0]>(channel.promoMaterials),
+        owner_id: safeString(channel.owner_id),
+        status: safeString(channel.status) || 'pending',
+        xExchanges: safeNumber(channel.xExchanges),
+        created_at: safeString(channel.created_at),
+        updated_at: safeString(channel.updated_at)
+      }));
+      
+      setChannels(validatedChannels);
+      setOwners(safeObject(data?.owners));
     } catch (err: any) {
+      console.error('Error fetching channels:', err);
       setError(err.message || 'Failed to load channels');
     } finally {
       setLoading(false);
@@ -125,25 +169,30 @@ export default function AdminModerateChannelsPage() {
   };
 
   const filteredChannels = channels.filter(channel => {
-    // Status filter
-    if (statusFilter !== 'all' && channel.status !== statusFilter) {
+    try {
+      // Status filter
+      if (statusFilter !== 'all' && channel.status !== statusFilter) {
+        return false;
+      }
+
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const owner = owners[channel.owner_id];
+        return (
+          safeString(channel.name).toLowerCase().includes(query) ||
+          safeString(channel.username).toLowerCase().includes(query) ||
+          safeString(channel.topic).toLowerCase().includes(query) ||
+          safeString(owner?.first_name).toLowerCase().includes(query) ||
+          safeString(owner?.username).toLowerCase().includes(query)
+        );
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Error filtering channel:', err);
       return false;
     }
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const owner = owners[channel.owner_id];
-      return (
-        channel.name.toLowerCase().includes(query) ||
-        channel.username.toLowerCase().includes(query) ||
-        channel.topic.toLowerCase().includes(query) ||
-        (owner?.first_name || '').toLowerCase().includes(query) ||
-        (owner?.username || '').toLowerCase().includes(query)
-      );
-    }
-
-    return true;
   });
 
   const stats = {
@@ -274,6 +323,10 @@ export default function AdminModerateChannelsPage() {
           ) : (
             filteredChannels.map((channel) => {
               const owner = owners[channel.owner_id];
+              const acceptedDays = safeArray(channel.acceptedDays);
+              const timeSlots = safeArray(channel.availableTimeSlots);
+              const promoMaterials = safeArray(channel.promoMaterials);
+              
               return (
                 <div
                   key={channel.id}
@@ -282,10 +335,10 @@ export default function AdminModerateChannelsPage() {
                   <div className="flex items-start gap-6">
                     {/* Channel Avatar */}
                     <ChannelAvatar
-                      src={channel.avatar}
-                      alt={channel.name}
+                      src={channel.avatar || ''}
+                      alt={channel.name || 'Channel'}
                       className="w-24 h-24 flex-shrink-0"
-                      channelName={channel.name}
+                      channelName={channel.name || 'Unknown'}
                     />
 
                     {/* Channel Info */}
@@ -293,18 +346,18 @@ export default function AdminModerateChannelsPage() {
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-2xl font-bold text-white">{channel.name}</h3>
+                            <h3 className="text-2xl font-bold text-white">{channel.name || 'Unknown Channel'}</h3>
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                               channel.status === 'approved' ? 'bg-green-500/20 text-green-300' :
                               channel.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
                               channel.status === 'paused' ? 'bg-blue-500/20 text-blue-300' :
                               'bg-red-500/20 text-red-300'
                             }`}>
-                              {channel.status.toUpperCase()}
+                              {(channel.status || 'PENDING').toUpperCase()}
                             </span>
                           </div>
-                          <p className="text-grey-400 mb-1">{channel.username}</p>
-                          <p className="text-blue-400 text-sm">Topic: {channel.topic}</p>
+                          <p className="text-grey-400 mb-1">{channel.username || 'N/A'}</p>
+                          <p className="text-blue-400 text-sm">Topic: {channel.topic || 'N/A'}</p>
                         </div>
                       </div>
 
@@ -312,19 +365,19 @@ export default function AdminModerateChannelsPage() {
                       <div className="grid grid-cols-4 gap-4 mb-4 bg-darkBlue-700 p-4 rounded-lg">
                         <div>
                           <p className="text-grey-400 text-xs mb-1">Subscribers</p>
-                          <p className="text-white font-bold text-lg">{channel.subscribers.toLocaleString()}</p>
+                          <p className="text-white font-bold text-lg">{safeNumber(channel.subscribers).toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-grey-400 text-xs mb-1">Avg 24h Views</p>
-                          <p className="text-white font-bold text-lg">{channel.avgViews24h.toLocaleString()}</p>
+                          <p className="text-white font-bold text-lg">{safeNumber(channel.avgViews24h).toLocaleString()}</p>
                         </div>
                         <div>
                           <p className="text-grey-400 text-xs mb-1">Language</p>
-                          <p className="text-white font-bold text-lg">{channel.language}</p>
+                          <p className="text-white font-bold text-lg">{channel.language || 'N/A'}</p>
                         </div>
                         <div>
                           <p className="text-grey-400 text-xs mb-1">Promos/Day</p>
-                          <p className="text-white font-bold text-lg">{channel.promosPerDay}</p>
+                          <p className="text-white font-bold text-lg">{safeNumber(channel.promosPerDay)}</p>
                         </div>
                       </div>
 
@@ -335,12 +388,12 @@ export default function AdminModerateChannelsPage() {
                           <div className="flex items-center gap-3">
                             <div>
                               <p className="text-white font-medium">
-                                {owner.first_name} {owner.last_name}
+                                {safeString(owner.first_name)} {safeString(owner.last_name)}
                               </p>
                               {owner.username && (
                                 <p className="text-grey-400 text-sm">@{owner.username}</p>
                               )}
-                              <p className="text-grey-500 text-xs">ID: {owner.telegram_id}</p>
+                              <p className="text-grey-500 text-xs">ID: {owner.telegram_id || 'N/A'}</p>
                             </div>
                           </div>
                         </div>
@@ -351,19 +404,19 @@ export default function AdminModerateChannelsPage() {
                         <div className="flex items-center gap-2">
                           <Calendar className="text-grey-400" size={16} />
                           <span className="text-grey-400">
-                            Days: {channel.acceptedDays.length}
+                            Days: {acceptedDays.length}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="text-grey-400" size={16} />
                           <span className="text-grey-400">
-                            Time Slots: {channel.availableTimeSlots.length}
+                            Time Slots: {timeSlots.length}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <TrendingUp className="text-grey-400" size={16} />
                           <span className="text-grey-400">
-                            Promos: {channel.promoMaterials.length}
+                            Promos: {promoMaterials.length}
                           </span>
                         </div>
                       </div>
@@ -521,11 +574,11 @@ export default function AdminModerateChannelsPage() {
                 )}
 
                 {/* Days */}
-                {selectedChannel.acceptedDays && selectedChannel.acceptedDays.length > 0 && (
+                {safeArray<string>(selectedChannel?.acceptedDays).length > 0 && (
                   <div>
                     <h4 className="text-white font-bold mb-3">Accepted Days</h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedChannel.acceptedDays.map(day => (
+                      {safeArray<string>(selectedChannel.acceptedDays).map(day => (
                         <span key={day} className="bg-blue-600/20 text-blue-300 px-3 py-1 rounded-lg text-sm">
                           {day}
                         </span>
@@ -535,13 +588,13 @@ export default function AdminModerateChannelsPage() {
                 )}
 
                 {/* Time Slots */}
-                {selectedChannel.availableTimeSlots && selectedChannel.availableTimeSlots.length > 0 && (
+                {safeArray(selectedChannel?.availableTimeSlots).length > 0 && (
                   <div>
                     <h4 className="text-white font-bold mb-3">Available Time Slots</h4>
                     <div className="flex flex-wrap gap-2">
-                      {selectedChannel.availableTimeSlots.map(slot => (
-                        <span key={slot} className="bg-darkBlue-700 text-grey-300 px-3 py-1 rounded-lg text-sm">
-                          {slot}
+                      {safeArray(selectedChannel.availableTimeSlots).map((slot, index) => (
+                        <span key={index} className="bg-darkBlue-700 text-grey-300 px-3 py-1 rounded-lg text-sm">
+                          {safeString(slot)}
                         </span>
                       ))}
                     </div>
@@ -549,11 +602,11 @@ export default function AdminModerateChannelsPage() {
                 )}
 
                 {/* Promo Materials */}
-                {selectedChannel.promoMaterials && selectedChannel.promoMaterials.length > 0 && (
+                {safeArray<Channel['promoMaterials'][0]>(selectedChannel?.promoMaterials).length > 0 && (
                   <div>
-                    <h4 className="text-white font-bold mb-3">Promo Materials ({selectedChannel.promoMaterials.length})</h4>
+                    <h4 className="text-white font-bold mb-3">Promo Materials ({safeArray<Channel['promoMaterials'][0]>(selectedChannel.promoMaterials).length})</h4>
                     <div className="space-y-3">
-                      {selectedChannel.promoMaterials.map(promo => (
+                      {safeArray<Channel['promoMaterials'][0]>(selectedChannel.promoMaterials).map((promo) => (
                         <div key={promo.id} className="bg-darkBlue-700 p-4 rounded-lg">
                           <h5 className="text-white font-bold mb-2">{promo.name}</h5>
                           <p className="text-grey-300 text-sm mb-2">{promo.text}</p>
@@ -561,14 +614,16 @@ export default function AdminModerateChannelsPage() {
                             <span className="text-grey-400">CTA:</span>
                             <span className="text-blue-400">{promo.cta}</span>
                           </div>
-                          <a
-                            href={promo.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 text-sm"
-                          >
-                            {promo.link}
-                          </a>
+                          {promo.link && (
+                            <a
+                              href={promo.link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 text-sm"
+                            >
+                              {promo.link}
+                            </a>
+                          )}
                         </div>
                       ))}
                     </div>
