@@ -1750,8 +1750,16 @@ def preview_promo(channel_id):
                 print("[DEBUG] Channel not found in database for id:", channel_id)
             return jsonify({'error': 'Channel not found'}), 404
         
-        # Find the promo material
-        promo_materials = channel.get('promo_materials', [])
+        # Find the promo material (support both snake_case and camelCase storage)
+        promo_materials = channel.get('promo_materials') or channel.get('promoMaterials') or []
+        # If still empty, try normalized view which merges compat fields
+        if not promo_materials:
+            try:
+                normalized = _normalize_channel_for_frontend(channel)
+                promo_materials = normalized.get('promos', [])
+            except Exception as e:
+                print(f"[DEBUG] normalization fallback failed: {e}")
+
         print(f"[DEBUG] promo_materials count={len(promo_materials)} ids={[p.get('id') for p in promo_materials]}")
         promo = next((p for p in promo_materials if p.get('id') == promo_id), None)
         if not promo:
