@@ -6,7 +6,7 @@ import ErrorAlert from '../components/ErrorAlert';
 import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { Plus, X, CheckCircle, Save, Pause, Play } from 'lucide-react';
+import { Plus, X, CheckCircle, Save, Pause, Play, Send } from 'lucide-react';
 
 interface Channel {
   id: string;
@@ -84,6 +84,10 @@ export default function EditChannelPage() {
     link: '',
     cta: ''
   });
+
+const [selectedPreviewPromo, setSelectedPreviewPromo] = useState<string>('');
+const [previewing, setPreviewing] = useState(false);
+const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -257,6 +261,30 @@ export default function EditChannelPage() {
       setSubmitting(false);
     }
   };
+
+  const handlePreviewPromo = async () => {
+  if (!selectedPreviewPromo) {
+    setError('Please select a promo to preview');
+    return;
+  }
+
+  try {
+    setPreviewing(true);
+    setError(null);
+    setPreviewSuccess(null);
+
+    await apiService.previewPromo(channelId!, selectedPreviewPromo);
+    
+    setPreviewSuccess('Preview sent to your Telegram! Check your messages.');
+    
+    // Clear success message after 5 seconds
+    setTimeout(() => setPreviewSuccess(null), 5000);
+  } catch (err: any) {
+    setError(err.message || 'Failed to send preview');
+  } finally {
+    setPreviewing(false);
+  }
+};
 
   if (loading || !channel) {
     return (
@@ -567,6 +595,58 @@ export default function EditChannelPage() {
               </div>
             )}
           </div>
+
+          {/* Preview Promo Section */}
+{promoMaterials.length > 0 && (
+  <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
+    <h2 className="text-xl font-bold text-white mb-4">Preview Promo</h2>
+    <p className="text-grey-400 text-sm mb-4">
+      See how your promo will look when the bot posts it on channels
+    </p>
+
+    {previewSuccess && (
+      <div className="mb-4 bg-green-600/10 border border-green-600/30 rounded-lg p-4">
+        <div className="flex items-center gap-3">
+          <CheckCircle className="text-green-400" size={20} />
+          <p className="text-green-400">{previewSuccess}</p>
+        </div>
+      </div>
+    )}
+
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-grey-300 mb-2">
+          Select Promo to Preview
+        </label>
+        <select
+          value={selectedPreviewPromo}
+          onChange={(e) => setSelectedPreviewPromo(e.target.value)}
+          className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+        >
+          <option value="">Choose a promo...</option>
+          {promoMaterials.map((promo) => (
+            <option key={promo.id} value={promo.id}>
+              {promo.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <button
+        onClick={handlePreviewPromo}
+        disabled={!selectedPreviewPromo || previewing}
+        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:from-grey-600 disabled:to-grey-700 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+      >
+        <Send size={20} />
+        {previewing ? 'Sending Preview...' : 'Send Preview to Telegram'}
+      </button>
+
+      <p className="text-grey-400 text-xs text-center">
+        The preview will be sent to you via the CP Gram bot
+      </p>
+    </div>
+  </div>
+)}
 
           {/* Save Button */}
           <div className="flex gap-4">
