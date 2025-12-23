@@ -475,66 +475,74 @@ export default function AdminModerateChannelsPage() {
 
               <div className="space-y-6">
                 {/* Prices */}
-                <div>
-                  <h4 className="text-white font-bold mb-3">Pricing</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    {Object.entries(selectedChannel.durationPrices).map(([hours, price]) => (
-                      <div key={hours} className="bg-darkBlue-700 p-3 rounded-lg">
-                        <p className="text-grey-400 text-sm">{hours} hours</p>
-                        <p className="text-white font-bold">{price} CP</p>
-                      </div>
-                    ))}
+                {selectedChannel.durationPrices && Object.keys(selectedChannel.durationPrices).length > 0 && (
+                  <div>
+                    <h4 className="text-white font-bold mb-3">Pricing</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      {Object.entries(selectedChannel.durationPrices).map(([hours, price]) => (
+                        <div key={hours} className="bg-darkBlue-700 p-3 rounded-lg">
+                          <p className="text-grey-400 text-sm">{hours} hours</p>
+                          <p className="text-white font-bold">{price} CP</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Days */}
-                <div>
-                  <h4 className="text-white font-bold mb-3">Accepted Days</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedChannel.acceptedDays.map(day => (
-                      <span key={day} className="bg-blue-600/20 text-blue-300 px-3 py-1 rounded-lg text-sm">
-                        {day}
-                      </span>
-                    ))}
+                {selectedChannel.acceptedDays && selectedChannel.acceptedDays.length > 0 && (
+                  <div>
+                    <h4 className="text-white font-bold mb-3">Accepted Days</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedChannel.acceptedDays.map(day => (
+                        <span key={day} className="bg-blue-600/20 text-blue-300 px-3 py-1 rounded-lg text-sm">
+                          {day}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Time Slots */}
-                <div>
-                  <h4 className="text-white font-bold mb-3">Available Time Slots</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedChannel.availableTimeSlots.map(slot => (
-                      <span key={slot} className="bg-darkBlue-700 text-grey-300 px-3 py-1 rounded-lg text-sm">
-                        {slot}
-                      </span>
-                    ))}
+                {selectedChannel.availableTimeSlots && selectedChannel.availableTimeSlots.length > 0 && (
+                  <div>
+                    <h4 className="text-white font-bold mb-3">Available Time Slots</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedChannel.availableTimeSlots.map(slot => (
+                        <span key={slot} className="bg-darkBlue-700 text-grey-300 px-3 py-1 rounded-lg text-sm">
+                          {slot}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Promo Materials */}
-                <div>
-                  <h4 className="text-white font-bold mb-3">Promo Materials ({selectedChannel.promoMaterials.length})</h4>
-                  <div className="space-y-3">
-                    {selectedChannel.promoMaterials.map(promo => (
-                      <div key={promo.id} className="bg-darkBlue-700 p-4 rounded-lg">
-                        <h5 className="text-white font-bold mb-2">{promo.name}</h5>
-                        <p className="text-grey-300 text-sm mb-2">{promo.text}</p>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-grey-400">CTA:</span>
-                          <span className="text-blue-400">{promo.cta}</span>
+                {selectedChannel.promoMaterials && selectedChannel.promoMaterials.length > 0 && (
+                  <div>
+                    <h4 className="text-white font-bold mb-3">Promo Materials ({selectedChannel.promoMaterials.length})</h4>
+                    <div className="space-y-3">
+                      {selectedChannel.promoMaterials.map(promo => (
+                        <div key={promo.id} className="bg-darkBlue-700 p-4 rounded-lg">
+                          <h5 className="text-white font-bold mb-2">{promo.name}</h5>
+                          <p className="text-grey-300 text-sm mb-2">{promo.text}</p>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="text-grey-400">CTA:</span>
+                            <span className="text-blue-400">{promo.cta}</span>
+                          </div>
+                          <a
+                            href={promo.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 text-sm"
+                          >
+                            {promo.link}
+                          </a>
                         </div>
-                        <a
-                          href={promo.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 text-sm"
-                        >
-                          {promo.link}
-                        </a>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {selectedChannel.status === 'pending' && (
