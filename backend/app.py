@@ -955,11 +955,32 @@ def get_channel(channel_id):
     
     try:
         channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id}, {'_id': 0})
-        
+
         if not channel:
             return jsonify({'error': 'Channel not found'}), 404
-        
-        return jsonify(channel)
+
+        # Normalize for frontend compatibility
+        normalized = _normalize_channel_for_frontend(channel)
+
+        frontend_channel = {
+            'id': normalized.get('id'),
+            'name': normalized.get('name'),
+            'username': normalized.get('telegram_chat', ''),
+            'avatar': normalized.get('avatar', ''),
+            'subscribers': normalized.get('subs', 0),
+            'is_paused': channel.get('is_paused', False),
+            'topic': normalized.get('topic', ''),
+            'status': normalized.get('status', ''),
+            'acceptedDays': normalized.get('acceptedDays', []),
+            'promosPerDay': normalized.get('promosPerDay', 1),
+            'durationPrices': normalized.get('durationPrices', {}),
+            'availableTimeSlots': normalized.get('availableTimeSlots', []),
+            'promoMaterials': normalized.get('promos', []),
+            'price_settings': channel.get('price_settings', {}),
+            'promo_materials': channel.get('promo_materials', [])
+        }
+
+        return jsonify(frontend_channel)
     except Exception as e:
         print(f"Error fetching channel: {e}")
         return jsonify({'error': 'Failed to fetch channel'}), 500
