@@ -14,6 +14,7 @@ interface Channel {
   username: string;
   avatar: string;
   subscribers: number;
+  is_paused?: boolean;
   topic: string;
   status: string;
   acceptedDays: string[];
@@ -242,16 +243,16 @@ export default function EditChannelPage() {
 
   const handleToggleStatus = async () => {
     if (!channel) return;
-
-    const newStatus = channel.status === 'approved' ? 'paused' : 'approved';
-    
+    // Toggle pause state via dedicated endpoint
+    const currentlyPaused = !!channel.is_paused;
     try {
       setSubmitting(true);
-      await apiService.updateChannelStatus(channelId!, newStatus);
-      setChannel({ ...channel, status: newStatus });
-      setSuccess(`Channel ${newStatus === 'paused' ? 'paused' : 'activated'} successfully!`);
+      const res = await apiService.pauseChannel(channelId!, !currentlyPaused);
+      // backend returns { ok, message, is_paused }
+      setChannel({ ...channel, is_paused: !!res.is_paused });
+      setSuccess(res.message || `Channel ${res.is_paused ? 'paused' : 'activated'} successfully!`);
     } catch (err: any) {
-      setError(err.message || 'Failed to update channel status');
+      setError(err.response?.data?.error || err.message || 'Failed to update channel status');
     } finally {
       setSubmitting(false);
     }
@@ -301,13 +302,19 @@ export default function EditChannelPage() {
                     <h3 className="text-2xl font-bold text-white">{channel.name}</h3>
                     <p className="text-grey-400">{channel.username}</p>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    channel.status === 'approved' ? 'bg-green-500/20 text-green-300' :
-                    channel.status === 'paused' ? 'bg-yellow-500/20 text-yellow-300' :
-                    'bg-blue-500/20 text-blue-300'
-                  }`}>
-                    {channel.status.toUpperCase()}
-                  </span>
+                  {(() => {
+                    const isPaused = !!channel.is_paused;
+                    const baseStatus = (channel.status || '').toLowerCase();
+                    const displayStatus = baseStatus === 'approved' ? (isPaused ? 'Paused' : 'Active') : channel.status;
+                    const badgeClass = displayStatus === 'Active' ? 'bg-green-500/20 text-green-300' :
+                      displayStatus === 'Paused' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-blue-500/20 text-blue-300';
+
+                    return (
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${badgeClass}`}>
+                        {String(displayStatus).toUpperCase()}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div>
@@ -327,30 +334,32 @@ export default function EditChannelPage() {
           <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">Channel Status</h2>
             <p className="text-grey-400 text-sm mb-4">
-              {channel.status === 'approved' 
-                ? 'Your channel is active and visible to other users for cross-promotions.' 
-                : 'Your channel is paused and hidden from the partner listings.'}
+              {(() => {
+                const isPaused = !!channel.is_paused;
+                const baseStatus = (channel.status || '').toLowerCase();
+                if (baseStatus === 'approved' && !isPaused) return 'Your channel is active and visible to other users for cross-promotions.';
+                if (baseStatus === 'approved' && isPaused) return 'Your channel is paused and hidden from the partner listings.';
+                return 'Your channel is not active for promotions.';
+              })()}
             </p>
             <button
               onClick={handleToggleStatus}
-              disabled={submitting || channel.status === 'pending'}
+              disabled={submitting || (channel.status || '').toLowerCase() === 'pending'}
               className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
-                channel.status === 'approved'
+                (channel.status || '').toLowerCase() === 'approved' && !channel.is_paused
                   ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
                   : 'bg-green-600 hover:bg-green-700 text-white'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {channel.status === 'approved' ? (
-                <>
-                  <Pause size={20} />
-                  Pause Channel
-                </>
-              ) : (
-                <>
-                  <Play size={20} />
-                  Activate Channel
-                </>
-              )}
+              {(() => {
+                const baseStatus = (channel.status || '').toLowerCase();
+                const isPaused = !!channel.is_paused;
+                if (baseStatus === 'approved' && !isPaused) {
+                  return (<><Pause size={20} />Pause Channel</>);
+                }
+                // otherwise show activate
+                return (<><Play size={20} />Activate Channel</>);
+              })()}
             </button>
           </div>
 
