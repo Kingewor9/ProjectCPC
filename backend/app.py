@@ -1355,24 +1355,17 @@ def create_invite_task():
         if status_raw not in ['approved', 'active']:
             return jsonify({'error': 'Channel must be active to complete this task'}), 400
 
-        # Create a scheduled post
-        # We'll use the first available time slot
-        # Support both DB snake_case fields and camelCase fields used by frontend
-        time_slots = channel.get('time_slots') or channel.get('availableTimeSlots') or []
-        accepted_days = channel.get('selected_days') or channel.get('acceptedDays') or []
-        
-        if not time_slots or not accepted_days:
-            return jsonify({'error': 'Channel needs configured time slots and days'}), 400
-        
-        # Schedule the promotional post
-        # For now, we'll schedule it for the next available slot
-        from time_utils import parse_day_time_to_utc
-        
-        # Use the first day and time slot
-        day = accepted_days[0]
-        time_slot = time_slots[0]
-        
-        start_at = parse_day_time_to_utc(day, time_slot)
+        # Create a scheduled post to go live shortly (default 5 minutes)
+        # We intentionally post invite tasks almost immediately rather than using
+        # channel time slots so users get their promo posted right after confirm.
+        delay_minutes = 5
+        try:
+            # Allow optional override from frontend: { delay_minutes: <int> }
+            delay_minutes = int(data.get('delay_minutes', delay_minutes))
+        except Exception:
+            delay_minutes = 5
+
+        start_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=delay_minutes)
         end_at = start_at + datetime.timedelta(hours=12)
         
         # Create invite campaign
@@ -1419,7 +1412,7 @@ def create_invite_task():
                 f"📢 Invite task created\n"
                 f"User: {telegram_id}\n"
                 f"Channel: {channel.get('name')}\n"
-                f"Scheduled: {start_at.strftime('%Y-%m-%d %H:%M UTC')}"
+                f"Posting soon at: {start_at.strftime('%Y-%m-%d %H:%M UTC')}"
             )
         
         return jsonify({
