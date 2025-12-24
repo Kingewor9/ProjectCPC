@@ -11,17 +11,30 @@ def send_message(chat_id, text, parse_mode='HTML', reply_markup=None):
     payload = {'chat_id': chat_id, 'text': text, 'parse_mode': parse_mode}
     if reply_markup is not None:
         # reply_markup should be a dict representing inline keyboard etc.
+        # Telegram expects reply_markup as a JSON-serializable object when using
+        # application/json; keep as dict and let requests.json handle it.
         payload['reply_markup'] = reply_markup
     try:
         r = requests.post(url, json=payload, timeout=10)
-        r.raise_for_status()
-        return r.json()
-    except requests.exceptions.HTTPError as e:
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError:
+            # Attempt to return Telegram error payload if present so callers
+            # can inspect the `description` field. Also log the full response.
+            try:
+                resp = r.json()
+            except Exception:
+                resp = {'ok': False, 'description': r.text}
+            logging.error(f'Failed to send message to chat_id {chat_id}: {resp}')
+            return resp
+        try:
+            return r.json()
+        except Exception:
+            return {'ok': True, 'result': {}}
+    except Exception as e:
         logging.error(f'Failed to send message to chat_id {chat_id}')
-        logging.error(f'Status code: {e.response.status_code}')
-        logging.error(f'Response: {e.response.text}')
-        logging.exception('HTTPError details')
-        return None
+        logging.exception('Failed to send message')
+        return {'ok': False, 'description': str(e)}
     except Exception as e:
         logging.error(f'Failed to send message to chat_id {chat_id}')
         logging.exception('Failed to send message')
@@ -35,11 +48,22 @@ def send_photo(chat_id, photo_url, caption=None, parse_mode='HTML', reply_markup
         payload['reply_markup'] = reply_markup
     try:
         r = requests.post(url, json=payload, timeout=10)
-        r.raise_for_status()
-        return r.json()
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError:
+            try:
+                resp = r.json()
+            except Exception:
+                resp = {'ok': False, 'description': r.text}
+            logging.error(f'Failed to send photo to {chat_id}: {resp}')
+            return resp
+        try:
+            return r.json()
+        except Exception:
+            return {'ok': True, 'result': {}}
     except Exception as e:
         logging.exception('Failed to send photo')
-        return None
+        return {'ok': False, 'description': str(e)}
 
 
 def send_open_button_message(chat_id, text, button_text='Open'):
@@ -110,7 +134,9 @@ def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
     try:
         # CP Gram branded image URL (you can replace this with your own hosted image)
         # For now using a placeholder - you should upload your own CP Gram logo/banner
-        image_url = "https://ibb.co/jZkmD4RK"
+        # Use a direct image URL; if not available or Telegram rejects it,
+        # fall back to sending a text-only post with the CTA button.
+        image_url = "https://placehold.co/800x400.png?text=CP+Gram+Invite"
         
         # Build the caption with professional formatting
         caption = f"<b>🚀 Grow Your Channel with CP Gram!</b>\n\n{promo_text}"
@@ -131,12 +157,15 @@ def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
             parse_mode='HTML',
             reply_markup=keyboard
         )
-        
-        if result and result.get('ok'):
-            logging.info(f"Successfully posted invite campaign to {chat_id}, message_id: {result.get('result', {}).get('message_id')}")
-        else:
-            logging.error(f"Failed to post invite campaign to {chat_id}: {result}")
-        
+
+        # If Telegram rejects the photo URL (some hosts redirect or block hotlinking),
+        # fallback to sending a text-only message with the CTA button.
+        if not result or not result.get('ok'):
+            logging.warning(f"Photo post failed for {chat_id}, falling back to text post: {result}")
+            text_result = send_message(chat_id, caption, reply_markup=keyboard)
+            return text_result
+
+        logging.info(f"Successfully posted invite campaign to {chat_id}, message_id: {result.get('result', {}).get('message_id')}")
         return result
     
     except Exception as e:
