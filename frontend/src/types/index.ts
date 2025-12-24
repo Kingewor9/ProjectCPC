@@ -78,18 +78,27 @@ export interface CrossPromoRequest {
 
 // Campaign Types
 export interface Campaign {
-  id?: string;
-  request_id: string;
+  id: string;
+  fromChannelId?: string;
+  toChannelId?: string;
   chat_id: string;
-  promo: Promo;
+  promo: {
+    id?: string;
+    name: string;
+    text: string;
+    link: string;
+    image?: string;
+    cta?: string;
+  };
   duration_hours: number;
-  status: 'scheduled' | 'running' | 'ended';
-  start_at: string;
-  end_at: string;
-  message_id?: string;
+  status: 'scheduled' | 'running' | 'ended' | 'failed';
+  start_at: string;  // ISO datetime string
+  end_at: string;    // ISO datetime string
+  created_at?: string;
   posted_at?: string;
   ended_at?: string;
-  created_at?: string;
+  message_id?: string | number;
+  error?: string;
 }
 
 // Auth Response
