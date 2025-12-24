@@ -3,7 +3,7 @@ from flask_cors import CORS
 from models import ensure_indexes, init_mock_partners, upsert_user, partners, requests_col, campaigns, users
 from scheduler import start_scheduler, check_and_post_campaigns, cleanup_finished_campaigns
 from bot import send_message, send_open_button_message
-from config import STARS_PER_CPC, TELEGRAM_BOT_TOKEN, BOT_ADMIN_CHAT_ID, APP_URL
+from config import STARS_PER_CPC, TELEGRAM_BOT_TOKEN, BOT_ADMIN_CHAT_ID, APP_URL, BOT_URL
 from auth import create_token, verify_token, token_required
 from time_utils import parse_day_time_to_utc, calculate_end_time
 import hmac, hashlib, time
@@ -1350,14 +1350,16 @@ def create_invite_task():
         if not channel:
             return jsonify({'error': 'Channel not found'}), 404
         
-        # Check if channel is active
-        if channel.get('status') not in ['approved', 'Active']:
+        # Check if channel is active (accept DB values or display values)
+        status_raw = (channel.get('status') or '').lower()
+        if status_raw not in ['approved', 'active']:
             return jsonify({'error': 'Channel must be active to complete this task'}), 400
-        
+
         # Create a scheduled post
         # We'll use the first available time slot
-        time_slots = channel.get('availableTimeSlots', [])
-        accepted_days = channel.get('acceptedDays', [])
+        # Support both DB snake_case fields and camelCase fields used by frontend
+        time_slots = channel.get('time_slots') or channel.get('availableTimeSlots') or []
+        accepted_days = channel.get('selected_days') or channel.get('acceptedDays') or []
         
         if not time_slots or not accepted_days:
             return jsonify({'error': 'Channel needs configured time slots and days'}), 400
