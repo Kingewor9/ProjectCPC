@@ -813,9 +813,50 @@ def accept_request(req_id):
 
 
 @app.route('/api/campaigns', methods=['GET'])
+@token_required
 def list_campaigns():
-    c = list(campaigns.find({}, {'_id': 0}))
-    return jsonify(c)
+    """Get campaigns relevant to the authenticated user"""
+    telegram_id = request.telegram_id
+    
+    try:
+        # Get user's channels
+        user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
+        channel_ids = [ch.get('id') for ch in user_channels]
+        
+        if not channel_ids:
+            # No channels, return empty list
+            return jsonify([])
+        
+        # Get campaigns where user is either sender OR receiver
+        # This includes campaigns for channels owned by the user
+        user_campaigns = list(campaigns.find({
+            '$or': [
+                {'fromChannelId': {'$in': channel_ids}},
+                {'toChannelId': {'$in': channel_ids}},
+                {'chat_id': {'$in': [ch.get('telegram_id') for ch in user_channels if ch.get('telegram_id')]}}
+            ]
+        }, {'_id': 0}))  # Exclude _id to avoid ObjectId serialization issues
+        
+        # Convert datetime objects to ISO strings for JSON serialization
+        for campaign in user_campaigns:
+            if 'start_at' in campaign and campaign['start_at']:
+                campaign['start_at'] = campaign['start_at'].isoformat()
+            if 'end_at' in campaign and campaign['end_at']:
+                campaign['end_at'] = campaign['end_at'].isoformat()
+            if 'created_at' in campaign and campaign['created_at']:
+                campaign['created_at'] = campaign['created_at'].isoformat()
+            if 'posted_at' in campaign and campaign.get('posted_at'):
+                campaign['posted_at'] = campaign['posted_at'].isoformat()
+            if 'ended_at' in campaign and campaign.get('ended_at'):
+                campaign['ended_at'] = campaign['ended_at'].isoformat()
+        
+        return jsonify(user_campaigns)
+    
+    except Exception as e:
+        print(f"Error fetching campaigns: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to fetch campaigns'}), 500
 
 @app.route('/api/channels/validate', methods=['POST'])
 @token_required
