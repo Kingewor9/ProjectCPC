@@ -19,25 +19,40 @@ def check_and_post_campaigns():
     now = datetime.utcnow()
     logging.info(f"[SCHEDULER] Checking campaigns at {now}")
     
-    # Find scheduled campaigns that are due to post
-    to_post = list(campaigns.find({'status': 'scheduled', 'start_at': {'$lte': now}}))
+    # Find campaigns due in next 2 minutes (to catch any close to posting)
+    check_window = now + timedelta(minutes=2)
+    to_post = list(campaigns.find({
+        'status': 'scheduled', 
+        'start_at': {'$lte': check_window}
+    }))
     
     logging.info(f"[SCHEDULER] Found {len(to_post)} campaigns to post")
     
     for camp in to_post:
-        try:
-            logging.info(f"[SCHEDULER] Processing campaign {camp.get('id', camp.get('_id'))}")
+        # Skip if not actually due yet (give 30 second buffer)
+        start_at = camp.get('start_at')
+        if start_at and start_at > now + timedelta(seconds=30):
+            continue
             
+        try:
+            campaign_id = camp.get('id', str(camp.get('_id')))
+            logging.info(f"[SCHEDULER] Processing campaign {campaign_id}")
+            
+            # Get chat_id with fallbacks
             chat_id = camp.get('chat_id') or camp.get('telegram_chat_id')
             campaign_type = camp.get('type', 'regular')
             
             if not chat_id:
-                logging.error(f"[SCHEDULER] No chat_id for campaign {camp.get('id')}")
+                error_msg = 'No chat_id provided'
+                logging.error(f"[SCHEDULER] {error_msg} for campaign {campaign_id}")
+                logging.error(f"[SCHEDULER] Campaign data: {camp}")
                 campaigns.update_one(
                     {'_id': camp['_id']},
-                    {'$set': {'status': 'failed', 'error': 'No chat_id provided'}}
+                    {'$set': {'status': 'failed', 'error': error_msg}}
                 )
                 continue
+            
+            logging.info(f"[SCHEDULER] Posting to chat_id: {chat_id}, type: {campaign_type}")
             
             res = None
             
@@ -45,17 +60,24 @@ def check_and_post_campaigns():
             if campaign_type == 'invite_task':
                 # This is an invite task campaign
                 promo_text = camp.get('promo_text', '')
-                app_url = APP_URL
+                
+                if not promo_text:
+                    logging.error(f"[SCHEDULER] No promo_text for invite campaign {campaign_id}")
+                    campaigns.update_one(
+                        {'_id': camp['_id']},
+                        {'$set': {'status': 'failed', 'error': 'No promo_text'}}
+                    )
+                    continue
                 
                 logging.info(f"[SCHEDULER] Sending invite campaign to {chat_id}")
-                res = send_invite_campaign_post(chat_id, promo_text, app_url)
+                res = send_invite_campaign_post(chat_id, promo_text, APP_URL)
                 
             else:
                 # This is a regular cross-promotion campaign
                 promo = camp.get('promo', {})
                 
                 if not promo:
-                    logging.error(f"[SCHEDULER] No promo data for campaign {camp.get('id')}")
+                    logging.error(f"[SCHEDULER] No promo data for campaign {campaign_id}")
                     campaigns.update_one(
                         {'_id': camp['_id']},
                         {'$set': {'status': 'failed', 'error': 'No promo data'}}
@@ -65,9 +87,10 @@ def check_and_post_campaigns():
                 logging.info(f"[SCHEDULER] Sending regular campaign to {chat_id}")
                 res = send_campaign_post(chat_id, promo)
             
+            # Check result
             if res and res.get('ok') and res.get('result'):
-                message_id = res['result']['message_id']
-                logging.info(f"[SCHEDULER] Successfully posted campaign {camp.get('id')}, message_id={message_id}")
+                message_id = res['result'].get('message_id')
+                logging.info(f"[SCHEDULER] Successfully posted campaign {campaign_id}, message_id={message_id}")
                 
                 # Update campaign status
                 campaigns.update_one(
@@ -83,27 +106,29 @@ def check_and_post_campaigns():
                 
                 # Set end time if not already set
                 if not camp.get('end_at'):
-                    duration_hours = camp.get('duration_hours', 8)
+                    duration_hours = camp.get('duration_hours', 12)
                     end_time = datetime.utcnow() + timedelta(hours=duration_hours)
                     campaigns.update_one(
                         {'_id': camp['_id']}, 
                         {'$set': {'end_at': end_time}}
                     )
             else:
-                logging.error(f"[SCHEDULER] Failed to post campaign {camp.get('id')}: {res}")
-                # Mark as failed
                 error_msg = res.get('description', 'Failed to send message') if res else 'No response from Telegram'
+                logging.error(f"[SCHEDULER] Failed to post campaign {campaign_id}: {error_msg}")
+                logging.error(f"[SCHEDULER] Full response: {res}")
+                
+                # Mark as failed
                 campaigns.update_one(
                     {'_id': camp['_id']},
                     {'$set': {'status': 'failed', 'error': error_msg}}
                 )
                 
         except Exception as e:
-            logging.exception(f'[SCHEDULER] Failed to post campaign {camp.get("id")}')
+            logging.exception(f'[SCHEDULER] Exception posting campaign {campaign_id}')
             campaigns.update_one(
                 {'_id': camp['_id']},
-                {'$set': {'status': 'failed', 'error': str(e)}}   
-                )
+                {'$set': {'status': 'failed', 'error': str(e)}}
+            )
       
 def cleanup_finished_campaigns():
     """Cleanup finished campaigns and complete invite tasks"""

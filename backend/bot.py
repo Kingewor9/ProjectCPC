@@ -118,7 +118,7 @@ def send_promo_preview(chat_id, promo_name, promo_text, promo_link, promo_image,
         logging.exception(f'Failed to send promo preview to {chat_id}')
         return None
             
-def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
+def send_invite_campaign_post(chat_id, promo_text, app_url):
     """
     Send an invite campaign post with CP Gram branding
     This is specifically for the invite task feature
@@ -132,11 +132,8 @@ def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
         Response from Telegram API with message details
     """
     try:
-        # CP Gram branded image URL (you can replace this with your own hosted image)
-        # For now using a placeholder - you should upload your own CP Gram logo/banner
-        # Use a direct image URL; if not available or Telegram rejects it,
-        # fall back to sending a text-only post with the CTA button.
-        image_url = "https://placehold.co/800x400.png?text=CP+Gram+Invite"
+        # CP Gram branded image URL
+        image_url = "https://ibb.co/Y7V6fX6c"
         
         # Build the caption with professional formatting
         caption = f"<b>🚀 Grow Your Channel with CP Gram!</b>\n\n{promo_text}"
@@ -144,12 +141,12 @@ def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
         # Create inline keyboard with call-to-action button
         keyboard = {
             'inline_keyboard': [[
-                {'text': '🚀 Join CP Gram Now', 'url': BOT_URL}
+                {'text': '🚀 Join CP Gram Now', 'url': app_url}
             ]]
         }
         
         # Send photo with caption and button
-        logging.info(f"Sending invite campaign to chat_id: {chat_id}")
+        logging.info(f"[BOT] Sending invite campaign to chat_id: {chat_id}")
         result = send_photo(
             chat_id=chat_id,
             photo_url=image_url,
@@ -158,18 +155,20 @@ def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
             reply_markup=keyboard
         )
 
-        # If Telegram rejects the photo URL (some hosts redirect or block hotlinking),
-        # fallback to sending a text-only message with the CTA button.
+        # If photo fails, fallback to text
         if not result or not result.get('ok'):
-            logging.warning(f"Photo post failed for {chat_id}, falling back to text post: {result}")
-            text_result = send_message(chat_id, caption, reply_markup=keyboard)
-            return text_result
+            logging.warning(f"[BOT] Photo post failed for {chat_id}, falling back to text: {result}")
+            result = send_message(chat_id, caption, reply_markup=keyboard)
 
-        logging.info(f"Successfully posted invite campaign to {chat_id}, message_id: {result.get('result', {}).get('message_id')}")
+        if result and result.get('ok'):
+            logging.info(f"[BOT] Successfully posted invite campaign to {chat_id}, message_id: {result.get('result', {}).get('message_id')}")
+        else:
+            logging.error(f"[BOT] Failed to post invite campaign to {chat_id}: {result}")
+        
         return result
     
     except Exception as e:
-        logging.exception(f'Failed to send invite campaign post to {chat_id}')
+        logging.exception(f'[BOT] Failed to send invite campaign post to {chat_id}')
         return None
 
 def send_campaign_post(chat_id, promo):

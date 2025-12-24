@@ -15,6 +15,7 @@ from config import ADMIN_TELEGRAM_ID
 from models import user_tasks
 import uuid
 import json
+import logging
 from models import transactions
 from urllib.parse import parse_qsl
 
@@ -1368,6 +1369,8 @@ def create_invite_task():
         start_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=delay_minutes)
         end_at = start_at + datetime.timedelta(hours=12)
         
+       
+        
         # Create invite campaign
         invite_campaign = {
             'type': 'invite_task',
@@ -1384,7 +1387,7 @@ def create_invite_task():
                          f"✅ Automated posting\n"
                          f"✅ Fair pricing system\n"
                          f"✅ Earn rewards\n\n"
-                         f"Start growing today: {BOT_URL}",
+                         f"Start growing today: {APP_URL}",
             'created_at': datetime.datetime.utcnow()
         }
         
@@ -2084,6 +2087,42 @@ def debug_campaigns():
         ],
         'running_campaigns': len(running)
     })
+    
+@app.route('/api/admin/test-post/<campaign_id>', methods=['POST'])
+@token_required
+@admin_required
+def test_post_campaign(campaign_id):
+    """Test posting a campaign immediately (Admin only)"""
+    try:
+        camp = campaigns.find_one({'id': campaign_id})
+        if not camp:
+            return jsonify({'error': 'Campaign not found'}), 404
+        
+        chat_id = camp.get('chat_id') or camp.get('telegram_chat_id')
+        campaign_type = camp.get('type', 'regular')
+        
+        if not chat_id:
+            return jsonify({'error': 'No chat_id in campaign'}), 400
+        
+        from bot import send_invite_campaign_post, send_campaign_post
+        
+        if campaign_type == 'invite_task':
+            promo_text = camp.get('promo_text', '')
+            res = send_invite_campaign_post(chat_id, promo_text, APP_URL)
+        else:
+            promo = camp.get('promo', {})
+            res = send_campaign_post(chat_id, promo)
+        
+        return jsonify({
+            'ok': res.get('ok') if res else False,
+            'result': res,
+            'chat_id': chat_id,
+            'campaign_type': campaign_type
+        })
+    
+    except Exception as e:
+        logging.exception('Error in test post')
+        return jsonify({'error': str(e)}), 500
     
 if __name__ == '__main__':
     # Initialize database
