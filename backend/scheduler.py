@@ -2,12 +2,14 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 from models import campaigns, requests_col
 from bot import send_message, send_photo, delete_message,  send_invite_campaign_post, send_campaign_post
-from config import APP_URL
+from config import APP_URL, TELEGRAM_BOT_TOKEN
 import logging
 
 s = BackgroundScheduler()
 
 def start_scheduler():
+    if not TELEGRAM_BOT_TOKEN:
+        logging.warning('[SCHEDULER] TELEGRAM_BOT_TOKEN is not set. Bot API calls will fail.')
     s.add_job(check_and_post_campaigns, 'interval', seconds=20, id='campaign_checker')
     s.add_job(cleanup_finished_campaigns, 'interval', seconds=30, id='campaign_cleanup')
     s.start()
