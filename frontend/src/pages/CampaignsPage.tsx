@@ -22,17 +22,29 @@ export default function CampaignsPage() {
     }
 
     const fetchCampaigns = async () => {
-      try {
-        setLoading(true);
-        const data = await apiService.listCampaigns();
-        setCampaigns(data);
-      } catch (err) {
-        setError('Failed to load campaigns');
-        console.error('Error loading campaigns:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  try {
+    setLoading(true);
+    setError(null);
+    const data = await apiService.listCampaigns();
+    
+    // Validate data is an array
+    if (!Array.isArray(data)) {
+      console.error('Invalid campaigns data:', data);
+      setError('Invalid data received from server');
+      setCampaigns([]);
+      return;
+    }
+    
+    setCampaigns(data);
+  } catch (err: any) {
+    const errorMessage = err?.response?.data?.error || err?.message || 'Failed to load campaigns';
+    setError(errorMessage);
+    console.error('Error loading campaigns:', err);
+    setCampaigns([]); // Set to empty array on error
+  } finally {
+    setLoading(false);
+  }
+};
 
     fetchCampaigns();
 
@@ -80,8 +92,8 @@ export default function CampaignsPage() {
   };
 
   const CampaignCard = ({ campaign }: { campaign: Campaign }) => {
-    const startTime = new Date(campaign.start_at);
-    const endTime = new Date(campaign.end_at);
+    const startTime = campaign.start_at ? new Date(campaign.start_at) : new Date();
+    const endTime = campaign.end_at ? new Date(campaign.end_at) : new Date();
 
     return (
       <div className={`bg-darkBlue-800 border rounded-lg p-6 ${getStatusColor(campaign.status)}`}>
