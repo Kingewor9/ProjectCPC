@@ -1389,7 +1389,7 @@ def create_invite_task():
                          f"✅ Automated posting\n"
                          f"✅ Fair pricing system\n"
                          f"✅ Earn rewards\n\n"
-                         f"Start growing today: {APP_URL}",
+                         f"Start growing today: {BOT_URL}",
             'created_at': datetime.datetime.utcnow()
         }
         

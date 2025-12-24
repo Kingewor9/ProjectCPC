@@ -1,7 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 from models import campaigns, requests_col
-from bot import send_message, send_photo, delete_message
+from bot import send_message, send_photo, delete_message,  send_invite_campaign_post, send_campaign_post
 from config import APP_URL
 import logging
 
@@ -11,7 +11,6 @@ def start_scheduler():
     s.add_job(check_and_post_campaigns, 'interval', seconds=20, id='campaign_checker')
     s.add_job(cleanup_finished_campaigns, 'interval', seconds=30, id='campaign_cleanup')
     s.start()
-
 
 def check_and_post_campaigns():
     """Check and post scheduled campaigns"""
@@ -27,36 +26,42 @@ def check_and_post_campaigns():
         try:
             logging.info(f"[SCHEDULER] Processing campaign {camp.get('id', camp.get('_id'))}")
             
-            chat_id = camp.get('chat_id')
-            promo = camp.get('promo', {})
+            chat_id = camp.get('chat_id') or camp.get('telegram_chat_id')
+            campaign_type = camp.get('type', 'regular')
             
             if not chat_id:
                 logging.error(f"[SCHEDULER] No chat_id for campaign {camp.get('id')}")
+                campaigns.update_one(
+                    {'_id': camp['_id']},
+                    {'$set': {'status': 'failed', 'error': 'No chat_id provided'}}
+                )
                 continue
             
-            # Build message text
-            promo_name = promo.get('name', 'Promo')
-            promo_text = promo.get('text', '')
-            promo_link = promo.get('link', '')
-            
-            text = f"<b>{promo_name}</b>\n\n{promo_text}"
-            if promo_link:
-                text += f"\n\n🔗 {promo_link}"
-            text += f"\n\n<i>Powered by CP Gram</i>"
-            
-            # Build CTA button
-            cta_text = promo.get('cta') or 'Learn More'
-            button_url = promo_link or APP_URL
-            reply_markup = {'inline_keyboard': [[{'text': cta_text, 'url': button_url}]]}
-            
-            # Send the message
             res = None
-            if promo.get('image'):
-                logging.info(f"[SCHEDULER] Sending photo to {chat_id}")
-                res = send_photo(chat_id, promo.get('image'), caption=text, reply_markup=reply_markup)
+            
+            # Handle different campaign types
+            if campaign_type == 'invite_task':
+                # This is an invite task campaign
+                promo_text = camp.get('promo_text', '')
+                app_url = APP_URL
+                
+                logging.info(f"[SCHEDULER] Sending invite campaign to {chat_id}")
+                res = send_invite_campaign_post(chat_id, promo_text, app_url)
+                
             else:
-                logging.info(f"[SCHEDULER] Sending text message to {chat_id}")
-                res = send_message(chat_id, text, reply_markup=reply_markup)
+                # This is a regular cross-promotion campaign
+                promo = camp.get('promo', {})
+                
+                if not promo:
+                    logging.error(f"[SCHEDULER] No promo data for campaign {camp.get('id')}")
+                    campaigns.update_one(
+                        {'_id': camp['_id']},
+                        {'$set': {'status': 'failed', 'error': 'No promo data'}}
+                    )
+                    continue
+                
+                logging.info(f"[SCHEDULER] Sending regular campaign to {chat_id}")
+                res = send_campaign_post(chat_id, promo)
             
             if res and res.get('ok') and res.get('result'):
                 message_id = res['result']['message_id']
@@ -74,40 +79,68 @@ def check_and_post_campaigns():
                     }
                 )
                 
-                # Set end time
-                duration_hours = camp.get('duration_hours', 8)
-                end_time = datetime.utcnow() + timedelta(hours=duration_hours)
-                campaigns.update_one(
-                    {'_id': camp['_id']}, 
-                    {'$set': {'end_at': end_time}}
-                )
+                # Set end time if not already set
+                if not camp.get('end_at'):
+                    duration_hours = camp.get('duration_hours', 8)
+                    end_time = datetime.utcnow() + timedelta(hours=duration_hours)
+                    campaigns.update_one(
+                        {'_id': camp['_id']}, 
+                        {'$set': {'end_at': end_time}}
+                    )
             else:
                 logging.error(f"[SCHEDULER] Failed to post campaign {camp.get('id')}: {res}")
                 # Mark as failed
+                error_msg = res.get('description', 'Failed to send message') if res else 'No response from Telegram'
                 campaigns.update_one(
                     {'_id': camp['_id']},
-                    {'$set': {'status': 'failed', 'error': 'Failed to send message'}}
+                    {'$set': {'status': 'failed', 'error': error_msg}}
                 )
                 
         except Exception as e:
             logging.exception(f'[SCHEDULER] Failed to post campaign {camp.get("id")}')
             campaigns.update_one(
                 {'_id': camp['_id']},
-                {'$set': {'status': 'failed', 'error': str(e)}}
-            )
-
+                {'$set': {'status': 'failed', 'error': str(e)}}   
+                )
+      
 def cleanup_finished_campaigns():
+    """Cleanup finished campaigns and complete invite tasks"""
     now = datetime.utcnow()
     finished = list(campaigns.find({'status': 'running', 'end_at': {'$lte': now}}))
+    
+    logging.info(f"[SCHEDULER] Found {len(finished)} campaigns to cleanup")
+    
     for camp in finished:
         try:
-            chat_id = camp.get('chat_id')
+            chat_id = camp.get('chat_id') or camp.get('telegram_chat_id')
             message_id = camp.get('message_id')
+            campaign_type = camp.get('type', 'regular')
+            
+            # Delete the message
             if chat_id and message_id:
+                logging.info(f"[SCHEDULER] Deleting message {message_id} from {chat_id}")
                 delete_message(chat_id, message_id)
-            campaigns.update_one({'_id': camp['_id']}, {'$set': {'status': 'ended', 'ended_at': datetime.utcnow()}})
-        except Exception:
-            logging.exception('Failed to cleanup campaign')
+            
+            # Mark campaign as ended
+            campaigns.update_one(
+                {'_id': camp['_id']}, 
+                {'$set': {'status': 'ended', 'ended_at': datetime.utcnow()}}
+            )
+            
+            # If this is an invite task, complete it and reward the user
+            if campaign_type == 'invite_task':
+                user_id = camp.get('user_id')
+                campaign_id = camp.get('id') or str(camp.get('_id'))
+                
+                if user_id and campaign_id:
+                    logging.info(f"[SCHEDULER] Completing invite task for user {user_id}")
+                    from app import complete_invite_task
+                    complete_invite_task(campaign_id, user_id)
+            
+            logging.info(f"[SCHEDULER] Successfully cleaned up campaign {camp.get('id')}")
+            
+        except Exception as e:
+            logging.exception(f'[SCHEDULER] Failed to cleanup campaign {camp.get("id")}')
             
 def process_invite_campaigns():
     """Process and complete invite campaigns"""

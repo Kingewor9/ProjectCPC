@@ -90,6 +90,122 @@ def send_promo_preview(chat_id, promo_name, promo_text, promo_link, promo_image,
                 parse_mode='HTML',
                 reply_markup=keyboard
             )
+    except Exception as e:
+        logging.exception(f'Failed to send promo preview to {chat_id}')
+        return None
+            
+def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
+    """
+    Send an invite campaign post with CP Gram branding
+    This is specifically for the invite task feature
+    
+    Args:
+        chat_id: Telegram channel/chat ID where to post
+        promo_text: The promotional text to display
+        app_url: URL to the CP Gram app
+    
+    Returns:
+        Response from Telegram API with message details
+    """
+    try:
+        # CP Gram branded image URL (you can replace this with your own hosted image)
+        # For now using a placeholder - you should upload your own CP Gram logo/banner
+        image_url = "https://ibb.co/jZkmD4RK"
+        
+        # Build the caption with professional formatting
+        caption = f"<b>🚀 Grow Your Channel with CP Gram!</b>\n\n{promo_text}"
+        
+        # Create inline keyboard with call-to-action button
+        keyboard = {
+            'inline_keyboard': [[
+                {'text': '🚀 Join CP Gram Now', 'url': BOT_URL}
+            ]]
+        }
+        
+        # Send photo with caption and button
+        logging.info(f"Sending invite campaign to chat_id: {chat_id}")
+        result = send_photo(
+            chat_id=chat_id,
+            photo_url=image_url,
+            caption=caption,
+            parse_mode='HTML',
+            reply_markup=keyboard
+        )
+        
+        if result and result.get('ok'):
+            logging.info(f"Successfully posted invite campaign to {chat_id}, message_id: {result.get('result', {}).get('message_id')}")
+        else:
+            logging.error(f"Failed to post invite campaign to {chat_id}: {result}")
+        
+        return result
+    
+    except Exception as e:
+        logging.exception(f'Failed to send invite campaign post to {chat_id}')
+        return None
+
+def send_campaign_post(chat_id, promo):
+    """
+    Send a campaign post (for regular cross-promotion campaigns)
+    
+    Args:
+        chat_id: Telegram channel/chat ID where to post
+        promo: Dictionary containing promo details (name, text, link, image, cta)
+    
+    Returns:
+        Response from Telegram API with message details
+    """
+    try:
+        promo_name = promo.get('name', 'Promotion')
+        promo_text = promo.get('text', '')
+        promo_link = promo.get('link', '')
+        promo_image = promo.get('image', '')
+        promo_cta = promo.get('cta', 'Learn More')
+        
+        # Build caption
+        caption = f"<b>{promo_name}</b>\n\n{promo_text}"
+        
+        # Add powered by footer
+        caption += "\n\n<i>Powered by CP Gram</i>"
+        
+        # Create inline keyboard with CTA button
+        keyboard = None
+        if promo_link and promo_cta:
+            keyboard = {
+                'inline_keyboard': [[
+                    {'text': promo_cta, 'url': promo_link}
+                ]]
+            }
+        
+        # Send with image if available, otherwise just text
+        logging.info(f"Sending campaign post to chat_id: {chat_id}")
+        
+        if promo_image:
+            result = send_photo(
+                chat_id=chat_id,
+                photo_url=promo_image,
+                caption=caption,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        else:
+            result = send_message(
+                chat_id=chat_id,
+                text=caption,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        
+        if result and result.get('ok'):
+            logging.info(f"Successfully posted campaign to {chat_id}, message_id: {result.get('result', {}).get('message_id')}")
+        else:
+            logging.error(f"Failed to post campaign to {chat_id}: {result}")
+        
+        return result
+    
+    except Exception as e:
+        logging.exception(f'Failed to send campaign post to {chat_id}')
+        return None
+
     
     except Exception as e:
         logging.exception(f'Failed to send promo preview to {chat_id}')
