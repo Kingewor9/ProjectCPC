@@ -1788,6 +1788,12 @@ def preview_promo(channel_id):
     except Exception as e:
         print(f"Error sending promo preview: {e}")
         return jsonify({'error': 'Failed to send preview'}), 500
+
+#To keep render awake with a cron job pinging the /health endpoint    
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for keeping the service alive"""
+    return jsonify({'status': 'ok', 'timestamp': datetime.datetime.utcnow().isoformat()})
     
 #API routes for admin functionalities  
 @app.route('/api/admin/channels', methods=['GET'])
@@ -2005,15 +2011,51 @@ def get_purchase_stats():
         'revenue': revenue[0] if revenue else {'total_cpc': 0, 'total_stars': 0}
     })
     
+@app.route('/api/admin/campaigns/debug', methods=['GET'])
+@token_required
+@admin_required
+def debug_campaigns():
+    """Debug campaign scheduling"""
+    now = datetime.datetime.utcnow()
+    
+    # Get all scheduled campaigns
+    scheduled = list(campaigns.find({'status': 'scheduled'}).sort('start_at', 1).limit(10))
+    
+    # Get recent failed campaigns
+    failed = list(campaigns.find({'status': 'failed'}).sort('posted_at', -1).limit(5))
+    
+    # Get running campaigns
+    running = list(campaigns.find({'status': 'running'}).sort('posted_at', -1).limit(5))
+    
+    return jsonify({
+        'current_time': now.isoformat(),
+        'scheduled_campaigns': len(scheduled),
+        'scheduled_details': [
+            {
+                'id': str(c.get('id', c.get('_id'))),
+                'start_at': c.get('start_at').isoformat() if c.get('start_at') else None,
+                'chat_id': c.get('chat_id'),
+                'promo_name': c.get('promo', {}).get('name'),
+                'time_until_post': (c.get('start_at') - now).total_seconds() / 60 if c.get('start_at') else None
+            } for c in scheduled
+        ],
+        'failed_campaigns': [
+            {
+                'id': str(c.get('id', c.get('_id'))),
+                'error': c.get('error'),
+                'chat_id': c.get('chat_id')
+            } for c in failed
+        ],
+        'running_campaigns': len(running)
+    })
+    
 if __name__ == '__main__':
     # Initialize database
     ensure_indexes()
     init_mock_partners()
     
-    # Only run scheduler locally
-    import os
-    if os.getenv('RENDER') != 'true':
-        start_scheduler()
+    # Always start scheduler
+    start_scheduler()
     
     # Local development server
     app.run(host='0.0.0.0', port=5000, debug=True)

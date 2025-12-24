@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_time
 import calendar
 
-
 def parse_day_time_to_utc(day_name: str, time_slot: str) -> datetime:
     """
     Convert day name (e.g., 'Monday') and time slot (e.g., '14:00 - 15:00 UTC') 
@@ -23,8 +22,23 @@ def parse_day_time_to_utc(day_name: str, time_slot: str) -> datetime:
     
     # Calculate next occurrence of target_weekday
     now = datetime.utcnow()
-    days_ahead = target_weekday - now.weekday()
-    if days_ahead <= 0:  # Target day already happened this week or is today
+    current_weekday = now.weekday()
+    
+    # Calculate days until target day
+    days_ahead = target_weekday - current_weekday
+    
+    # If it's the same day, check if the time has passed
+    if days_ahead == 0:
+        # It's today - check if time has passed
+        target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if target_time > now:
+            # Time hasn't passed yet today, schedule for today
+            return target_time
+        else:
+            # Time has passed, schedule for next week
+            days_ahead = 7
+    elif days_ahead < 0:
+        # Target day already happened this week
         days_ahead += 7
     
     next_occurrence = now + timedelta(days=days_ahead)
