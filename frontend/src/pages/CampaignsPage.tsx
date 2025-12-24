@@ -111,7 +111,7 @@ export default function CampaignsPage() {
           </div>
           <div>
             <p className="text-grey-400 text-xs font-medium">Chat ID</p>
-            <p className="text-white text-sm font-medium mt-1 font-mono text-xs">{campaign.chat_id.substring(0, 12)}...</p>
+            <p className="text-white text-sm font-medium mt-1 font-mono">{campaign.chat_id.substring(0, 12)}...</p>
           </div>
         </div>
 
