@@ -97,7 +97,7 @@ export interface Campaign {
   duration_hours: number;
   
   // Status now includes manual posting workflow
-  status: 'pending_posting' | 'posted_pending_partner' | 'active' | 'completed' | 'expired' | 'cancelled';
+  status: 'pending_posting' | 'active' | 'completed';
   
   // Scheduling info
   scheduled_start_at: string;  // When it was originally scheduled
