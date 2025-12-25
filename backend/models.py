@@ -350,19 +350,71 @@ def create_manual_campaign(request_id, from_channel_id, to_channel_id, promo,
     campaigns.insert_one(campaign_doc)
     return campaign_id
 
+def create_single_manual_campaign(request_id, from_channel_id, to_channel_id, 
+                                  requester_promo, acceptor_promo, duration_hours, cpc_cost):
+    """
+    Create a single campaign that tracks both users independently
+    
+    Args:
+        request_id: Original cross-promo request ID
+        from_channel_id: Requester's channel ID
+        to_channel_id: Acceptor's channel ID
+        requester_promo: Promo from requester (to be posted by acceptor)
+        acceptor_promo: Promo from acceptor (to be posted by requester)
+        duration_hours: Campaign duration
+        cpc_cost: Cost that will be transferred from requester to acceptor
+    
+    Returns:
+        Campaign ID
+    """
+    campaign_id = f"camp_{uuid.uuid4().hex[:12]}"
+    
+    campaign_doc = {
+        'id': campaign_id,
+        'request_id': request_id,
+        'fromChannelId': from_channel_id,
+        'toChannelId': to_channel_id,
+        'duration_hours': duration_hours,
+        'cpc_cost': cpc_cost,
+        
+        # Promos for both sides
+        'requester_promo': requester_promo,  # Acceptor posts this
+        'acceptor_promo': acceptor_promo,    # Requester posts this
+        
+        # Requester tracking
+        'requester_status': 'pending_posting',
+        'requester_post_link': None,
+        'requester_posted_at': None,
+        'requester_ended_at': None,
+        'requester_reward_given': False,
+        
+        # Acceptor tracking
+        'acceptor_status': 'pending_posting',
+        'acceptor_post_link': None,
+        'acceptor_posted_at': None,
+        'acceptor_ended_at': None,
+        'acceptor_reward_given': False,
+        
+        # Metadata
+        'created_at': datetime.datetime.utcnow(),
+        'updated_at': datetime.datetime.utcnow()
+    }
+    
+    campaigns.insert_one(campaign_doc)
+    return campaign_id
 
 def get_user_campaigns(telegram_id):
     """
     Get all campaigns for channels owned by the user
     """
     # Get user's channel IDs
-    user_channels = list(channels.find({'owner_id': telegram_id}, {'id': 1}))
+    user_channels = list(channels.find({'owner_id': telegram_id}, {'id': 1, '_id': 0}))
     channel_ids = [ch['id'] for ch in user_channels]
     
     if not channel_ids:
         return []
     
-    # Get campaigns where user is either sender or receiver
+    # Get campaigns where user is either sender or receiver - EXCLUDE _id
     user_campaigns = list(campaigns.find({
         '$or': [
             {'fromChannelId': {'$in': channel_ids}},
@@ -370,62 +422,88 @@ def get_user_campaigns(telegram_id):
         ]
     }, {'_id': 0}))
     
-    # Determine user_role for each campaign
+    # Determine user_role and get user-specific data for each campaign
     for campaign in user_campaigns:
         from_id = campaign.get('fromChannelId')
         to_id = campaign.get('toChannelId')
         
         if from_id in channel_ids:
+            # User is the requester
             campaign['user_role'] = 'requester'
+            campaign['status'] = campaign.get('requester_status', 'pending_posting')
+            campaign['promo'] = campaign.get('acceptor_promo', {})  # Requester posts acceptor's promo
+            campaign['post_verification_link'] = campaign.get('requester_post_link')
+            campaign['actual_start_at'] = campaign.get('requester_posted_at')
+            campaign['actual_end_at'] = campaign.get('requester_ended_at')
+            
             # Get partner channel name
-            partner_ch = channels.find_one({'id': to_id}, {'name': 1})
+            partner_ch = channels.find_one({'id': to_id}, {'name': 1, '_id': 0})
             if partner_ch:
                 campaign['partner_channel_name'] = partner_ch.get('name')
         else:
+            # User is the acceptor
             campaign['user_role'] = 'acceptor'
+            campaign['status'] = campaign.get('acceptor_status', 'pending_posting')
+            campaign['promo'] = campaign.get('requester_promo', {})  # Acceptor posts requester's promo
+            campaign['post_verification_link'] = campaign.get('acceptor_post_link')
+            campaign['actual_start_at'] = campaign.get('acceptor_posted_at')
+            campaign['actual_end_at'] = campaign.get('acceptor_ended_at')
+            
             # Get partner channel name
-            partner_ch = channels.find_one({'id': from_id}, {'name': 1})
+            partner_ch = channels.find_one({'id': from_id}, {'name': 1, '_id': 0})
             if partner_ch:
                 campaign['partner_channel_name'] = partner_ch.get('name')
     
     return user_campaigns
 
-
-def update_campaign_post_verification(campaign_id, post_link):
+def verify_and_start_user_campaign(campaign_id, telegram_id, post_link):
     """
-    User submits their post link for verification
+    User submits their post link and starts their side of the campaign immediately
     """
-    campaigns.update_one(
-        {'id': campaign_id},
-        {
-            '$set': {
-                'post_verification_link': post_link,
-                'status': 'posted_pending_partner',
-                'updated_at': datetime.datetime.utcnow()
+    campaign = campaigns.find_one({'id': campaign_id})
+    if not campaign:
+        return {'error': 'Campaign not found'}
+    
+    # Determine if user is requester or acceptor
+    from_channel = channels.find_one({'id': campaign.get('fromChannelId')})
+    to_channel = channels.find_one({'id': campaign.get('toChannelId')})
+    
+    is_requester = from_channel and from_channel.get('owner_id') == telegram_id
+    
+    now = datetime.datetime.utcnow()
+    
+    if is_requester:
+        # Update requester's side
+        campaigns.update_one(
+            {'id': campaign_id},
+            {
+                '$set': {
+                    'requester_status': 'active',
+                    'requester_post_link': post_link,
+                    'requester_posted_at': now,
+                    'updated_at': now
+                }
             }
-        }
-    )
-
-
-def start_campaign_countdown(campaign_id):
-    """
-    Start the campaign countdown (both users have posted)
-    """
-    campaigns.update_one(
-        {'id': campaign_id},
-        {
-            '$set': {
-                'actual_start_at': datetime.datetime.utcnow(),
-                'status': 'active',
-                'updated_at': datetime.datetime.utcnow()
+        )
+    else:
+        # Update acceptor's side
+        campaigns.update_one(
+            {'id': campaign_id},
+            {
+                '$set': {
+                    'acceptor_status': 'active',
+                    'acceptor_post_link': post_link,
+                    'acceptor_posted_at': now,
+                    'updated_at': now
+                }
             }
-        }
-    )
+        )
+    
+    return {'ok': True}
 
-
-def end_campaign_and_distribute_rewards(campaign_id, telegram_id):
+def end_user_campaign_and_reward(campaign_id, telegram_id):
     """
-    End campaign and distribute rewards to users
+    End user's side of campaign and distribute their reward
     Returns dict with reward info
     """
     campaign = campaigns.find_one({'id': campaign_id})
@@ -445,45 +523,79 @@ def end_campaign_and_distribute_rewards(campaign_id, telegram_id):
     
     requester_id = from_channel.get('owner_id')
     acceptor_id = to_channel.get('owner_id')
+    cpc_cost = campaign.get('cpc_cost', 0)
     
-    # Get CPC cost from original request
-    request = requests_col.find_one({'_id': campaign.get('request_id')})
-    cpc_cost = request.get('cpcCost', 0) if request else 0
+    is_requester = telegram_id == requester_id
+    now = datetime.datetime.utcnow()
     
-    # Distribute rewards
-    requester_bonus = 150  # Fixed bonus for requester
-    acceptor_reward = cpc_cost  # Acceptor gets the full cost
-    
-    # Update balances
-    users.update_one(
-        {'telegram_id': requester_id},
-        {'$inc': {'cpcBalance': requester_bonus}}
-    )
-    
-    users.update_one(
-        {'telegram_id': acceptor_id},
-        {'$inc': {'cpcBalance': acceptor_reward}}
-    )
-    
-    # Update campaign status
-    campaigns.update_one(
-        {'id': campaign_id},
-        {
-            '$set': {
-                'status': 'completed',
-                'actual_end_at': datetime.datetime.utcnow(),
-                'updated_at': datetime.datetime.utcnow()
+    if is_requester:
+        # Check if already rewarded
+        if campaign.get('requester_reward_given'):
+            return {'error': 'Reward already claimed'}
+        
+        # Requester gets 150 CP bonus
+        requester_bonus = 150
+        users.update_one(
+            {'telegram_id': requester_id},
+            {'$inc': {'cpcBalance': requester_bonus}}
+        )
+        
+        # Mark requester side as completed
+        campaigns.update_one(
+            {'id': campaign_id},
+            {
+                '$set': {
+                    'requester_status': 'completed',
+                    'requester_ended_at': now,
+                    'requester_reward_given': True,
+                    'updated_at': now
+                }
             }
+        )
+        
+        # Increment exchange counter for requester's channel
+        increment_channel_exchanges(from_channel_id)
+        
+        return {
+            'ok': True,
+            'reward': requester_bonus,
+            'role': 'requester'
         }
-    )
-    
-    # Increment exchange counters
-    increment_channel_exchanges(from_channel_id)
-    increment_channel_exchanges(to_channel_id)
-    
-    return {
-        'requester_bonus': requester_bonus,
-        'acceptor_reward': acceptor_reward,
-        'requester_id': requester_id,
-        'acceptor_id': acceptor_id
-    }
+    else:
+        # Check if already rewarded
+        if campaign.get('acceptor_reward_given'):
+            return {'error': 'Reward already claimed'}
+        
+        # Acceptor gets full CPC cost
+        # Deduct from requester, add to acceptor
+        users.update_one(
+            {'telegram_id': requester_id},
+            {'$inc': {'cpcBalance': -cpc_cost}}
+        )
+        
+        users.update_one(
+            {'telegram_id': acceptor_id},
+            {'$inc': {'cpcBalance': cpc_cost}}
+        )
+        
+        # Mark acceptor side as completed
+        campaigns.update_one(
+            {'id': campaign_id},
+            {
+                '$set': {
+                    'acceptor_status': 'completed',
+                    'acceptor_ended_at': now,
+                    'acceptor_reward_given': True,
+                    'updated_at': now
+                }
+            }
+        )
+        
+        # Increment exchange counter for acceptor's channel
+        increment_channel_exchanges(to_channel_id)
+        
+        return {
+            'ok': True,
+            'reward': cpc_cost,
+            'role': 'acceptor'
+        }

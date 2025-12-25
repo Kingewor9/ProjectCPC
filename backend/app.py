@@ -691,6 +691,7 @@ def create_request():
             send_message(BOT_ADMIN_CHAT_ID, f"New cross-promo request (failed to notify owner) from {req['fromChannel']} to {req['toChannel']}")
     return jsonify({'ok': True, 'id': str_id})
 
+
 @app.route('/api/request/<req_id>/accept', methods=['POST'])
 @token_required
 def accept_request(req_id):
@@ -732,46 +733,23 @@ def accept_request(req_id):
     # Get channel docs
     from_ch = channels.find_one({'id': req.get('fromChannelId')})
     
-    # Calculate scheduled times
-    day = req.get('daySelected')
-    time_slot = req.get('timeSelected')
+    # Get CPC cost from request
+    cpc_cost = req.get('cpcCost', 0)
     duration = req.get('duration', 2)
     
-    scheduled_start = parse_day_time_to_utc(day, time_slot)
-    scheduled_end = calculate_end_time(scheduled_start, duration)
-    
-    created_campaign_ids = []
-    
     try:
-        from models import create_manual_campaign
+        from models import create_single_manual_campaign
         
-        # Campaign 1: Acceptor's promo to be posted on Requester's channel
-        # Requester will post this
-        campaign_1_id = create_manual_campaign(
+        # Create ONE campaign that tracks both users
+        campaign_id = create_single_manual_campaign(
             request_id=req['_id'],
             from_channel_id=req.get('fromChannelId'),
             to_channel_id=req.get('toChannelId'),
-            promo=selected_promo,
-            scheduled_start=scheduled_start,
-            scheduled_end=scheduled_end,
+            requester_promo=requester_promo,
+            acceptor_promo=selected_promo,
             duration_hours=duration,
-            user_role='requester'  # Requester posts this
+            cpc_cost=cpc_cost
         )
-        created_campaign_ids.append(campaign_1_id)
-        
-        # Campaign 2: Requester's promo to be posted on Acceptor's channel
-        # Acceptor will post this
-        campaign_2_id = create_manual_campaign(
-            request_id=req['_id'],
-            from_channel_id=req.get('fromChannelId'),
-            to_channel_id=req.get('toChannelId'),
-            promo=requester_promo,
-            scheduled_start=scheduled_start,
-            scheduled_end=scheduled_end,
-            duration_hours=duration,
-            user_role='acceptor'  # Acceptor posts this
-        )
-        created_campaign_ids.append(campaign_2_id)
         
         # Notify both parties
         if from_ch and from_ch.get('owner_id'):
@@ -782,7 +760,7 @@ def accept_request(req_id):
                 f"1. Check your Campaigns page\n"
                 f"2. Get the promo from Telegram\n"
                 f"3. Post it manually on your channel\n"
-                f"4. Submit your post link for verification"
+                f"4. Submit your post link to start your campaign"
             )
             try:
                 send_open_button_message(from_ch.get('owner_id'), msg)
@@ -797,7 +775,7 @@ def accept_request(req_id):
                 f"1. Check your Campaigns page\n"
                 f"2. Get the promo from Telegram\n"
                 f"3. Post it manually on your channel\n"
-                f"4. Submit your post link for verification"
+                f"4. Submit your post link to start your campaign"
             )
             try:
                 send_open_button_message(to_ch.get('owner_id'), msg)
@@ -806,15 +784,15 @@ def accept_request(req_id):
         
         return jsonify({
             'ok': True,
-            'message': 'Request accepted! Check your Campaigns page for next steps.',
-            'campaign_ids': created_campaign_ids
+            'message': 'Request accepted! Check your Campaigns page.',
+            'campaign_id': campaign_id
         })
         
     except Exception as e:
-        print(f"Error creating manual campaigns: {e}")
+        print(f"Error creating campaign: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': 'Failed to create campaigns'}), 500
+        return jsonify({'error': 'Failed to create campaign'}), 500
 
 #Updated campaign to match new logic
 @app.route('/api/campaigns', methods=['GET'])
@@ -831,11 +809,11 @@ def list_campaigns():
         for campaign in user_campaigns:
             # Remove MongoDB ObjectId fields
             campaign.pop('_id', None)
-            campaign.pop('request_id', None)  # Remove ObjectId, keep string id if exists
             
             # Convert datetime objects to ISO strings
-            for field in ['scheduled_start_at', 'scheduled_end_at', 'actual_start_at', 
-                         'actual_end_at', 'created_at', 'updated_at']:
+            for field in ['requester_posted_at', 'requester_ended_at', 
+                         'acceptor_posted_at', 'acceptor_ended_at',
+                         'created_at', 'updated_at', 'actual_start_at', 'actual_end_at']:
                 if field in campaign and campaign[field]:
                     campaign[field] = campaign[field].isoformat()
         
@@ -872,14 +850,18 @@ def send_campaign_to_telegram(campaign_id):
         if from_ch.get('owner_id') != telegram_id and to_ch.get('owner_id') != telegram_id:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Get promo details
-        promo = campaign.get('promo', {})
+        # Determine which promo to send based on user role
+        is_requester = from_ch.get('owner_id') == telegram_id
         
-        # Send via bot
-        from bot import send_promo_preview
-        result = send_promo_preview(
+        if is_requester:
+            promo = campaign.get('acceptor_promo', {})
+        else:
+            promo = campaign.get('requester_promo', {})
+        
+        # Send via bot WITHOUT preview label
+        from bot import send_campaign_promo_for_posting
+        result = send_campaign_promo_for_posting(
             chat_id=telegram_id,
-            promo_name=promo.get('name', 'Promo'),
             promo_text=promo.get('text', ''),
             promo_link=promo.get('link', ''),
             promo_image=promo.get('image', ''),
@@ -898,11 +880,11 @@ def send_campaign_to_telegram(campaign_id):
         print(f"Error sending to Telegram: {e}")
         return jsonify({'error': str(e)}), 500
 
-# NEW ENDPOINT: Verify post
-@app.route('/api/campaigns/<campaign_id>/verify-post', methods=['POST'])
+# NEW ENDPOINT: Verify post and start campaign immediately
+@app.route('/api/campaigns/<campaign_id>/verify-and-start', methods=['POST'])
 @token_required
-def verify_campaign_post(campaign_id):
-    """User submits their post link for verification"""
+def verify_and_start_campaign(campaign_id):
+    """User submits their post link and starts their campaign immediately"""
     telegram_id = request.telegram_id
     data = request.json or {}
     post_link = data.get('post_link', '').strip()
@@ -928,79 +910,28 @@ def verify_campaign_post(campaign_id):
         if from_ch.get('owner_id') != telegram_id and to_ch.get('owner_id') != telegram_id:
             return jsonify({'error': 'Unauthorized'}), 403
         
-        # Update campaign
-        from models import update_campaign_post_verification
-        update_campaign_post_verification(campaign_id, post_link)
+        # Verify and start
+        from models import verify_and_start_user_campaign
+        result = verify_and_start_user_campaign(campaign_id, telegram_id, post_link)
         
-        # Notify partner
-        partner_id = to_ch.get('owner_id') if from_ch.get('owner_id') == telegram_id else from_ch.get('owner_id')
-        partner_name = to_ch.get('name') if from_ch.get('owner_id') == telegram_id else from_ch.get('name')
-        
-        if partner_id:
-            msg = (
-                f"📢 Campaign Update\n\n"
-                f"Your partner has posted their promo!\n"
-                f"Partner: {partner_name}\n"
-                f"Post: {post_link}\n\n"
-                f"Please verify and post your side too."
-            )
-            try:
-                send_open_button_message(partner_id, msg)
-            except:
-                send_message(partner_id, msg)
+        if 'error' in result:
+            return jsonify(result), 400
         
         return jsonify({
             'ok': True,
-            'message': 'Post verified! Waiting for partner to post.'
+            'message': 'Campaign started! Timer is now running.'
         })
         
     except Exception as e:
         print(f"Error verifying post: {e}")
         return jsonify({'error': str(e)}), 500
 
-# NEW ENDPOINT: Start campaign
-@app.route('/api/campaigns/<campaign_id>/start', methods=['POST'])
-@token_required
-def start_campaign(campaign_id):
-    """Start the campaign countdown (both have posted)"""
-    telegram_id = request.telegram_id
-    
-    try:
-        campaign = campaigns.find_one({'id': campaign_id})
-        if not campaign:
-            return jsonify({'error': 'Campaign not found'}), 404
-        
-        # Verify user owns one of the channels
-        from_id = campaign.get('fromChannelId')
-        to_id = campaign.get('toChannelId')
-        
-        from_ch = channels.find_one({'id': from_id})
-        to_ch = channels.find_one({'id': to_id})
-        
-        if not from_ch or not to_ch:
-            return jsonify({'error': 'Channel not found'}), 404
-        
-        if from_ch.get('owner_id') != telegram_id and to_ch.get('owner_id') != telegram_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
-        # Start countdown
-        from models import start_campaign_countdown
-        start_campaign_countdown(campaign_id)
-        
-        return jsonify({
-            'ok': True,
-            'message': 'Campaign started!'
-        })
-        
-    except Exception as e:
-        print(f"Error starting campaign: {e}")
-        return jsonify({'error': str(e)}), 500
 
-# NEW ENDPOINT: End campaign
+# NEW ENDPOINT: End campaign and get reward
 @app.route('/api/campaigns/<campaign_id>/end', methods=['POST'])
 @token_required
 def end_campaign(campaign_id):
-    """End campaign and distribute rewards"""
+    """End user's campaign and distribute reward"""
     telegram_id = request.telegram_id
     
     try:
@@ -1022,40 +953,31 @@ def end_campaign(campaign_id):
             return jsonify({'error': 'Unauthorized'}), 403
         
         # End and distribute rewards
-        from models import end_campaign_and_distribute_rewards
-        result = end_campaign_and_distribute_rewards(campaign_id, telegram_id)
+        from models import end_user_campaign_and_reward
+        result = end_user_campaign_and_reward(campaign_id, telegram_id)
         
         if 'error' in result:
             return jsonify(result), 400
         
-        # Notify both users
-        requester_id = result.get('requester_id')
-        acceptor_id = result.get('acceptor_id')
+        # Notify user
+        role = result.get('role')
+        reward = result.get('reward')
         
-        if requester_id:
-            msg = f"✅ Campaign Completed!\n\nYou earned {result['requester_bonus']} CP Coins as completion bonus!"
-            try:
-                send_open_button_message(requester_id, msg)
-            except:
-                send_message(requester_id, msg)
-        
-        if acceptor_id:
-            msg = f"✅ Campaign Completed!\n\nYou earned {result['acceptor_reward']} CP Coins!"
-            try:
-                send_open_button_message(acceptor_id, msg)
-            except:
-                send_message(acceptor_id, msg)
+        msg = f"✅ Campaign Completed!\n\nYou earned {reward} CP Coins!"
+        try:
+            send_open_button_message(telegram_id, msg)
+        except:
+            send_message(telegram_id, msg)
         
         return jsonify({
             'ok': True,
             'message': 'Campaign completed!',
-            'rewards': result
+            'reward': reward
         })
         
     except Exception as e:
         print(f"Error ending campaign: {e}")
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/api/channels/validate', methods=['POST'])
 @token_required

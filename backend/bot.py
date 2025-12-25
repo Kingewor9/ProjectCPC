@@ -117,6 +117,63 @@ def send_promo_preview(chat_id, promo_name, promo_text, promo_link, promo_image,
     except Exception as e:
         logging.exception(f'Failed to send promo preview to {chat_id}')
         return None
+
+#Promo message for posting by users
+def send_campaign_promo_for_posting(chat_id, promo_text, promo_link, promo_image, promo_cta):
+    """
+    Send promo for manual posting - NO preview label, professional format
+    This is what users will forward to their channels
+    
+    Args:
+        chat_id: User's Telegram ID
+        promo_text: The promo text
+        promo_link: The promo link
+        promo_image: Optional image URL
+        promo_cta: Call-to-action button text
+    
+    Returns:
+        Response from Telegram API
+    """
+    try:
+        # Build the message WITHOUT any preview labels
+        caption = promo_text
+        
+        # Create inline keyboard with CTA button if link provided
+        keyboard = None
+        if promo_link and promo_cta:
+            keyboard = {
+                'inline_keyboard': [[
+                    {'text': promo_cta, 'url': promo_link}
+                ]]
+            }
+        
+        # Send with image if available, otherwise just text
+        if promo_image:
+            result = send_photo(
+                chat_id=chat_id,
+                photo_url=promo_image,
+                caption=caption,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        else:
+            result = send_message(
+                chat_id=chat_id,
+                text=caption,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        
+        if result and result.get('ok'):
+            logging.info(f"[BOT] Successfully sent campaign promo to {chat_id}")
+        else:
+            logging.error(f"[BOT] Failed to send campaign promo to {chat_id}: {result}")
+        
+        return result
+    
+    except Exception as e:
+        logging.exception(f'[BOT] Failed to send campaign promo to {chat_id}')
+        return None
             
 def send_invite_campaign_post(chat_id, promo_text, app_url):
     """
