@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Zap, Clock, CheckCircle, Send, ExternalLink, Play, StopCircle, AlertCircle } from 'lucide-react';
+import Layout from '../components/Layout';
+import LoadingSpinner from '../components/LoadingSpinner';
+import ErrorAlert from '../components/ErrorAlert';
+import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
+import { Zap, Clock, CheckCircle, Send, ExternalLink, Play, StopCircle, AlertCircle } from 'lucide-react';
 
-// Types
 interface Campaign {
   id: string;
   fromChannelId?: string;
@@ -16,7 +19,7 @@ interface Campaign {
     cta?: string;
   };
   duration_hours: number;
-  status: 'pending_posting' | 'posted_pending_partner' | 'active' | 'completed' | 'expired';
+  status: 'pending_posting' | 'posted_pending_partner' | 'active' | 'completed' | 'expired' | 'cancelled';
   scheduled_start_at: string;
   scheduled_end_at: string;
   actual_start_at?: string;
@@ -27,18 +30,22 @@ interface Campaign {
 }
 
 export default function CampaignsPage() {
+  const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [postLink, setPostLink] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
 
   useEffect(() => {
-    fetchCampaigns();
-    const interval = setInterval(fetchCampaigns, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (user) {
+      fetchCampaigns();
+      const interval = setInterval(fetchCampaigns, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   // Timer for active campaigns
   useEffect(() => {
@@ -61,127 +68,89 @@ export default function CampaignsPage() {
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
-      // Mock data for demonstration
-      const mockCampaigns: Campaign[] = [
-        {
-          id: 'camp_1',
-          partner_channel_name: 'Tech News Daily',
-          promo: {
-            name: 'Join Our Community',
-            text: 'Get the latest tech news and insights! Join our growing community of tech enthusiasts.',
-            link: 'https://t.me/technewsdaily',
-            cta: 'Join Now'
-          },
-          duration_hours: 12,
-          status: 'pending_posting',
-          scheduled_start_at: new Date().toISOString(),
-          scheduled_end_at: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
-          user_role: 'requester'
-        },
-        {
-          id: 'camp_2',
-          partner_channel_name: 'Crypto Insights',
-          promo: {
-            name: 'Market Analysis',
-            text: 'Daily crypto market analysis and trading tips from experts.',
-            link: 'https://t.me/cryptoinsights',
-            image: 'https://placehold.co/600x400/0078d4/FFFFFF?text=Crypto+Analysis',
-            cta: 'Subscribe'
-          },
-          duration_hours: 8,
-          status: 'posted_pending_partner',
-          scheduled_start_at: new Date().toISOString(),
-          scheduled_end_at: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
-          post_verification_link: 'https://t.me/mychannel/123',
-          user_role: 'acceptor',
-          partner_posted: false
-        },
-        {
-          id: 'camp_3',
-          partner_channel_name: 'Fitness Tips',
-          promo: {
-            name: 'Transform Your Body',
-            text: 'Professional fitness coaching and nutrition advice.',
-            link: 'https://t.me/fitnesstips',
-            cta: 'Start Now'
-          },
-          duration_hours: 6,
-          status: 'active',
-          scheduled_start_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          scheduled_end_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
-          actual_start_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          user_role: 'requester',
-          partner_posted: true
-        }
-      ];
-      setCampaigns(mockCampaigns);
-    } catch (err) {
+      setError(null);
+      const data = await apiService.listCampaigns();
+      
+      if (!Array.isArray(data)) {
+        console.error('Invalid campaigns data:', data);
+        setError('Invalid data received from server');
+        setCampaigns([]);
+        return;
+      }
+      
+      setCampaigns(data);
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.error || err?.message || 'Failed to load campaigns';
+      setError(errorMessage);
       console.error('Error loading campaigns:', err);
+      setCampaigns([]);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSendToTelegram = async (campaign: Campaign) => {
-  setActionLoading(true);
-  try {
-    await apiService.sendCampaignToTelegram(campaign.id);
-    alert('Promo sent to your Telegram! Check your messages.');
-  } catch (err) {
-    console.error('Error:', err);
-  } finally {
-    setActionLoading(false);
-  }
-};
+    setActionLoading(true);
+    try {
+      await apiService.sendCampaignToTelegram(campaign.id);
+      alert('Promo sent to your Telegram! Check your messages.');
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || 'Failed to send to Telegram';
+      alert(errorMsg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleVerifyPost = async () => {
-  if (!postLink.trim() || !selectedCampaign) return;
-
-  setActionLoading(true);
-  try {
-    await apiService.verifyCampaignPost(
-      selectedCampaign.id,
-      postLink
-    );
-    alert('Post verified! Partner has been notified.');
-    setPostLink('');
-    fetchCampaigns();
-  } catch (err) {
-    console.error('Error:', err);
-  } finally {
-    setActionLoading(false);
-  }
-};
+    if (!postLink.trim() || !selectedCampaign) return;
+    
+    setActionLoading(true);
+    try {
+      await apiService.verifyCampaignPost(selectedCampaign.id, postLink);
+      alert('Post verified! Partner has been notified.');
+      setPostLink('');
+      fetchCampaigns();
+      setSelectedCampaign(null);
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || 'Failed to verify post';
+      alert(errorMsg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleStartCampaign = async (campaign: Campaign) => {
-  setActionLoading(true);
-  try {
-    await apiService.startCampaign(campaign.id);
-    alert('Campaign started! Timer is now running.');
-    fetchCampaigns();
-  } catch (err) {
-    console.error('Error:', err);
-  } finally {
-    setActionLoading(false);
-  }
-};
+    setActionLoading(true);
+    try {
+      await apiService.startCampaign(campaign.id);
+      alert('Campaign started! Timer is now running.');
+      fetchCampaigns();
+      setSelectedCampaign(null);
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || 'Failed to start campaign';
+      alert(errorMsg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleEndCampaign = async (campaign: Campaign) => {
-  if (!confirm('Are you sure you want to end this campaign? Rewards will be distributed.')) return;
-
-  setActionLoading(true);
-  try {
-    await apiService.endCampaign(campaign.id);
-    alert('Campaign completed! Rewards have been distributed.');
-    fetchCampaigns();
-    setSelectedCampaign(null);
-  } catch (err) {
-    console.error('Error:', err);
-  } finally {
-    setActionLoading(false);
-  }
-};
-
+    if (!confirm('Are you sure you want to end this campaign? Rewards will be distributed.')) return;
+    
+    setActionLoading(true);
+    try {
+      await apiService.endCampaign(campaign.id);
+      alert('Campaign completed! Rewards have been distributed.');
+      fetchCampaigns();
+      setSelectedCampaign(null);
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || 'Failed to end campaign';
+      alert(errorMsg);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const formatTimeLeft = (ms: number) => {
     const hours = Math.floor(ms / (1000 * 60 * 60));
@@ -196,7 +165,8 @@ export default function CampaignsPage() {
       posted_pending_partner: { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: AlertCircle, label: 'Waiting for Partner' },
       active: { bg: 'bg-green-500/20', text: 'text-green-400', icon: Zap, label: 'Active' },
       completed: { bg: 'bg-gray-500/20', text: 'text-gray-400', icon: CheckCircle, label: 'Completed' },
-      expired: { bg: 'bg-red-500/20', text: 'text-red-400', icon: AlertCircle, label: 'Expired' }
+      expired: { bg: 'bg-red-500/20', text: 'text-red-400', icon: AlertCircle, label: 'Expired' },
+      cancelled: { bg: 'bg-gray-500/20', text: 'text-gray-400', icon: AlertCircle, label: 'Cancelled' }
     };
     const config = configs[status];
     const Icon = config.icon;
@@ -211,19 +181,19 @@ export default function CampaignsPage() {
   const CampaignCard = ({ campaign }: { campaign: Campaign }) => (
     <div 
       onClick={() => setSelectedCampaign(campaign)}
-      className="bg-slate-800 border border-slate-700 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer"
+      className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 hover:border-blue-500 transition-colors cursor-pointer"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <h3 className="text-lg font-bold text-white mb-1">{campaign.promo.name}</h3>
-          <p className="text-slate-400 text-sm">Partner: {campaign.partner_channel_name}</p>
-          <p className="text-slate-500 text-xs mt-1">Role: {campaign.user_role === 'requester' ? 'You requested' : 'You accepted'}</p>
+          <p className="text-grey-400 text-sm">Partner: {campaign.partner_channel_name}</p>
+          <p className="text-grey-500 text-xs mt-1">Role: {campaign.user_role === 'requester' ? 'You requested' : 'You accepted'}</p>
         </div>
         {getStatusBadge(campaign.status)}
       </div>
 
       <div className="space-y-2 text-sm">
-        <div className="flex items-center gap-2 text-slate-400">
+        <div className="flex items-center gap-2 text-grey-400">
           <Clock size={16} />
           <span>Duration: {campaign.duration_hours}h</span>
         </div>
@@ -239,15 +209,15 @@ export default function CampaignsPage() {
 
   const CampaignDetailModal = ({ campaign }: { campaign: Campaign }) => (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-darkBlue-800 border border-grey-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">{campaign.promo.name}</h2>
-            <p className="text-slate-400">Partner: {campaign.partner_channel_name}</p>
+            <p className="text-grey-400">Partner: {campaign.partner_channel_name}</p>
           </div>
           <button 
             onClick={() => setSelectedCampaign(null)}
-            className="text-slate-400 hover:text-white"
+            className="text-grey-400 hover:text-white"
           >
             ✕
           </button>
@@ -257,12 +227,12 @@ export default function CampaignsPage() {
 
         <div className="mt-6 space-y-6">
           {/* Promo Preview */}
-          <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+          <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
             <h3 className="text-white font-semibold mb-3">Promo to Post</h3>
             {campaign.promo.image && (
               <img src={campaign.promo.image} alt={campaign.promo.name} className="w-full h-48 object-cover rounded-lg mb-3" />
             )}
-            <p className="text-slate-300 text-sm mb-3">{campaign.promo.text}</p>
+            <p className="text-grey-300 text-sm mb-3">{campaign.promo.text}</p>
             {campaign.promo.link && (
               <a 
                 href={campaign.promo.link} 
@@ -288,9 +258,9 @@ export default function CampaignsPage() {
                 Get Promo in Telegram
               </button>
               
-              <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+              <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
                 <h4 className="text-white font-medium mb-2">📋 Next Steps:</h4>
-                <ol className="text-slate-300 text-sm space-y-2 list-decimal list-inside">
+                <ol className="text-grey-300 text-sm space-y-2 list-decimal list-inside">
                   <li>Click "Get Promo in Telegram" to receive the promo</li>
                   <li>Manually post it on your channel</li>
                   <li>Copy the post link from Telegram</li>
@@ -305,7 +275,7 @@ export default function CampaignsPage() {
                   value={postLink}
                   onChange={(e) => setPostLink(e.target.value)}
                   placeholder="https://t.me/yourchannel/123"
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white"
+                  className="w-full bg-darkBlue-900 border border-grey-700 rounded-lg px-4 py-3 text-white"
                 />
                 <button
                   onClick={handleVerifyPost}
@@ -321,7 +291,7 @@ export default function CampaignsPage() {
           {campaign.status === 'posted_pending_partner' && (
             <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4">
               <h4 className="text-blue-400 font-medium mb-2">⏳ Waiting for Partner</h4>
-              <p className="text-slate-300 text-sm mb-3">
+              <p className="text-grey-300 text-sm mb-3">
                 You've posted your side! Waiting for {campaign.partner_channel_name} to post theirs.
               </p>
               {campaign.post_verification_link && (
@@ -356,7 +326,7 @@ export default function CampaignsPage() {
                 <div className="text-3xl font-mono text-green-400 mb-2">
                   {formatTimeLeft(timeLeft)}
                 </div>
-                <p className="text-slate-400 text-sm">Time remaining</p>
+                <p className="text-grey-400 text-sm">Time remaining</p>
               </div>
 
               <button
@@ -368,7 +338,7 @@ export default function CampaignsPage() {
                 End Campaign Early
               </button>
 
-              <p className="text-slate-400 text-sm text-center">
+              <p className="text-grey-400 text-sm text-center">
                 Campaign will end automatically after {campaign.duration_hours}h
               </p>
             </div>
@@ -378,7 +348,7 @@ export default function CampaignsPage() {
             <div className="bg-gray-500/20 border border-gray-500/30 rounded-lg p-4 text-center">
               <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
               <h4 className="text-white font-medium mb-2">Campaign Completed</h4>
-              <p className="text-slate-400 text-sm">
+              <p className="text-grey-400 text-sm">
                 Rewards have been distributed
               </p>
             </div>
@@ -393,90 +363,94 @@ export default function CampaignsPage() {
   const activeCampaigns = campaigns.filter(c => c.status === 'active');
   const completedCampaigns = campaigns.filter(c => c.status === 'completed');
 
-  if (loading) {
+  if (loading || !user) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-white text-lg">Loading campaigns...</div>
-      </div>
+      <Layout>
+        <LoadingSpinner />
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+    <Layout>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Campaigns</h1>
-          <p className="text-slate-400">Manage your cross-promotion campaigns</p>
+          <p className="text-grey-400">Manage your cross-promotion campaigns</p>
         </div>
 
-        {pendingCampaigns.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <Clock className="text-yellow-400" />
-              Pending Posting ({pendingCampaigns.length})
-            </h2>
-            <div className="grid gap-4">
-              {pendingCampaigns.map(campaign => (
-                <CampaignCard key={campaign.id} campaign={campaign} />
-              ))}
-            </div>
-          </div>
-        )}
+        {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
 
-        {waitingCampaigns.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <AlertCircle className="text-blue-400" />
-              Waiting for Partner ({waitingCampaigns.length})
-            </h2>
-            <div className="grid gap-4">
-              {waitingCampaigns.map(campaign => (
-                <CampaignCard key={campaign.id} campaign={campaign} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeCampaigns.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <Zap className="text-green-400" />
-              Active ({activeCampaigns.length})
-            </h2>
-            <div className="grid gap-4">
-              {activeCampaigns.map(campaign => (
-                <CampaignCard key={campaign.id} campaign={campaign} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {completedCampaigns.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <CheckCircle className="text-gray-400" />
-              Completed ({completedCampaigns.length})
-            </h2>
-            <div className="grid gap-4">
-              {completedCampaigns.map(campaign => (
-                <CampaignCard key={campaign.id} campaign={campaign} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {campaigns.length === 0 && (
-          <div className="bg-slate-800 border border-slate-700 rounded-lg p-12 text-center">
-            <Zap className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 text-lg mb-2">No campaigns yet</p>
-            <p className="text-slate-500 text-sm">
-              Accept a cross-promo request to start your first campaign
+        {campaigns.length === 0 ? (
+          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-12 text-center">
+            <Zap className="w-16 h-16 text-grey-600 mx-auto mb-4" />
+            <p className="text-grey-400 text-lg mb-2">No campaigns yet</p>
+            <p className="text-grey-500 text-sm">
+              Accept or send a cross-promo request to start your first campaign
             </p>
           </div>
+        ) : (
+          <>
+            {pendingCampaigns.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                  <Clock className="text-yellow-400" />
+                  Pending Posting ({pendingCampaigns.length})
+                </h2>
+                <div className="grid gap-4">
+                  {pendingCampaigns.map(campaign => (
+                    <CampaignCard key={campaign.id} campaign={campaign} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {waitingCampaigns.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                  <AlertCircle className="text-blue-400" />
+                  Waiting for Partner ({waitingCampaigns.length})
+                </h2>
+                <div className="grid gap-4">
+                  {waitingCampaigns.map(campaign => (
+                    <CampaignCard key={campaign.id} campaign={campaign} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeCampaigns.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                  <Zap className="text-green-400" />
+                  Active ({activeCampaigns.length})
+                </h2>
+                <div className="grid gap-4">
+                  {activeCampaigns.map(campaign => (
+                    <CampaignCard key={campaign.id} campaign={campaign} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {completedCampaigns.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                  <CheckCircle className="text-grey-400" />
+                  Completed ({completedCampaigns.length})
+                </h2>
+                <div className="grid gap-4">
+                  {completedCampaigns.map(campaign => (
+                    <CampaignCard key={campaign.id} campaign={campaign} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {selectedCampaign && <CampaignDetailModal campaign={selectedCampaign} />}
       </div>
-    </div>
+    </Layout>
   );
 }
