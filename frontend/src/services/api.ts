@@ -144,9 +144,9 @@ class ApiService {
 
   // --- Campaigns ---
   async listCampaigns(): Promise<Campaign[]> {
-    const response = await this.api.get('/api/campaigns');
-    return response.data;
-  }
+  const response = await this.api.get('/api/campaigns');
+  return response.data;
+}
 
   // --- Campaign Actions ---
 
@@ -157,20 +157,13 @@ async sendCampaignToTelegram(campaignId: string): Promise<any> {
   return response.data;
 }
 
-async verifyCampaignPost(
+async verifyAndStartCampaign(
   campaignId: string,
   postLink: string
 ): Promise<any> {
   const response = await this.api.post(
-    `/api/campaigns/${campaignId}/verify-post`,
+    `/api/campaigns/${campaignId}/verify-and-start`,
     { post_link: postLink }
-  );
-  return response.data;
-}
-
-async startCampaign(campaignId: string): Promise<any> {
-  const response = await this.api.post(
-    `/api/campaigns/${campaignId}/start`
   );
   return response.data;
 }
@@ -181,6 +174,7 @@ async endCampaign(campaignId: string): Promise<any> {
   );
   return response.data;
 }
+
 
 
   // --- Channel Management ---
