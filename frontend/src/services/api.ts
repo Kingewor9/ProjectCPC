@@ -148,6 +148,41 @@ class ApiService {
     return response.data;
   }
 
+  // --- Campaign Actions ---
+
+async sendCampaignToTelegram(campaignId: string): Promise<any> {
+  const response = await this.api.post(
+    `/api/campaigns/${campaignId}/send-to-telegram`
+  );
+  return response.data;
+}
+
+async verifyCampaignPost(
+  campaignId: string,
+  postLink: string
+): Promise<any> {
+  const response = await this.api.post(
+    `/api/campaigns/${campaignId}/verify-post`,
+    { post_link: postLink }
+  );
+  return response.data;
+}
+
+async startCampaign(campaignId: string): Promise<any> {
+  const response = await this.api.post(
+    `/api/campaigns/${campaignId}/start`
+  );
+  return response.data;
+}
+
+async endCampaign(campaignId: string): Promise<any> {
+  const response = await this.api.post(
+    `/api/campaigns/${campaignId}/end`
+  );
+  return response.data;
+}
+
+
   // --- Channel Management ---
   async validateChannel(channelInput: string): Promise<ChannelValidationResponse> {
     // Axios automatically handles the headers and base URL
@@ -252,7 +287,6 @@ async previewPromo(channelId: string, promoId: string): Promise<any> {
 
   return response.data;
 }
-
 
 // Purchase / Transactions endpoints
 
