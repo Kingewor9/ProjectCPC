@@ -77,6 +77,10 @@ export interface CrossPromoRequest {
 }
 
 // Campaign Types
+
+
+
+// Campaign Types - Updated for Manual Posting System
 export interface Campaign {
   id: string;
   fromChannelId?: string;
@@ -91,10 +95,37 @@ export interface Campaign {
     cta?: string;
   };
   duration_hours: number;
-  status: 'scheduled' | 'running' | 'ended' | 'failed';
-  start_at: string;  // ISO datetime string
-  end_at: string;    // ISO datetime string
+  
+  // Status now includes manual posting workflow
+  status: 'pending_posting' | 'posted_pending_partner' | 'active' | 'completed' | 'expired' | 'cancelled';
+  
+  // Scheduling info
+  scheduled_start_at: string;  // When it was originally scheduled
+  scheduled_end_at: string;    // Original scheduled end
+  
+  // Actual posting times (set by user)
+  actual_start_at?: string;    // When user actually posted
+  actual_end_at?: string;      // When user ended the campaign
+  
+  // Verification
+  post_verification_link?: string;  // URL user submits as proof
+  partner_verified?: boolean;       // Has partner confirmed they posted?
+  
+  // User role in this campaign
+  user_role: 'requester' | 'acceptor';  // Who is viewing this campaign
+  
+  // Partner info
+  partner_channel_name?: string;
+  partner_posted?: boolean;  // Has partner posted their side?
+  
+  // Metadata
   created_at?: string;
+  updated_at?: string;
+  request_id?: string;  // Link back to original request
+  
+  // Legacy fields (keep for backward compatibility)
+  start_at?: string;
+  end_at?: string;
   posted_at?: string;
   ended_at?: string;
   message_id?: string | number;
