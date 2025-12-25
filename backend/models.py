@@ -356,7 +356,7 @@ def create_single_manual_campaign(request_id, from_channel_id, to_channel_id,
     Create a single campaign that tracks both users independently
     
     Args:
-        request_id: Original cross-promo request ID
+        request_id: Original cross-promo request ID (ObjectId or string)
         from_channel_id: Requester's channel ID
         to_channel_id: Acceptor's channel ID
         requester_promo: Promo from requester (to be posted by acceptor)
@@ -369,9 +369,12 @@ def create_single_manual_campaign(request_id, from_channel_id, to_channel_id,
     """
     campaign_id = f"camp_{uuid.uuid4().hex[:12]}"
     
+    # Convert ObjectId to string if necessary
+    request_id_str = str(request_id) if request_id else None
+    
     campaign_doc = {
         'id': campaign_id,
-        'request_id': request_id,
+        'request_id_str': request_id_str,  # Store as string to avoid ObjectId issues
         'fromChannelId': from_channel_id,
         'toChannelId': to_channel_id,
         'duration_hours': duration_hours,
