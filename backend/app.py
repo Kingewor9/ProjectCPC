@@ -805,10 +805,19 @@ def list_campaigns():
         from models import get_user_campaigns
         user_campaigns = get_user_campaigns(telegram_id)
         
-        # Convert datetime objects to ISO strings and remove ObjectId fields
+        # Convert datetime objects to ISO strings and remove ALL ObjectId fields
         for campaign in user_campaigns:
-            # Remove MongoDB ObjectId fields
+            # Remove ALL MongoDB ObjectId fields that could cause issues
             campaign.pop('_id', None)
+            campaign.pop('request_id', None)
+            
+            # Also remove nested ObjectIds in promos if they exist
+            if 'requester_promo' in campaign and isinstance(campaign['requester_promo'], dict):
+                campaign['requester_promo'].pop('_id', None)
+            if 'acceptor_promo' in campaign and isinstance(campaign['acceptor_promo'], dict):
+                campaign['acceptor_promo'].pop('_id', None)
+            if 'promo' in campaign and isinstance(campaign['promo'], dict):
+                campaign['promo'].pop('_id', None)
             
             # Convert datetime objects to ISO strings
             for field in ['requester_posted_at', 'requester_ended_at', 
@@ -824,7 +833,7 @@ def list_campaigns():
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Failed to fetch campaigns'}), 500
-    
+
 # NEW ENDPOINT: Send promo to Telegram
 @app.route('/api/campaigns/<campaign_id>/send-to-telegram', methods=['POST'])
 @token_required
