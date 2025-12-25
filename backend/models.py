@@ -296,3 +296,194 @@ def increment_channel_exchanges(channel_id):
         {'id': channel_id},
         {'$inc': {'xExchanges': 1}, '$set': {'updated_at': datetime.datetime.utcnow()}}
     )
+    
+def create_manual_campaign(request_id, from_channel_id, to_channel_id, promo, 
+                           scheduled_start, scheduled_end, duration_hours, user_role):
+    """
+    Create a campaign with manual posting workflow
+    
+    Args:
+        request_id: Original cross-promo request ID
+        from_channel_id: Requester's channel ID
+        to_channel_id: Acceptor's channel ID
+        promo: Promo material to be posted
+        scheduled_start: Originally scheduled start time
+        scheduled_end: Originally scheduled end time
+        duration_hours: Campaign duration
+        user_role: 'requester' or 'acceptor' - who will post this promo
+    
+    Returns:
+        Campaign ID
+    """
+    campaign_id = f"camp_{uuid.uuid4().hex[:12]}"
+    
+    campaign_doc = {
+        'id': campaign_id,
+        'request_id': request_id,
+        'fromChannelId': from_channel_id,
+        'toChannelId': to_channel_id,
+        'promo': promo,
+        'duration_hours': duration_hours,
+        'user_role': user_role,
+        
+        # Status starts as pending_posting
+        'status': 'pending_posting',
+        
+        # Scheduled times (for reference)
+        'scheduled_start_at': scheduled_start,
+        'scheduled_end_at': scheduled_end,
+        
+        # Actual times (set later by user)
+        'actual_start_at': None,
+        'actual_end_at': None,
+        
+        # Verification
+        'post_verification_link': None,
+        'partner_verified': False,
+        'partner_posted': False,
+        
+        # Metadata
+        'created_at': datetime.datetime.utcnow(),
+        'updated_at': datetime.datetime.utcnow()
+    }
+    
+    campaigns.insert_one(campaign_doc)
+    return campaign_id
+
+
+def get_user_campaigns(telegram_id):
+    """
+    Get all campaigns for channels owned by the user
+    """
+    # Get user's channel IDs
+    user_channels = list(channels.find({'owner_id': telegram_id}, {'id': 1}))
+    channel_ids = [ch['id'] for ch in user_channels]
+    
+    if not channel_ids:
+        return []
+    
+    # Get campaigns where user is either sender or receiver
+    user_campaigns = list(campaigns.find({
+        '$or': [
+            {'fromChannelId': {'$in': channel_ids}},
+            {'toChannelId': {'$in': channel_ids}}
+        ]
+    }, {'_id': 0}))
+    
+    # Determine user_role for each campaign
+    for campaign in user_campaigns:
+        from_id = campaign.get('fromChannelId')
+        to_id = campaign.get('toChannelId')
+        
+        if from_id in channel_ids:
+            campaign['user_role'] = 'requester'
+            # Get partner channel name
+            partner_ch = channels.find_one({'id': to_id}, {'name': 1})
+            if partner_ch:
+                campaign['partner_channel_name'] = partner_ch.get('name')
+        else:
+            campaign['user_role'] = 'acceptor'
+            # Get partner channel name
+            partner_ch = channels.find_one({'id': from_id}, {'name': 1})
+            if partner_ch:
+                campaign['partner_channel_name'] = partner_ch.get('name')
+    
+    return user_campaigns
+
+
+def update_campaign_post_verification(campaign_id, post_link):
+    """
+    User submits their post link for verification
+    """
+    campaigns.update_one(
+        {'id': campaign_id},
+        {
+            '$set': {
+                'post_verification_link': post_link,
+                'status': 'posted_pending_partner',
+                'updated_at': datetime.datetime.utcnow()
+            }
+        }
+    )
+
+
+def start_campaign_countdown(campaign_id):
+    """
+    Start the campaign countdown (both users have posted)
+    """
+    campaigns.update_one(
+        {'id': campaign_id},
+        {
+            '$set': {
+                'actual_start_at': datetime.datetime.utcnow(),
+                'status': 'active',
+                'updated_at': datetime.datetime.utcnow()
+            }
+        }
+    )
+
+
+def end_campaign_and_distribute_rewards(campaign_id, telegram_id):
+    """
+    End campaign and distribute rewards to users
+    Returns dict with reward info
+    """
+    campaign = campaigns.find_one({'id': campaign_id})
+    if not campaign:
+        return {'error': 'Campaign not found'}
+    
+    # Get channel IDs
+    from_channel_id = campaign.get('fromChannelId')
+    to_channel_id = campaign.get('toChannelId')
+    
+    # Get channel owners
+    from_channel = channels.find_one({'id': from_channel_id})
+    to_channel = channels.find_one({'id': to_channel_id})
+    
+    if not from_channel or not to_channel:
+        return {'error': 'Channels not found'}
+    
+    requester_id = from_channel.get('owner_id')
+    acceptor_id = to_channel.get('owner_id')
+    
+    # Get CPC cost from original request
+    request = requests_col.find_one({'_id': campaign.get('request_id')})
+    cpc_cost = request.get('cpcCost', 0) if request else 0
+    
+    # Distribute rewards
+    requester_bonus = 150  # Fixed bonus for requester
+    acceptor_reward = cpc_cost  # Acceptor gets the full cost
+    
+    # Update balances
+    users.update_one(
+        {'telegram_id': requester_id},
+        {'$inc': {'cpcBalance': requester_bonus}}
+    )
+    
+    users.update_one(
+        {'telegram_id': acceptor_id},
+        {'$inc': {'cpcBalance': acceptor_reward}}
+    )
+    
+    # Update campaign status
+    campaigns.update_one(
+        {'id': campaign_id},
+        {
+            '$set': {
+                'status': 'completed',
+                'actual_end_at': datetime.datetime.utcnow(),
+                'updated_at': datetime.datetime.utcnow()
+            }
+        }
+    )
+    
+    # Increment exchange counters
+    increment_channel_exchanges(from_channel_id)
+    increment_channel_exchanges(to_channel_id)
+    
+    return {
+        'requester_bonus': requester_bonus,
+        'acceptor_reward': acceptor_reward,
+        'requester_id': requester_id,
+        'acceptor_id': acceptor_id
+    }
