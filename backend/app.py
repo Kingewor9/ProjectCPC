@@ -827,8 +827,13 @@ def list_campaigns():
         from models import get_user_campaigns
         user_campaigns = get_user_campaigns(telegram_id)
         
-        # Convert datetime objects to ISO strings
+        # Convert datetime objects to ISO strings and remove ObjectId fields
         for campaign in user_campaigns:
+            # Remove MongoDB ObjectId fields
+            campaign.pop('_id', None)
+            campaign.pop('request_id', None)  # Remove ObjectId, keep string id if exists
+            
+            # Convert datetime objects to ISO strings
             for field in ['scheduled_start_at', 'scheduled_end_at', 'actual_start_at', 
                          'actual_end_at', 'created_at', 'updated_at']:
                 if field in campaign and campaign[field]:
