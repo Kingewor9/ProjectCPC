@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import PromoImage from '../components/PromoImage';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { Zap, Clock, CheckCircle, Send, ExternalLink, StopCircle, AlertCircle } from 'lucide-react';
@@ -274,7 +275,8 @@ export default function CampaignsPage() {
           <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
             <h3 className="text-white font-semibold mb-3">Promo to Post</h3>
             {campaign.promo.image && (
-              <img src={campaign.promo.image} alt={campaign.promo.name} className="w-full h-48 object-cover rounded-lg mb-3" />
+            <PromoImage
+             src={campaign.promo.image}alt={campaign.promo.name}/>
             )}
             <p className="text-grey-300 text-sm mb-3">{campaign.promo.text}</p>
             {campaign.promo.link && (
