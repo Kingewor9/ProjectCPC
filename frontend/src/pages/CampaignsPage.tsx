@@ -4,7 +4,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { Zap, Clock, CheckCircle, Send, ExternalLink, StopCircle } from 'lucide-react';
+import { Zap, Clock, CheckCircle, Send, ExternalLink, StopCircle, AlertCircle } from 'lucide-react';
 
 interface Campaign {
   id: string;
@@ -19,12 +19,13 @@ interface Campaign {
     cta?: string;
   };
   duration_hours: number;
-  status: 'pending_posting' | 'active' | 'completed';
+  status: 'pending_posting' | 'active' | 'completed' | 'expired';
   actual_start_at?: string;
   actual_end_at?: string;
   post_verification_link?: string;
   user_role: 'requester' | 'acceptor';
   cpc_cost?: number;
+  posting_deadline?: string;  // NEW: 48-hour deadline
 }
 
 export default function CampaignsPage() {
@@ -36,6 +37,7 @@ export default function CampaignsPage() {
   const [postLink, setPostLink] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [deadlineTimeLeft, setDeadlineTimeLeft] = useState<{[key: string]: number}>({});
 
   useEffect(() => {
     if (user) {
@@ -44,6 +46,28 @@ export default function CampaignsPage() {
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  // Timer for campaign deadlines (48 hours)
+  useEffect(() => {
+    const calculateDeadlines = () => {
+      const newDeadlines: {[key: string]: number} = {};
+      
+      campaigns.forEach(campaign => {
+        if (campaign.status === 'pending_posting' && campaign.posting_deadline) {
+          const deadline = new Date(campaign.posting_deadline).getTime();
+          const now = Date.now();
+          const remaining = Math.max(0, deadline - now);
+          newDeadlines[campaign.id] = remaining;
+        }
+      });
+      
+      setDeadlineTimeLeft(newDeadlines);
+    };
+
+    calculateDeadlines();
+    const timer = setInterval(calculateDeadlines, 1000);
+    return () => clearInterval(timer);
+  }, [campaigns]);
 
   // Timer for active campaigns
   useEffect(() => {
@@ -148,11 +172,25 @@ export default function CampaignsPage() {
     return `${hours}h ${minutes}m ${seconds}s`;
   };
 
+  const formatDeadline = (ms: number) => {
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m left to post`;
+    } else if (minutes > 0) {
+      return `${minutes}m left to post`;
+    } else {
+      return 'Deadline passed';
+    }
+  };
+
   const getStatusBadge = (status: Campaign['status']) => {
     const configs = {
       pending_posting: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', icon: Clock, label: 'Pending' },
       active: { bg: 'bg-green-500/20', text: 'text-green-400', icon: Zap, label: 'Active' },
-      completed: { bg: 'bg-gray-500/20', text: 'text-gray-400', icon: CheckCircle, label: 'Completed' }
+      completed: { bg: 'bg-gray-500/20', text: 'text-gray-400', icon: CheckCircle, label: 'Completed' },
+      expired: { bg: 'bg-red-500/20', text: 'text-red-400', icon: AlertCircle, label: 'Expired' }
     };
     const config = configs[status];
     const Icon = config.icon;
@@ -177,7 +215,16 @@ export default function CampaignsPage() {
             {campaign.user_role === 'requester' ? '👉 You requested' : '✅ You accepted'}
           </p>
         </div>
-        {getStatusBadge(campaign.status)}
+        <div className="flex flex-col items-end gap-2">
+          {getStatusBadge(campaign.status)}
+          
+          {/* 48-hour deadline timer - only show for pending */}
+          {campaign.status === 'pending_posting' && campaign.posting_deadline && deadlineTimeLeft[campaign.id] !== undefined && (
+            <div className="text-xs text-orange-400 font-medium bg-orange-500/10 px-2 py-1 rounded">
+              ⏰ {formatDeadline(deadlineTimeLeft[campaign.id])}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2 text-sm">
@@ -189,6 +236,12 @@ export default function CampaignsPage() {
           <div className="flex items-center gap-2 text-green-400 font-medium">
             <Zap size={16} />
             <span>Running for {Math.floor((Date.now() - new Date(campaign.actual_start_at).getTime()) / (1000 * 60 * 60))}h</span>
+          </div>
+        )}
+        {campaign.status === 'expired' && (
+          <div className="flex items-center gap-2 text-red-400 font-medium">
+            <AlertCircle size={16} />
+            <span>Failed to post within 48 hours</span>
           </div>
         )}
       </div>
@@ -240,6 +293,36 @@ export default function CampaignsPage() {
           {/* Actions based on status */}
           {campaign.status === 'pending_posting' && (
             <div className="space-y-4">
+              {/* 48-hour deadline warning */}
+              {campaign.posting_deadline && deadlineTimeLeft[campaign.id] !== undefined && (
+                <div className={`rounded-lg p-4 border ${
+                  deadlineTimeLeft[campaign.id] < 24 * 60 * 60 * 1000 
+                    ? 'bg-red-500/10 border-red-500/30' 
+                    : 'bg-orange-500/10 border-orange-500/30'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className={
+                      deadlineTimeLeft[campaign.id] < 24 * 60 * 60 * 1000 
+                        ? 'text-red-400' 
+                        : 'text-orange-400'
+                    } size={20} />
+                    <div>
+                      <p className={`font-medium mb-1 ${
+                        deadlineTimeLeft[campaign.id] < 24 * 60 * 60 * 1000 
+                          ? 'text-red-400' 
+                          : 'text-orange-400'
+                      }`}>
+                        ⏰ {formatDeadline(deadlineTimeLeft[campaign.id])}
+                      </p>
+                      <p className="text-grey-300 text-sm">
+                        You have 48 hours from campaign creation to post the promo. 
+                        Failure to post will result in campaign expiry and a 250 CP penalty.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => handleSendToTelegram(campaign)}
                 disabled={actionLoading}
@@ -328,6 +411,24 @@ export default function CampaignsPage() {
               </p>
             </div>
           )}
+
+          {campaign.status === 'expired' && (
+            <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-center">
+              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+              <h4 className="text-white font-medium mb-2">Campaign Expired</h4>
+              <p className="text-red-300 text-sm mb-3">
+                You failed to post the promo within 48 hours
+              </p>
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                <p className="text-red-400 text-sm font-medium">
+                  Penalty: -250 CP Coins deducted from your balance
+                </p>
+              </div>
+              <p className="text-grey-400 text-xs mt-3">
+                Your partner will still receive their reward if they completed their side
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -336,6 +437,7 @@ export default function CampaignsPage() {
   const pendingCampaigns = campaigns.filter(c => c.status === 'pending_posting');
   const activeCampaigns = campaigns.filter(c => c.status === 'active');
   const completedCampaigns = campaigns.filter(c => c.status === 'completed');
+  const expiredCampaigns = campaigns.filter(c => c.status === 'expired');
 
   if (loading || !user) {
     return (
@@ -401,6 +503,20 @@ export default function CampaignsPage() {
                 </h2>
                 <div className="grid gap-4">
                   {completedCampaigns.map(campaign => (
+                    <CampaignCard key={campaign.id} campaign={campaign} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {expiredCampaigns.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                  <AlertCircle className="text-red-400" />
+                  Expired ({expiredCampaigns.length})
+                </h2>
+                <div className="grid gap-4">
+                  {expiredCampaigns.map(campaign => (
                     <CampaignCard key={campaign.id} campaign={campaign} />
                   ))}
                 </div>
