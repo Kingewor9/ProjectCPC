@@ -22,13 +22,31 @@ export default function ChannelAvatar({
   const [isLoading, setIsLoading] = useState(true);
 
   const handleError = () => {
+    console.log('Image failed to load:', src); // Debug log
     setHasError(true);
     setIsLoading(false);
   };
 
   const handleLoad = () => {
+    console.log('Image loaded successfully:', src); // Debug log
     setIsLoading(false);
   };
+
+  // If no src or empty src, show fallback immediately
+  if (!src || src.trim() === '') {
+    const initial = channelName ? channelName.charAt(0).toUpperCase() : '📺';
+    return (
+      <div
+        className={`${className} rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0`}
+        title={`No image for ${alt}`}
+      >
+        <div className="flex flex-col items-center justify-center">
+          <ImageIcon size={16} className="text-white/70 mb-0.5" />
+          <span className="text-xs font-bold text-white">{initial}</span>
+        </div>
+      </div>
+    );
+  }
 
   if (hasError) {
     // Fallback: Show a placeholder with channel icon and initial letter
@@ -47,9 +65,9 @@ export default function ChannelAvatar({
   }
 
   return (
-    <div className={`${className} rounded-lg bg-grey-700 flex items-center justify-center overflow-hidden flex-shrink-0`}>
+    <div className={`${className} rounded-lg bg-grey-700 flex items-center justify-center overflow-hidden flex-shrink-0 relative`}>
       {isLoading && (
-        <div className="absolute inset-0 bg-grey-700 flex items-center justify-center">
+        <div className="absolute inset-0 bg-grey-700 flex items-center justify-center z-10">
           <div className="animate-pulse">
             <ImageIcon size={20} className="text-grey-600" />
           </div>
@@ -60,7 +78,8 @@ export default function ChannelAvatar({
         alt={alt}
         onError={handleError}
         onLoad={handleLoad}
-        className={`w-full h-full object-cover ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+        className={`w-full h-full object-cover transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+        crossOrigin="anonymous"
       />
     </div>
   );
