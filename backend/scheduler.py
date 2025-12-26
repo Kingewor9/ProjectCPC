@@ -1,7 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
-from models import campaigns, requests_col
-from bot import send_message, send_photo, delete_message,  send_invite_campaign_post, send_campaign_post
+from models import campaigns, channels, users, requests_col
+from bot import  send_message, send_photo, delete_message,  send_invite_campaign_post, send_campaign_post, send_open_button_message
 from config import APP_URL, TELEGRAM_BOT_TOKEN
 import logging
 
@@ -9,10 +9,24 @@ s = BackgroundScheduler()
 
 def start_scheduler():
     if not TELEGRAM_BOT_TOKEN:
-        logging.warning('[SCHEDULER] TELEGRAM_BOT_TOKEN is not set. Bot API calls will fail.')
+        logging.warning('[SCHEDULER] TELEGRAM_BOT_TOKEN is not set.')
+
+    # Existing jobs
     s.add_job(check_and_post_campaigns, 'interval', seconds=20, id='campaign_checker')
     s.add_job(cleanup_finished_campaigns, 'interval', seconds=30, id='campaign_cleanup')
+
+    # NEW JOB
+    s.add_job(
+        check_and_notify_expired_campaigns,
+        'interval',
+        minutes=1,
+        id='expiry_notifier',
+        replace_existing=True
+    )
+
     s.start()
+    logging.info("[SCHEDULER] Scheduler started with expiry notifications")
+
 
 def check_and_post_campaigns():
     """Check and post scheduled campaigns"""
@@ -168,7 +182,139 @@ def cleanup_finished_campaigns():
             
         except Exception as e:
             logging.exception(f'[SCHEDULER] Failed to cleanup campaign {camp.get("id")}')
-            
+
+def check_and_notify_expired_campaigns():
+    """
+    Notify users when campaigns or invite tasks expire
+    """
+    try:
+        now = datetime.utcnow()
+
+        # ===== REQUESTER SIDE =====
+        requester_campaigns = list(campaigns.find({
+            'requester_status': 'active',
+            'requester_notified_expiry': {'$ne': True}
+        }))
+
+        for campaign in requester_campaigns:
+            posted_at = campaign.get('requester_posted_at')
+            if not posted_at:
+                continue
+
+            duration = campaign.get('duration_hours', 2)
+            if now < posted_at + timedelta(hours=duration):
+                continue
+
+            channel = channels.find_one({'id': campaign.get('fromChannelId')})
+            if not channel:
+                continue
+
+            owner_id = channel.get('owner_id')
+            if not owner_id:
+                continue
+
+            message = (
+                "⏰ <b>Campaign Timer Complete!</b>\n\n"
+                f"Your campaign with <b>{campaign.get('partner_channel_name','Partner')}</b> has ended.\n\n"
+                "1️⃣ Delete the promo post\n"
+                "2️⃣ Open the app and click <b>End Campaign</b>\n"
+                "3️⃣ Claim your reward 💰"
+            )
+
+            try:
+                send_open_button_message(str(owner_id), message, button_text="Open App")
+            except:
+                send_message(str(owner_id), message)
+
+            campaigns.update_one(
+                {'_id': campaign['_id']},
+                {'$set': {'requester_notified_expiry': True}}
+            )
+
+        # ===== ACCEPTOR SIDE =====
+        acceptor_campaigns = list(campaigns.find({
+            'acceptor_status': 'active',
+            'acceptor_notified_expiry': {'$ne': True}
+        }))
+
+        for campaign in acceptor_campaigns:
+            posted_at = campaign.get('acceptor_posted_at')
+            if not posted_at:
+                continue
+
+            duration = campaign.get('duration_hours', 2)
+            if now < posted_at + timedelta(hours=duration):
+                continue
+
+            channel = channels.find_one({'id': campaign.get('toChannelId')})
+            if not channel:
+                continue
+
+            owner_id = channel.get('owner_id')
+            if not owner_id:
+                continue
+
+            message = (
+                "⏰ <b>Campaign Timer Complete!</b>\n\n"
+                f"Your campaign with <b>{campaign.get('partner_channel_name','Partner')}</b> has ended.\n\n"
+                "1️⃣ Delete the promo post\n"
+                "2️⃣ Open the app and click <b>End Campaign</b>\n"
+                "3️⃣ Claim your reward 💰"
+            )
+
+            try:
+                send_open_button_message(str(owner_id), message, button_text="Open App")
+            except:
+                send_message(str(owner_id), message)
+
+            campaigns.update_one(
+                {'_id': campaign['_id']},
+                {'$set': {'acceptor_notified_expiry': True}}
+            )
+
+        # ===== INVITE TASKS =====
+        invite_tasks = list(campaigns.find({
+            'type': 'invite_task',
+            'status': 'running',
+            'expiry_notified': {'$ne': True}
+        }))
+
+        for task in invite_tasks:
+            posted_at = task.get('posted_at')
+            if not posted_at:
+                continue
+
+            duration = task.get('duration_hours', 12)
+            if now < posted_at + timedelta(hours=duration):
+                continue
+
+            user_id = task.get('user_id')
+            if not user_id:
+                continue
+
+            message = (
+                "⏰ <b>Invite Task Completed!</b>\n\n"
+                "Your 12-hour promo period is over.\n\n"
+                "➡️ Delete the promo post\n"
+                "➡️ Open the app and claim your <b>5,000 CP Coins</b> 🪙"
+            )
+
+            try:
+                send_open_button_message(str(user_id), message, button_text="Claim Reward")
+            except:
+                send_message(str(user_id), message)
+
+            campaigns.update_one(
+                {'_id': task['_id']},
+                {'$set': {'expiry_notified': True}}
+            )
+
+        logging.info("[SCHEDULER] Expiry notifications checked")
+
+    except Exception:
+        logging.exception("[SCHEDULER] Expiry notification error")
+
+           
 def process_invite_campaigns():
     """Process and complete invite campaigns"""
     from app import complete_invite_task
