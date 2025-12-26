@@ -183,138 +183,270 @@ def cleanup_finished_campaigns():
         except Exception as e:
             logging.exception(f'[SCHEDULER] Failed to cleanup campaign {camp.get("id")}')
 
+
 def check_and_notify_expired_campaigns():
     """
-    Notify users when campaigns or invite tasks expire
+    Check for campaigns and invite tasks that have expired and notify users
+    Runs every minute
     """
     try:
-        now = datetime.utcnow()
-
-        # ===== REQUESTER SIDE =====
-        requester_campaigns = list(campaigns.find({
+        now = datetime.datetime.utcnow()
+        
+        # ====== CHECK FOR MISSED 48-HOUR POSTING DEADLINES ======
+        check_posting_deadlines(now)
+        
+        # ====== CHECK REQUESTER CAMPAIGNS ======
+        active_requester_campaigns = list(campaigns.find({
             'requester_status': 'active',
             'requester_notified_expiry': {'$ne': True}
         }))
-
-        for campaign in requester_campaigns:
-            posted_at = campaign.get('requester_posted_at')
-            if not posted_at:
+        
+        for campaign in active_requester_campaigns:
+            requester_posted_at = campaign.get('requester_posted_at')
+            if not requester_posted_at:
                 continue
-
-            duration = campaign.get('duration_hours', 2)
-            if now < posted_at + timedelta(hours=duration):
-                continue
-
-            channel = channels.find_one({'id': campaign.get('fromChannelId')})
-            if not channel:
-                continue
-
-            owner_id = channel.get('owner_id')
-            if not owner_id:
-                continue
-
-            message = (
-                "⏰ <b>Campaign Timer Complete!</b>\n\n"
-                f"Your campaign with <b>{campaign.get('partner_channel_name','Partner')}</b> has ended.\n\n"
-                "1️⃣ Delete the promo post\n"
-                "2️⃣ Open the app and click <b>End Campaign</b>\n"
-                "3️⃣ Claim your reward 💰"
-            )
-
-            try:
-                send_open_button_message(str(owner_id), message, button_text="Open App")
-            except:
-                send_message(str(owner_id), message)
-
-            campaigns.update_one(
-                {'_id': campaign['_id']},
-                {'$set': {'requester_notified_expiry': True}}
-            )
-
-        # ===== ACCEPTOR SIDE =====
-        acceptor_campaigns = list(campaigns.find({
+            
+            duration_hours = campaign.get('duration_hours', 2)
+            expiry_time = requester_posted_at + datetime.timedelta(hours=duration_hours)
+            
+            # Check if campaign has expired
+            if now >= expiry_time:
+                from_channel_id = campaign.get('fromChannelId')
+                from_channel = channels.find_one({'id': from_channel_id})
+                
+                if from_channel:
+                    owner_id = from_channel.get('owner_id')
+                    partner_name = campaign.get('partner_channel_name', 'Partner')
+                    
+                    if owner_id:
+                        # Send notification
+                        message = (
+                            "⏰ <b>Campaign Timer Complete!</b>\n\n"
+                            f"Your campaign with <b>{partner_name}</b> has ended.\n\n"
+                            "✅ Next steps:\n"
+                            "1. Delete the promotional post from your channel\n"
+                            "2. Open the app and click 'End Campaign'\n"
+                            "3. Claim your reward!\n\n"
+                            "Thank you for using CP Gram! 🚀"
+                        )
+                        
+                        try:
+                            send_open_button_message(str(owner_id), message, button_text='Open App')
+                            logging.info(f"Sent expiry notification to requester {owner_id} for campaign {campaign.get('id')}")
+                        except:
+                            send_message(str(owner_id), message)
+                        
+                        # Mark as notified
+                        campaigns.update_one(
+                            {'id': campaign.get('id')},
+                            {'$set': {'requester_notified_expiry': True}}
+                        )
+        
+        # ====== CHECK ACCEPTOR CAMPAIGNS ======
+        active_acceptor_campaigns = list(campaigns.find({
             'acceptor_status': 'active',
             'acceptor_notified_expiry': {'$ne': True}
         }))
-
-        for campaign in acceptor_campaigns:
-            posted_at = campaign.get('acceptor_posted_at')
-            if not posted_at:
+        
+        for campaign in active_acceptor_campaigns:
+            acceptor_posted_at = campaign.get('acceptor_posted_at')
+            if not acceptor_posted_at:
                 continue
-
-            duration = campaign.get('duration_hours', 2)
-            if now < posted_at + timedelta(hours=duration):
-                continue
-
-            channel = channels.find_one({'id': campaign.get('toChannelId')})
-            if not channel:
-                continue
-
-            owner_id = channel.get('owner_id')
-            if not owner_id:
-                continue
-
-            message = (
-                "⏰ <b>Campaign Timer Complete!</b>\n\n"
-                f"Your campaign with <b>{campaign.get('partner_channel_name','Partner')}</b> has ended.\n\n"
-                "1️⃣ Delete the promo post\n"
-                "2️⃣ Open the app and click <b>End Campaign</b>\n"
-                "3️⃣ Claim your reward 💰"
-            )
-
-            try:
-                send_open_button_message(str(owner_id), message, button_text="Open App")
-            except:
-                send_message(str(owner_id), message)
-
-            campaigns.update_one(
-                {'_id': campaign['_id']},
-                {'$set': {'acceptor_notified_expiry': True}}
-            )
-
-        # ===== INVITE TASKS =====
-        invite_tasks = list(campaigns.find({
+            
+            duration_hours = campaign.get('duration_hours', 2)
+            expiry_time = acceptor_posted_at + datetime.timedelta(hours=duration_hours)
+            
+            if now >= expiry_time:
+                to_channel_id = campaign.get('toChannelId')
+                to_channel = channels.find_one({'id': to_channel_id})
+                
+                if to_channel:
+                    owner_id = to_channel.get('owner_id')
+                    partner_name = campaign.get('partner_channel_name', 'Partner')
+                    
+                    if owner_id:
+                        # Send notification
+                        message = (
+                            "⏰ <b>Campaign Timer Complete!</b>\n\n"
+                            f"Your campaign with <b>{partner_name}</b> has ended.\n\n"
+                            "✅ Next steps:\n"
+                            "1. Delete the promotional post from your channel\n"
+                            "2. Open the app and click 'End Campaign'\n"
+                            "3. Claim your reward!\n\n"
+                            "Thank you for using CP Gram! 🚀"
+                        )
+                        
+                        try:
+                            send_open_button_message(str(owner_id), message, button_text='Open App')
+                            logging.info(f"Sent expiry notification to acceptor {owner_id} for campaign {campaign.get('id')}")
+                        except:
+                            send_message(str(owner_id), message)
+                        
+                        # Mark as notified
+                        campaigns.update_one(
+                            {'id': campaign.get('id')},
+                            {'$set': {'acceptor_notified_expiry': True}}
+                        )
+        
+        # ====== CHECK INVITE TASKS ======
+        active_invite_tasks = list(campaigns.find({
             'type': 'invite_task',
-            'status': 'running',
+            'status': 'active',
             'expiry_notified': {'$ne': True}
         }))
-
-        for task in invite_tasks:
+        
+        for task in active_invite_tasks:
             posted_at = task.get('posted_at')
             if not posted_at:
                 continue
-
-            duration = task.get('duration_hours', 12)
-            if now < posted_at + timedelta(hours=duration):
-                continue
-
-            user_id = task.get('user_id')
-            if not user_id:
-                continue
-
+            
+            duration_hours = task.get('duration_hours', 12)
+            expiry_time = posted_at + datetime.timedelta(hours=duration_hours)
+            
+            if now >= expiry_time:
+                user_id = task.get('user_id')
+                
+                if user_id:
+                    # Send notification
+                    message = (
+                        "⏰ <b>Invite Task Timer Complete!</b>\n\n"
+                        "Your 12-hour promotional post period has ended.\n\n"
+                        "✅ Next steps:\n"
+                        "1. Delete the promotional post from your channel\n"
+                        "2. Open the app and claim your 5,000 CP Coins!\n\n"
+                        "Don't forget to claim your reward! 🎉"
+                    )
+                    
+                    try:
+                        send_open_button_message(str(user_id), message, button_text='Claim Reward')
+                        logging.info(f"Sent expiry notification to user {user_id} for invite task {task.get('id')}")
+                    except:
+                        send_message(str(user_id), message)
+                    
+                    # Mark as notified
+                    campaigns.update_one(
+                        {'id': task.get('id')},
+                        {'$set': {'expiry_notified': True}}
+                    )
+        
+        logging.info(f"Checked expired campaigns/tasks at {now}")
+        
+    except Exception as e:
+        logging.error(f"Error checking expired campaigns: {e}")
+        import traceback
+        traceback.print_exc()
+        
+def check_posting_deadlines(now):
+    """
+    Check for campaigns where 48-hour posting deadline has passed
+    Penalize users who didn't post
+    """
+    try:
+        # Find campaigns with pending status that have passed the deadline
+        pending_campaigns = list(campaigns.find({
+            'posting_deadline': {'$lte': now},
+            '$or': [
+                {'requester_status': 'pending_posting', 'requester_deadline_notified': False},
+                {'acceptor_status': 'pending_posting', 'acceptor_deadline_notified': False}
+            ]
+        }))
+        
+        for campaign in pending_campaigns:
+            campaign_id = campaign.get('id')
+            from_channel_id = campaign.get('fromChannelId')
+            to_channel_id = campaign.get('toChannelId')
+            
+            # Get channels
+            from_channel = channels.find_one({'id': from_channel_id})
+            to_channel = channels.find_one({'id': to_channel_id})
+            
+            # Check requester
+            if campaign.get('requester_status') == 'pending_posting' and not campaign.get('requester_deadline_notified'):
+                if from_channel:
+                    owner_id = from_channel.get('owner_id')
+                    if owner_id:
+                        # Penalize requester
+                        penalize_user_for_missed_deadline(owner_id, 'requester', campaign_id, to_channel.get('name') if to_channel else 'Partner')
+                        
+                        # Update campaign status
+                        campaigns.update_one(
+                            {'id': campaign_id},
+                            {
+                                '$set': {
+                                    'requester_status': 'expired',
+                                    'requester_deadline_notified': True,
+                                    'updated_at': datetime.datetime.utcnow()
+                                }
+                            }
+                        )
+            
+            # Check acceptor
+            if campaign.get('acceptor_status') == 'pending_posting' and not campaign.get('acceptor_deadline_notified'):
+                if to_channel:
+                    owner_id = to_channel.get('owner_id')
+                    if owner_id:
+                        # Penalize acceptor
+                        penalize_user_for_missed_deadline(owner_id, 'acceptor', campaign_id, from_channel.get('name') if from_channel else 'Partner')
+                        
+                        # Update campaign status
+                        campaigns.update_one(
+                            {'id': campaign_id},
+                            {
+                                '$set': {
+                                    'acceptor_status': 'expired',
+                                    'acceptor_deadline_notified': True,
+                                    'updated_at': datetime.datetime.utcnow()
+                                }
+                            }
+                        )
+        
+        if pending_campaigns:
+            logging.info(f"Processed {len(pending_campaigns)} expired posting deadlines")
+            
+    except Exception as e:
+        logging.error(f"Error checking posting deadlines: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        
+def penalize_user_for_missed_deadline(telegram_id, user_role, campaign_id, partner_name):
+    """
+    Deduct 250 CP from user and notify them
+    """
+    try:
+        penalty = 250
+        
+        # Deduct CP coins from user
+        result = users.update_one(
+            {'telegram_id': telegram_id},
+            {
+                '$inc': {'cpcBalance': -penalty},
+                '$set': {'updated_at': datetime.datetime.utcnow()}
+            }
+        )
+        
+        if result.modified_count > 0:
+            # Send notification
             message = (
-                "⏰ <b>Invite Task Completed!</b>\n\n"
-                "Your 12-hour promo period is over.\n\n"
-                "➡️ Delete the promo post\n"
-                "➡️ Open the app and claim your <b>5,000 CP Coins</b> 🪙"
+                "⚠️ <b>Campaign Posting Deadline Missed</b>\n\n"
+                f"Your campaign with <b>{partner_name}</b> has expired.\n\n"
+                f"You had 48 hours to post the promotional material but did not complete it.\n\n"
+                f"<b>Penalty:</b> -{penalty} CP Coins\n\n"
+                "Please ensure you post campaigns within the deadline to avoid penalties in the future.\n\n"
+                "The other user will still receive their reward if they completed their side."
             )
-
+            
             try:
-                send_open_button_message(str(user_id), message, button_text="Claim Reward")
+                send_open_button_message(str(telegram_id), message, button_text='View Campaigns')
+                logging.info(f"Penalized user {telegram_id} with {penalty} CP for missed deadline on campaign {campaign_id}")
             except:
-                send_message(str(user_id), message)
-
-            campaigns.update_one(
-                {'_id': task['_id']},
-                {'$set': {'expiry_notified': True}}
-            )
-
-        logging.info("[SCHEDULER] Expiry notifications checked")
-
-    except Exception:
-        logging.exception("[SCHEDULER] Expiry notification error")
-
-           
+                send_message(str(telegram_id), message)
+        
+    except Exception as e:
+        logging.error(f"Error penalizing user {telegram_id}: {e}")
+        import traceback
+        traceback.print_exc()
+         
 def process_invite_campaigns():
     """Process and complete invite campaigns"""
     from app import complete_invite_task

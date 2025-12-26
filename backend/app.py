@@ -822,7 +822,7 @@ def list_campaigns():
             # Convert datetime objects to ISO strings
             for field in ['requester_posted_at', 'requester_ended_at', 
                          'acceptor_posted_at', 'acceptor_ended_at',
-                         'created_at', 'updated_at', 'actual_start_at', 'actual_end_at']:
+                         'created_at', 'updated_at', 'actual_start_at', 'actual_end_at', 'posting_deadline']:
                 if field in campaign and campaign[field]:
                     campaign[field] = campaign[field].isoformat()
         

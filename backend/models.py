@@ -372,6 +372,10 @@ def create_single_manual_campaign(request_id, from_channel_id, to_channel_id,
     # Convert ObjectId to string if necessary
     request_id_str = str(request_id) if request_id else None
     
+      # Set 48-hour deadline for posting
+    now = datetime.datetime.utcnow()
+    posting_deadline = now + datetime.timedelta(hours=48)
+    
     campaign_doc = {
         'id': campaign_id,
         'request_id_str': request_id_str,  # Store as string to avoid ObjectId issues
@@ -379,6 +383,9 @@ def create_single_manual_campaign(request_id, from_channel_id, to_channel_id,
         'toChannelId': to_channel_id,
         'duration_hours': duration_hours,
         'cpc_cost': cpc_cost,
+        
+        # 48-hour posting deadline
+        'posting_deadline': posting_deadline,
         
         # Promos for both sides
         'requester_promo': requester_promo,  # Acceptor posts this
@@ -390,6 +397,8 @@ def create_single_manual_campaign(request_id, from_channel_id, to_channel_id,
         'requester_posted_at': None,
         'requester_ended_at': None,
         'requester_reward_given': False,
+        'requester_deadline_notified': False,  # For expiry notification
+        
         
         # Acceptor tracking
         'acceptor_status': 'pending_posting',
@@ -397,6 +406,7 @@ def create_single_manual_campaign(request_id, from_channel_id, to_channel_id,
         'acceptor_posted_at': None,
         'acceptor_ended_at': None,
         'acceptor_reward_given': False,
+        'acceptor_deadline_notified': False,  # For expiry notification
         
         # Metadata
         'created_at': datetime.datetime.utcnow(),
