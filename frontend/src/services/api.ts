@@ -282,6 +282,48 @@ async previewPromo(channelId: string, promoId: string): Promise<any> {
   return response.data;
 }
 
+// Invite task for CP Coins Page
+
+async getInviteTaskStatus(): Promise<any> {
+  const response = await this.api.get(
+    '/api/tasks/invite/status'
+  );
+  return response.data;
+}
+
+async initiateInviteTask(channelId: string): Promise<any> {
+  const response = await this.api.post(
+    '/api/tasks/invite/initiate',
+    { channel_id: channelId }
+  );
+  return response.data;
+}
+
+async sendInvitePromoToTelegram(taskId: string): Promise<any> {
+  const response = await this.api.post(
+    `/api/tasks/invite/${taskId}/send-promo`
+  );
+  return response.data;
+}
+
+async verifyAndStartInviteTask(
+  taskId: string,
+  postLink: string
+): Promise<any> {
+  const response = await this.api.post(
+    `/api/tasks/invite/${taskId}/verify-and-start`,
+    { post_link: postLink }
+  );
+  return response.data;
+}
+
+async completeInviteTask(taskId: string): Promise<any> {
+  const response = await this.api.post(
+    `/api/tasks/invite/${taskId}/complete`
+  );
+  return response.data;
+}
+
 // Purchase / Transactions endpoints
 
 async getExchangeRate(): Promise<any> {
