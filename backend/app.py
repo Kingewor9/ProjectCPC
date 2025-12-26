@@ -1455,11 +1455,10 @@ def verify_channel_join():
         print(f"Error verifying channel join: {e}")
         return jsonify({'error': 'Failed to verify channel join'}), 500
 
-
-@app.route('/api/tasks/create-invite', methods=['POST'])
+@app.route('/api/tasks/invite/initiate', methods=['POST'])
 @token_required
-def create_invite_task():
-    """Create an invite task for a channel"""
+def initiate_invite_task():
+    """Initiate invite task - user selects channel"""
     telegram_id = request.telegram_id
     data = request.json or {}
     channel_id = data.get('channel_id')
@@ -1468,11 +1467,11 @@ def create_invite_task():
         return jsonify({'error': 'Channel ID is required'}), 400
     
     try:
-        # Check if task already completed for this channel
+        # Check if task already completed
         task_record = user_tasks.find_one({'user_id': telegram_id})
         
-        if task_record and task_record.get(f'invite_users_{channel_id}'):
-            return jsonify({'error': 'Invite task already completed for this channel'}), 400
+        if task_record and task_record.get('invite_task_completed'):
+            return jsonify({'error': 'Invite task already completed. Wait for admin to renew it.'}), 400
         
         # Verify channel belongs to user
         channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
@@ -1480,83 +1479,271 @@ def create_invite_task():
         if not channel:
             return jsonify({'error': 'Channel not found'}), 404
         
-        # Check if channel is active (accept DB values or display values)
+        # Check if channel is active
         status_raw = (channel.get('status') or '').lower()
         if status_raw not in ['approved', 'active']:
             return jsonify({'error': 'Channel must be active to complete this task'}), 400
-
-        # Create a scheduled post to go live shortly (default 5 minutes)
-        # We intentionally post invite tasks almost immediately rather than using
-        # channel time slots so users get their promo posted right after confirm.
-        delay_minutes = 5
-        try:
-            # Allow optional override from frontend: { delay_minutes: <int> }
-            delay_minutes = int(data.get('delay_minutes', delay_minutes))
-        except Exception:
-            delay_minutes = 5
-
-        start_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=delay_minutes)
-        end_at = start_at + datetime.timedelta(hours=12)
         
-       
+        # Create invite task campaign (similar to regular campaigns but for invite task)
+        invite_task_id = f"invite_{uuid.uuid4().hex[:12]}"
         
-        # Create invite campaign
-        invite_campaign = {
+        invite_task = {
+            'id': invite_task_id,
             'type': 'invite_task',
-            'channel_id': channel_id,
             'user_id': telegram_id,
+            'channel_id': channel_id,
+            'channel_name': channel.get('name'),
             'telegram_chat_id': channel.get('telegram_id'),
-            'status': 'scheduled',
-            'start_at': start_at,
-            'end_at': end_at,
+            'status': 'pending_posting',
+            'duration_hours': 12,
             'reward': 5000,
-            'promo_text': f"🚀 Join CP Gram - The Ultimate Cross-Promotion Platform!\n\n"
-                         f"Grow your Telegram channel with strategic cross-promotions.\n\n"
-                         f"✅ Connect with similar channels\n"
-                         f"✅ Automated posting\n"
-                         f"✅ Fair pricing system\n"
-                         f"✅ Earn rewards\n\n"
-                         f"Start growing today: {APP_URL}",
-            'created_at': datetime.datetime.utcnow()
+            'promo': {
+                'name': 'CP Gram Promo',
+                'text': (
+                    "🚀 Grow Your Telegram Channel with CP Gram!\n\n"
+                    "The ultimate cross-promotion platform for Telegram channels.\n\n"
+                    "✅ Connect with similar channels\n"
+                    "✅ Manual posting control\n"
+                    "✅ Fair pricing system\n"
+                    "✅ Earn rewards\n\n"
+                    "Join thousands of growing channels today!"
+                ),
+                'link': BOT_URL,
+                'image': 'https://ibb.co/Y7V6fX6c',
+                'cta': '🚀 Join CP Gram'
+            },
+            'post_link': None,
+            'posted_at': None,
+            'ended_at': None,
+            'reward_given': False,
+            'created_at': datetime.datetime.utcnow(),
+            'updated_at': datetime.datetime.utcnow()
         }
         
-        result = campaigns.insert_one(invite_campaign)
-        campaign_id = str(result.inserted_id)
-        campaigns.update_one({'_id': result.inserted_id}, {'$set': {'id': campaign_id}})
+        campaigns.insert_one(invite_task)
         
-        # Mark task as in progress (will be completed when post is deleted)
+        return jsonify({
+            'ok': True,
+            'invite_task_id': invite_task_id,
+            'message': 'Invite task initiated! Get the promo and post it on your channel.'
+        })
+    
+    except Exception as e:
+        print(f"Error initiating invite task: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to initiate invite task'}), 500
+
+
+@app.route('/api/tasks/invite/<task_id>/send-promo', methods=['POST'])
+@token_required
+def send_invite_promo_to_telegram(task_id):
+    """Send invite promo to user's Telegram"""
+    telegram_id = request.telegram_id
+    
+    try:
+        invite_task = campaigns.find_one({'id': task_id, 'type': 'invite_task'})
+        
+        if not invite_task:
+            return jsonify({'error': 'Invite task not found'}), 404
+        
+        # Verify user owns this task
+        if invite_task.get('user_id') != telegram_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Get promo
+        promo = invite_task.get('promo', {})
+        
+        # Send via bot WITHOUT preview label
+        from bot import send_campaign_promo_for_posting
+        result = send_campaign_promo_for_posting(
+            chat_id=telegram_id,
+            promo_text=promo.get('text', ''),
+            promo_link=promo.get('link', ''),
+            promo_image=promo.get('image', ''),
+            promo_cta=promo.get('cta', 'Join Now')
+        )
+        
+        if result and result.get('ok'):
+            return jsonify({
+                'ok': True,
+                'message': 'Promo sent to your Telegram!'
+            })
+        else:
+            return jsonify({'error': 'Failed to send to Telegram'}), 500
+            
+    except Exception as e:
+        print(f"Error sending invite promo: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/tasks/invite/<task_id>/verify-and-start', methods=['POST'])
+@token_required
+def verify_invite_post_and_start(task_id):
+    """User submits post link and starts invite task timer"""
+    telegram_id = request.telegram_id
+    data = request.json or {}
+    post_link = data.get('post_link', '').strip()
+    
+    if not post_link:
+        return jsonify({'error': 'Post link is required'}), 400
+    
+    try:
+        invite_task = campaigns.find_one({'id': task_id, 'type': 'invite_task'})
+        
+        if not invite_task:
+            return jsonify({'error': 'Invite task not found'}), 404
+        
+        # Verify user owns this task
+        if invite_task.get('user_id') != telegram_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Update task status to active
+        now = datetime.datetime.utcnow()
+        campaigns.update_one(
+            {'id': task_id},
+            {
+                '$set': {
+                    'status': 'active',
+                    'post_link': post_link,
+                    'posted_at': now,
+                    'updated_at': now
+                }
+            }
+        )
+        
+        # Notify admin for verification
+        channel_name = invite_task.get('channel_name', 'Unknown')
+        user = users.find_one({'telegram_id': telegram_id})
+        user_name = user.get('first_name', 'User') if user else 'User'
+        
+        admin_msg = (
+            f"📢 New Invite Task Post\n\n"
+            f"User: {user_name} ({telegram_id})\n"
+            f"Channel: {channel_name}\n"
+            f"Post: {post_link}\n\n"
+            f"Please verify the post."
+        )
+        
+        if BOT_ADMIN_CHAT_ID:
+            send_message(BOT_ADMIN_CHAT_ID, admin_msg)
+        
+        return jsonify({
+            'ok': True,
+            'message': 'Post verified! Timer started. Admin has been notified.'
+        })
+        
+    except Exception as e:
+        print(f"Error verifying invite post: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/tasks/invite/<task_id>/complete', methods=['POST'])
+@token_required
+def complete_invite_task_endpoint(task_id):
+    """Complete invite task and give reward"""
+    telegram_id = request.telegram_id
+    
+    try:
+        invite_task = campaigns.find_one({'id': task_id, 'type': 'invite_task'})
+        
+        if not invite_task:
+            return jsonify({'error': 'Invite task not found'}), 404
+        
+        # Verify user owns this task
+        if invite_task.get('user_id') != telegram_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        # Check if already rewarded
+        if invite_task.get('reward_given'):
+            return jsonify({'error': 'Reward already claimed'}), 400
+        
+        # Give reward
+        reward = invite_task.get('reward', 5000)
+        users.update_one(
+            {'telegram_id': telegram_id},
+            {
+                '$inc': {'cpcBalance': reward},
+                '$set': {'updated_at': datetime.datetime.utcnow()}
+            }
+        )
+        
+        # Mark task as completed
+        now = datetime.datetime.utcnow()
+        campaigns.update_one(
+            {'id': task_id},
+            {
+                '$set': {
+                    'status': 'completed',
+                    'ended_at': now,
+                    'reward_given': True,
+                    'updated_at': now
+                }
+            }
+        )
+        
+        # Mark in user_tasks that invite task is completed
         user_tasks.update_one(
             {'user_id': telegram_id},
             {
                 '$set': {
-                    f'invite_users_{channel_id}': True,
-                    f'invite_users_{channel_id}_started_at': datetime.datetime.utcnow(),
-                    f'invite_campaign_{channel_id}': campaign_id
+                    'invite_task_completed': True,
+                    'invite_task_completed_at': now
                 }
             },
             upsert=True
         )
         
-        # Notify admin
-        if BOT_ADMIN_CHAT_ID:
-            send_message(
-                BOT_ADMIN_CHAT_ID,
-                f"📢 Invite task created\n"
-                f"User: {telegram_id}\n"
-                f"Channel: {channel.get('name')}\n"
-                f"Posting soon at: {start_at.strftime('%Y-%m-%d %H:%M UTC')}"
-            )
+        # Notify user
+        msg = f"✅ Invite Task Completed!\n\nYou earned {reward} CP Coins!"
+        try:
+            send_open_button_message(telegram_id, msg)
+        except:
+            send_message(telegram_id, msg)
         
         return jsonify({
             'ok': True,
-            'reward': 5000,
-            'campaign_id': campaign_id,
-            'message': 'Invite task created successfully!'
+            'message': 'Task completed!',
+            'reward': reward
+        })
+        
+    except Exception as e:
+        print(f"Error completing invite task: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/tasks/invite/status', methods=['GET'])
+@token_required
+def get_invite_task_status():
+    """Get user's current invite task status"""
+    telegram_id = request.telegram_id
+    
+    try:
+        # Check if task is completed
+        task_record = user_tasks.find_one({'user_id': telegram_id})
+        is_completed = task_record.get('invite_task_completed', False) if task_record else False
+        
+        # Check if there's an active invite task
+        active_task = campaigns.find_one({
+            'user_id': telegram_id,
+            'type': 'invite_task',
+            'status': {'$in': ['pending_posting', 'active']}
+        }, {'_id': 0})
+        
+        # Convert datetime to ISO strings
+        if active_task:
+            for field in ['posted_at', 'ended_at', 'created_at', 'updated_at']:
+                if field in active_task and active_task[field]:
+                    active_task[field] = active_task[field].isoformat()
+        
+        return jsonify({
+            'completed': is_completed,
+            'active_task': active_task
         })
     
     except Exception as e:
-        print(f"Error creating invite task: {e}")
-        return jsonify({'error': 'Failed to create invite task'}), 500
+        print(f"Error getting invite task status: {e}")
+        return jsonify({'error': 'Failed to get status'}), 500
 
 # Exchange rate configuration (can be moved to config.py)
 STARS_PER_CPC = 1  # 1 Star = 1 CP Coin
@@ -2137,17 +2324,28 @@ def get_admin_analytics():
     except Exception as e:
         print(f"Error fetching admin analytics: {e}")
         return jsonify({'error': 'Failed to fetch analytics'}), 500
-   
-@app.route('/api/admin/reset-invite-tasks', methods=['POST'])
+
+#Reset invite tasks for all users (5000 CP Coins)   
+@app.route('/api/admin/reset-invite-task', methods=['POST'])
 @token_required
 @admin_required
-def reset_invite_tasks():
-    """Reset invite tasks for all users"""
-    user_tasks.update_many(
-        {},
-        {'$set': {'invite_users': False}}
-    )
-    return jsonify({'ok': True, 'message': 'Invite tasks reset for all users'})
+def admin_reset_invite_tasks():
+    """Reset invite tasks for all users (Admin only)"""
+    try:
+        # Reset all users' invite task completion status
+        result = user_tasks.update_many(
+            {},
+            {'$set': {'invite_task_completed': False}}
+        )
+        
+        return jsonify({
+            'ok': True,
+            'message': f'Invite tasks reset for {result.modified_count} users'
+        })
+    
+    except Exception as e:
+        print(f"Error resetting invite tasks: {e}")
+        return jsonify({'error': 'Failed to reset invite tasks'}), 500
 
 @app.route('/api/admin/purchases/stats', methods=['GET'])
 @token_required
