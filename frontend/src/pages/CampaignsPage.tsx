@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
+import PromoImage from '../components/PromoImage';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { Zap, Clock, CheckCircle, Send, ExternalLink, StopCircle, AlertCircle } from 'lucide-react';
@@ -25,7 +26,7 @@ interface Campaign {
   post_verification_link?: string;
   user_role: 'requester' | 'acceptor';
   cpc_cost?: number;
-  posting_deadline?: string;  // NEW: 48-hour deadline
+  posting_deadline?: string;
 }
 
 export default function CampaignsPage() {
@@ -69,7 +70,7 @@ export default function CampaignsPage() {
     return () => clearInterval(timer);
   }, [campaigns]);
 
-  // Timer for active campaigns
+  // Timer for active campaigns - ONLY update when modal is open
   useEffect(() => {
     if (selectedCampaign?.status === 'active' && selectedCampaign.actual_start_at) {
       const calculateTimeLeft = () => {
@@ -249,8 +250,8 @@ export default function CampaignsPage() {
   );
 
   const CampaignDetailModal = ({ campaign }: { campaign: Campaign }) => (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-darkBlue-800 border border-grey-700 rounded-xl p-6 max-w-2xl w-full my-8">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-darkBlue-800 border border-grey-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-white mb-2">{campaign.promo.name}</h2>
@@ -273,9 +274,13 @@ export default function CampaignsPage() {
           {/* Promo Preview */}
           <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
             <h3 className="text-white font-semibold mb-3">Promo to Post</h3>
-            {campaign.promo.image && (
-              <img src={campaign.promo.image} alt={campaign.promo.name} className="w-full h-48 object-cover rounded-lg mb-3" />
-            )}
+            
+            {/* Using PromoImage component */}
+            <PromoImage 
+              src={campaign.promo.image} 
+              alt={campaign.promo.name}
+            />
+            
             <p className="text-grey-300 text-sm mb-3">{campaign.promo.text}</p>
             {campaign.promo.link && (
               <a 
@@ -293,35 +298,7 @@ export default function CampaignsPage() {
           {/* Actions based on status */}
           {campaign.status === 'pending_posting' && (
             <div className="space-y-4">
-              {/* 48-hour deadline warning */}
-              {campaign.posting_deadline && deadlineTimeLeft[campaign.id] !== undefined && (
-                <div className={`rounded-lg p-4 border min-h-[120px] ${
-                  deadlineTimeLeft[campaign.id] < 24 * 60 * 60 * 1000 
-                    ? 'bg-red-500/10 border-red-500/30' 
-                    : 'bg-orange-500/10 border-orange-500/30'
-                }`}>
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className={
-                      deadlineTimeLeft[campaign.id] < 24 * 60 * 60 * 1000 
-                        ? 'text-red-400' 
-                        : 'text-orange-400'
-                    } size={20} />
-                    <div>
-                      <p className={`font-medium mb-1 font-mono text-base ${
-                        deadlineTimeLeft[campaign.id] < 24 * 60 * 60 * 1000 
-                          ? 'text-red-400' 
-                          : 'text-orange-400'
-                      }`}>
-                        ⏰ {formatDeadline(deadlineTimeLeft[campaign.id])}
-                      </p>
-                      <p className="text-grey-300 text-sm">
-                        You have 48 hours from campaign creation to post the promo. 
-                        Failure to post will result in campaign expiry and a 250 CP penalty.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* REMOVED: 48-hour deadline warning from modal */}
 
               <button
                 onClick={() => handleSendToTelegram(campaign)}
@@ -364,10 +341,10 @@ export default function CampaignsPage() {
 
           {campaign.status === 'active' && (
             <div className="space-y-4">
-              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-6 text-center min-h-[180px] flex flex-col items-center justify-center">
-                <Zap className="w-12 h-12 text-green-400 mb-3" />
+              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-6 text-center">
+                <Zap className="w-12 h-12 text-green-400 mb-3 mx-auto" />
                 <h4 className="text-white text-xl font-bold mb-2">Campaign Active!</h4>
-                <div className="text-3xl font-mono text-green-400 mb-2 w-48">
+                <div className="text-3xl font-mono text-green-400 mb-2">
                   {formatTimeLeft(timeLeft)}
                 </div>
                 <p className="text-grey-400 text-sm">Time remaining</p>
