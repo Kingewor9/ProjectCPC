@@ -10,15 +10,16 @@ interface PromoImageProps {
 export default function PromoImage({
   src,
   alt,
-  className = 'w-full h-48'
+  className = ''
 }: PromoImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // If no src or error, show fallback
   if (!src || hasError) {
     return (
       <div
-        className={`${className} bg-darkBlue-700 rounded-lg flex flex-col items-center justify-center text-grey-400`}
+        className={`w-full h-48 bg-darkBlue-700 rounded-lg flex flex-col items-center justify-center text-grey-400 mb-3 ${className}`}
       >
         <ImageIcon size={28} className="mb-2" />
         <span className="text-sm">No promo image</span>
@@ -27,9 +28,7 @@ export default function PromoImage({
   }
 
   return (
-    <div
-      className={`${className} bg-darkBlue-900 rounded-lg overflow-hidden relative`}
-    >
+    <div className={`w-full h-48 bg-darkBlue-900 rounded-lg overflow-hidden relative mb-3 ${className}`}>
       {isLoading && (
         <div className="absolute inset-0 bg-darkBlue-700 flex items-center justify-center animate-pulse">
           <ImageIcon size={28} className="text-grey-600" />
