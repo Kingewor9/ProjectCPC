@@ -48,8 +48,11 @@ export default function CampaignsPage() {
     }
   }, [user]);
 
-  // Timer for campaign deadlines (48 hours)
+  // Timer for campaign deadlines (48 hours) - ONLY when modal is closed
   useEffect(() => {
+    // Don't update deadline timers when modal is open to prevent bouncing
+    if (selectedCampaign) return;
+
     const calculateDeadlines = () => {
       const newDeadlines: {[key: string]: number} = {};
       
@@ -68,7 +71,7 @@ export default function CampaignsPage() {
     calculateDeadlines();
     const timer = setInterval(calculateDeadlines, 1000);
     return () => clearInterval(timer);
-  }, [campaigns]);
+  }, [campaigns, selectedCampaign]);
 
   // Timer for active campaigns - ONLY update when modal is open
   useEffect(() => {
@@ -251,161 +254,161 @@ export default function CampaignsPage() {
 
   const CampaignDetailModal = ({ campaign }: { campaign: Campaign }) => (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-darkBlue-800 border border-grey-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-2">{campaign.promo.name}</h2>
-            <p className="text-grey-400">Partner: {campaign.partner_channel_name}</p>
-            <p className="text-grey-500 text-sm mt-1">
-              {campaign.user_role === 'requester' ? '👉 You requested this' : '✅ You accepted this'}
-            </p>
-          </div>
-          <button 
-            onClick={() => setSelectedCampaign(null)}
-            className="text-grey-400 hover:text-white"
-          >
-            ✕
-          </button>
-        </div>
-
-        {getStatusBadge(campaign.status)}
-
-        <div className="mt-6 space-y-6">
-          {/* Promo Preview */}
-          <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
-            <h3 className="text-white font-semibold mb-3">Promo to Post</h3>
-            
-            {/* Using PromoImage component */}
-            <PromoImage 
-              src={campaign.promo.image} 
-              alt={campaign.promo.name}
-            />
-            
-            <p className="text-grey-300 text-sm mb-3">{campaign.promo.text}</p>
-            {campaign.promo.link && (
-              <a 
-                href={campaign.promo.link} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
-              >
-                <ExternalLink size={16} />
-                {campaign.promo.link}
-              </a>
-            )}
-          </div>
-
-          {/* Actions based on status */}
-          {campaign.status === 'pending_posting' && (
-            <div className="space-y-4">
-              {/* REMOVED: 48-hour deadline warning from modal */}
-
-              <button
-                onClick={() => handleSendToTelegram(campaign)}
-                disabled={actionLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Send size={20} />
-                Get Promo in Telegram
-              </button>
-              
-              <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
-                <h4 className="text-white font-medium mb-2">📋 Next Steps:</h4>
-                <ol className="text-grey-300 text-sm space-y-2 list-decimal list-inside">
-                  <li>Click "Get Promo in Telegram"</li>
-                  <li>Forward the message to your channel</li>
-                  <li>Copy the post link from your channel</li>
-                  <li>Submit the link below to start your timer</li>
-                </ol>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-white text-sm font-medium">Post Link (after you've posted)</label>
-                <input
-                  type="url"
-                  value={postLink}
-                  onChange={(e) => setPostLink(e.target.value)}
-                  placeholder="https://t.me/yourchannel/123"
-                  className="w-full bg-darkBlue-900 border border-grey-700 rounded-lg px-4 py-3 text-white"
-                />
-                <button
-                  onClick={handleVerifyAndStart}
-                  disabled={!postLink.trim() || actionLoading}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium disabled:opacity-50"
-                >
-                  ✓ Start My Campaign
-                </button>
-              </div>
+      <div className="bg-darkBlue-800 border border-grey-700 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">{campaign.promo.name}</h2>
+              <p className="text-grey-400">Partner: {campaign.partner_channel_name}</p>
+              <p className="text-grey-500 text-sm mt-1">
+                {campaign.user_role === 'requester' ? '👉 You requested this' : '✅ You accepted this'}
+              </p>
             </div>
-          )}
+            <button 
+              onClick={() => setSelectedCampaign(null)}
+              className="text-grey-400 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
 
-          {campaign.status === 'active' && (
-            <div className="space-y-4">
-              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-6 text-center">
-                <Zap className="w-12 h-12 text-green-400 mb-3 mx-auto" />
-                <h4 className="text-white text-xl font-bold mb-2">Campaign Active!</h4>
-                <div className="text-3xl font-mono text-green-400 mb-2">
-                  {formatTimeLeft(timeLeft)}
-                </div>
-                <p className="text-grey-400 text-sm">Time remaining</p>
-              </div>
+          {getStatusBadge(campaign.status)}
 
-              {campaign.post_verification_link && (
+          <div className="mt-6 space-y-6">
+            {/* Promo Preview */}
+            <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
+              <h3 className="text-white font-semibold mb-3">Promo to Post</h3>
+              
+              {/* Using PromoImage component */}
+              <PromoImage 
+                src={campaign.promo.image} 
+                alt={campaign.promo.name}
+              />
+              
+              <p className="text-grey-300 text-sm mb-3">{campaign.promo.text}</p>
+              {campaign.promo.link && (
                 <a 
-                  href={campaign.post_verification_link}
-                  target="_blank"
+                  href={campaign.promo.link} 
+                  target="_blank" 
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
+                  className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
                 >
                   <ExternalLink size={16} />
-                  View Your Post
+                  {campaign.promo.link}
                 </a>
               )}
-
-              <button
-                onClick={() => handleEndCampaign(campaign)}
-                disabled={timeLeft > 0 || actionLoading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <StopCircle size={20} />
-                {timeLeft > 0 ? 'Wait for Timer to Complete' : 'End Campaign & Claim Reward'}
-              </button>
-
-              {timeLeft > 0 && (
-                <p className="text-grey-400 text-xs text-center">
-                  Button will activate when timer reaches 0
-                </p>
-              )}
             </div>
-          )}
 
-          {campaign.status === 'completed' && (
-            <div className="bg-gray-500/20 border border-gray-500/30 rounded-lg p-4 text-center">
-              <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <h4 className="text-white font-medium mb-2">Campaign Completed</h4>
-              <p className="text-grey-400 text-sm">
-                Reward has been added to your balance
-              </p>
-            </div>
-          )}
+            {/* Actions based on status */}
+            {campaign.status === 'pending_posting' && (
+              <div className="space-y-4">
+                <button
+                  onClick={() => handleSendToTelegram(campaign)}
+                  disabled={actionLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <Send size={20} />
+                  Get Promo in Telegram
+                </button>
+                
+                <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
+                  <h4 className="text-white font-medium mb-2">📋 Next Steps:</h4>
+                  <ol className="text-grey-300 text-sm space-y-2 list-decimal list-inside">
+                    <li>Click "Get Promo in Telegram"</li>
+                    <li>Forward the message to your channel</li>
+                    <li>Copy the post link from your channel</li>
+                    <li>Submit the link below to start your timer</li>
+                  </ol>
+                </div>
 
-          {campaign.status === 'expired' && (
-            <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-center">
-              <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-              <h4 className="text-white font-medium mb-2">Campaign Expired</h4>
-              <p className="text-red-300 text-sm mb-3">
-                You failed to post the promo within 48 hours
-              </p>
-              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                <p className="text-red-400 text-sm font-medium">
-                  Penalty: -250 CP Coins deducted from your balance
+                <div className="space-y-2">
+                  <label className="text-white text-sm font-medium">Post Link (after you've posted)</label>
+                  <input
+                    type="url"
+                    value={postLink}
+                    onChange={(e) => setPostLink(e.target.value)}
+                    placeholder="https://t.me/yourchannel/123"
+                    className="w-full bg-darkBlue-900 border border-grey-700 rounded-lg px-4 py-3 text-white"
+                  />
+                  <button
+                    onClick={handleVerifyAndStart}
+                    disabled={!postLink.trim() || actionLoading}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium disabled:opacity-50"
+                  >
+                    ✓ Start My Campaign
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {campaign.status === 'active' && (
+              <div className="space-y-4">
+                <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-6 text-center">
+                  <Zap className="w-12 h-12 text-green-400 mb-3 mx-auto" />
+                  <h4 className="text-white text-xl font-bold mb-2">Campaign Active!</h4>
+                  <div className="text-3xl font-mono text-green-400 mb-2">
+                    {formatTimeLeft(timeLeft)}
+                  </div>
+                  <p className="text-grey-400 text-sm">Time remaining</p>
+                </div>
+
+                {campaign.post_verification_link && (
+                  <a 
+                    href={campaign.post_verification_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
+                  >
+                    <ExternalLink size={16} />
+                    View Your Post
+                  </a>
+                )}
+
+                <button
+                  onClick={() => handleEndCampaign(campaign)}
+                  disabled={timeLeft > 0 || actionLoading}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <StopCircle size={20} />
+                  {timeLeft > 0 ? 'Wait for Timer to Complete' : 'End Campaign & Claim Reward'}
+                </button>
+
+                {timeLeft > 0 && (
+                  <p className="text-grey-400 text-xs text-center">
+                    Button will activate when timer reaches 0
+                  </p>
+                )}
+              </div>
+            )}
+
+            {campaign.status === 'completed' && (
+              <div className="bg-gray-500/20 border border-gray-500/30 rounded-lg p-4 text-center">
+                <CheckCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <h4 className="text-white font-medium mb-2">Campaign Completed</h4>
+                <p className="text-grey-400 text-sm">
+                  Reward has been added to your balance
                 </p>
               </div>
-              <p className="text-grey-400 text-xs mt-3">
-                Your partner will still receive their reward if they completed their side
-              </p>
-            </div>
-          )}
+            )}
+
+            {campaign.status === 'expired' && (
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-center">
+                <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+                <h4 className="text-white font-medium mb-2">Campaign Expired</h4>
+                <p className="text-red-300 text-sm mb-3">
+                  You failed to post the promo within 48 hours
+                </p>
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                  <p className="text-red-400 text-sm font-medium">
+                    Penalty: -250 CP Coins deducted from your balance
+                  </p>
+                </div>
+                <p className="text-grey-400 text-xs mt-3">
+                  Your partner will still receive their reward if they completed their side
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
