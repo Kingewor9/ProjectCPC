@@ -1,10 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 
 interface PromoImageProps {
   src?: string;
   alt: string;
   className?: string;
+}
+
+/**
+ * Convert external image URL to proxied URL
+ * This solves CORS and Telegram Mini App CSP issues
+ */
+function getProxiedImageUrl(originalUrl: string | undefined): string | null {
+  if (!originalUrl || originalUrl.trim() === '') {
+    return null;
+  }
+
+  // If it's already a proxied URL, return as-is
+  if (originalUrl.startsWith('/api/')) {
+    return originalUrl;
+  }
+
+  try {
+    // Encode the URL in base64 to safely pass it as a query parameter
+    const encoded = btoa(originalUrl);
+    return `/api/proxy/image?url=${encoded}`;
+  } catch (error) {
+    console.error('Error encoding image URL:', error);
+    return null;
+  }
 }
 
 export default function PromoImage({
@@ -14,15 +38,58 @@ export default function PromoImage({
 }: PromoImageProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [proxiedSrc, setProxiedSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Reset states when src changes
+    setHasError(false);
+    setIsLoading(true);
+
+    // Get proxied URL
+    const proxyUrl = getProxiedImageUrl(src);
+    
+    if (!proxyUrl) {
+      setHasError(true);
+      setIsLoading(false);
+      return;
+    }
+
+    // Test if the proxied image loads
+    const testImage = new Image();
+    
+    const loadTimeout = setTimeout(() => {
+      // If image takes more than 8 seconds, show fallback
+      setHasError(true);
+      setIsLoading(false);
+    }, 8000);
+    
+    testImage.onload = () => {
+      clearTimeout(loadTimeout);
+      setProxiedSrc(proxyUrl);
+      setIsLoading(false);
+      setHasError(false);
+    };
+    
+    testImage.onerror = () => {
+      clearTimeout(loadTimeout);
+      setHasError(true);
+      setIsLoading(false);
+    };
+    
+    // Start loading
+    testImage.src = proxyUrl;
+    
+    return () => {
+      clearTimeout(loadTimeout);
+    };
+  }, [src]);
 
   const handleError = () => {
-    console.log('Promo image failed to load:', src); // Debug log
     setIsLoading(false);
     setHasError(true);
   };
 
   const handleLoad = () => {
-    console.log('Promo image loaded successfully:', src); // Debug log
     setIsLoading(false);
   };
 
@@ -46,16 +113,18 @@ export default function PromoImage({
         </div>
       )}
 
-      <img
-        src={src}
-        alt={alt}
-        onLoad={handleLoad}
-        onError={handleError}
-        className={`w-full h-full object-cover transition-opacity duration-200 ${
-          isLoading ? 'opacity-0' : 'opacity-100'
-        }`}
-        crossOrigin="anonymous"
-      />
+      {proxiedSrc && (
+        <img
+          src={proxiedSrc}
+          alt={alt}
+          onLoad={handleLoad}
+          onError={handleError}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
+            isLoading ? 'opacity-0' : 'opacity-100'
+          }`}
+          referrerPolicy="no-referrer"
+        />
+      )}
     </div>
   );
 }
