@@ -170,15 +170,19 @@ export default function CampaignsPage() {
   };
 
   const formatTimeLeft = (ms: number) => {
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+    // Add 999ms to round up to the next second
+    const totalSeconds = Math.ceil(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
     return `${hours}h ${minutes}m ${seconds}s`;
   };
 
-  const formatDeadline = (ms: number) => {
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    const formatDeadline = (ms: number) => {
+    // Add 999ms to round up to the next second for better UX
+    const totalSeconds = Math.ceil(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
     
     if (hours > 0) {
       return `${hours}h ${minutes}m left to post`;
