@@ -1002,31 +1002,93 @@ def end_campaign(campaign_id):
 @app.route('/api/channels/validate', methods=['POST'])
 @token_required
 def validate_channel():
-    """Validate a Telegram channel link or username"""
+    """Validate a Telegram channel link or username (supports private channels)"""
     data = request.json or {}
     channel_input = data.get('channel_input', '').strip()
     
     if not channel_input:
         return jsonify({'error': 'Channel input is required'}), 400
     
-    # Clean up the input to get username
-    username = channel_input.replace('@', '').replace('https://t.me/', '').replace('http://t.me/', '')
+    # Clean up the input
+    # Support formats:
+    # - @username (public)
+    # - https://t.me/username (public)
+    # - -1001234567890 (private channel ID)
+    # - 1234567890 (channel ID)
+    
+    channel_identifier = channel_input
+    
+    # If it's a URL, extract the relevant part
+    if 'https://t.me/' in channel_identifier or 'http://t.me/' in channel_identifier:
+        # Could be public channel or private invite link
+        if '/joinchat/' in channel_identifier or '/+' in channel_identifier:
+            return jsonify({
+                'error': 'Private invite links are not supported. Please provide the channel ID instead.',
+                'hint': 'To get your channel ID: 1) Add @cp_grambot as admin, 2) Forward any message from your channel to @userinfobot'
+            }), 400
+        
+        # Extract username from URL
+        channel_identifier = channel_identifier.replace('https://t.me/', '').replace('http://t.me/', '')
     
     try:
-        # Call Telegram API to get channel info
-        channel_info = validate_channel_with_telegram(username, TELEGRAM_BOT_TOKEN)
+        # Call Telegram API to validate
+        channel_info = validate_channel_with_telegram(channel_identifier, TELEGRAM_BOT_TOKEN)
+        
+        # Check if validation returned an error
+        if isinstance(channel_info, dict) and 'error' in channel_info:
+            error_code = channel_info.get('error')
+            error_message = channel_info.get('message')
+            is_private_error = channel_info.get('is_private_channel_error', False)
+            
+            if is_private_error:
+                # Return 403 for private channel issues (bot not admin)
+                return jsonify({
+                    'error': error_message,
+                    'error_code': error_code,
+                    'is_private_channel': True,
+                    'instructions': [
+                        '1. Open your Telegram channel settings',
+                        '2. Go to Administrators',
+                        '3. Add @cp_grambot as an administrator',
+                        '4. Grant permissions: Post Messages, Edit Messages',
+                        '5. Come back and try validating again'
+                    ]
+                }), 403
+            else:
+                # Return 400 for other validation errors
+                return jsonify({
+                    'error': error_message,
+                    'error_code': error_code
+                }), 400
         
         if not channel_info:
-            return jsonify({'error': 'Invalid channel. Please check the link and try again.'}), 400
+            return jsonify({
+                'error': 'Invalid channel. Please check the link/ID and try again.'
+            }), 400
         
+        # Success - return channel info
         return jsonify({
             'ok': True,
-            'channel': channel_info
+            'channel': {
+                'name': channel_info.get('name'),
+                'username': channel_info.get('username'),
+                'avatar': channel_info.get('avatar'),
+                'subscribers': channel_info.get('subscribers'),
+                'avgViews24h': channel_info.get('avgViews24h'),
+                'language': channel_info.get('language'),
+                'telegram_id': channel_info.get('telegram_id'),
+                'is_private': channel_info.get('is_private', False),
+                'bot_is_admin': channel_info.get('bot_is_admin', False)
+            }
         })
     
     except Exception as e:
         print(f"Error validating channel: {e}")
-        return jsonify({'error': 'Failed to validate channel. Please try again.'}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to validate channel. Please try again.'
+        }), 500
 
 @app.route('/api/channels', methods=['POST'])
 @token_required

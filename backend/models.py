@@ -142,33 +142,105 @@ def refresh_channel_subscribers_from_telegram(telegram_id, bot_token):
 def validate_channel_with_telegram(username, bot_token):
     """
     Validate a Telegram channel using the Bot API
+    Supports both public and private channels
     Returns channel info if valid, None if invalid
     """
     try:
         # Try to get chat info using getChat method
-        # The username should start with @ for the API
-        chat_username = f"@{username}" if not username.startswith('@') else username
+        # The username should start with @ for public channels
+        # For private channels, user must provide the numeric chat ID
+        chat_identifier = username
+        
+        # Clean up the identifier
+        if chat_identifier.startswith('@'):
+            chat_username = chat_identifier
+        elif chat_identifier.startswith('https://t.me/'):
+            # Extract username from URL
+            chat_username = '@' + chat_identifier.replace('https://t.me/', '').replace('http://t.me/', '')
+        elif chat_identifier.startswith('-100'):
+            # This is a private channel ID (starts with -100)
+            chat_username = chat_identifier
+        elif chat_identifier.isdigit() or (chat_identifier.startswith('-') and chat_identifier[1:].isdigit()):
+            # Numeric chat ID
+            chat_username = chat_identifier
+        else:
+            # Assume it's a username without @
+            chat_username = f"@{chat_identifier}"
         
         api_url = f"https://api.telegram.org/bot{bot_token}/getChat"
         response = requests.get(api_url, params={'chat_id': chat_username}, timeout=10)
         
         if response.status_code != 200:
-            return None
+            # If public channel validation failed, return helpful error
+            return {
+                'error': 'unable_to_access',
+                'message': 'Unable to access channel. For private channels, please add @cp_grambot as admin first.',
+                'is_private_channel_error': True
+            }
         
         data = response.json()
         
         if not data.get('ok'):
-            return None
+            error_description = data.get('description', '')
+            
+            # Check if error is due to bot not being a member
+            if 'bot is not a member' in error_description.lower() or 'chat not found' in error_description.lower():
+                return {
+                    'error': 'bot_not_admin',
+                    'message': 'This appears to be a private channel. Please add @cp_grambot as an admin to your channel first, then try again.',
+                    'is_private_channel_error': True
+                }
+            
+            return {
+                'error': 'validation_failed',
+                'message': f'Validation failed: {error_description}',
+                'is_private_channel_error': False
+            }
         
         chat = data.get('result', {})
         
         # Verify it's a channel (not a group or private chat)
-        if chat.get('type') not in ['channel', 'supergroup']:
-            return None
+        chat_type = chat.get('type')
+        if chat_type not in ['channel', 'supergroup']:
+            return {
+                'error': 'not_a_channel',
+                'message': f'This is a {chat_type}, not a channel. Only channels are supported.',
+                'is_private_channel_error': False
+            }
+        
+        # Check if bot is an admin (required for private channels)
+        chat_id = chat.get('id')
+        bot_username = bot_token.split(':')[0]
+        
+        admin_check_url = f"https://api.telegram.org/bot{bot_token}/getChatMember"
+        admin_response = requests.get(
+            admin_check_url,
+            params={
+                'chat_id': chat_id,
+                'user_id': bot_username  # Bot's user ID
+            },
+            timeout=10
+        )
+        
+        is_admin = False
+        if admin_response.status_code == 200:
+            admin_data = admin_response.json()
+            if admin_data.get('ok'):
+                member_status = admin_data.get('result', {}).get('status')
+                is_admin = member_status in ['administrator', 'creator']
+        
+        # For private channels, bot MUST be admin
+        is_private = chat.get('username') is None
+        if is_private and not is_admin:
+            return {
+                'error': 'bot_not_admin',
+                'message': 'Bot must be an admin of private channels. Please add @cp_grambot as an admin first.',
+                'is_private_channel_error': True
+            }
         
         # Get member count
         member_count_url = f"https://api.telegram.org/bot{bot_token}/getChatMemberCount"
-        member_response = requests.get(member_count_url, params={'chat_id': chat.get('id')}, timeout=10)
+        member_response = requests.get(member_count_url, params={'chat_id': chat_id}, timeout=10)
         
         subscribers = 0
         if member_response.status_code == 200:
@@ -180,7 +252,6 @@ def validate_channel_with_telegram(username, bot_token):
         avatar = 'https://placehold.co/100x100/0078d4/FFFFFF?font=inter&text=CH'
         avatar_file_id = None
         if chat.get('photo'):
-            # Get the file path for the photo
             file_id = chat['photo'].get('big_file_id') or chat['photo'].get('small_file_id')
             if file_id:
                 avatar_file_id = file_id
@@ -192,31 +263,49 @@ def validate_channel_with_telegram(username, bot_token):
         # Extract language from description or default to English
         language = 'English'  # Default
         description = chat.get('description', '')
-        # You could add language detection logic here if needed
         
-        # Note: Telegram API doesn't provide 24h view statistics
-        # This would require a separate analytics bot running in the channel
-        # For now, we'll estimate it as a percentage of subscribers
-        avg_views_24h = int(subscribers * 0.15)  # Estimate 15% engagement
+        # Estimate 24h views
+        avg_views_24h = int(subscribers * 0.15)
+        
+        # For private channels, generate a display username
+        display_username = chat.get('username')
+        if not display_username:
+            # Private channel - use channel name
+            display_username = f"Private_{chat.get('title', 'Channel')[:20].replace(' ', '_')}"
         
         return {
             'name': chat.get('title', 'Unknown Channel'),
-            'username': chat.get('username', username),
+            'username': display_username,
             'avatar': avatar,
-            'avatar_file_id': avatar_file_id,  # Store file_id for later refresh
+            'avatar_file_id': avatar_file_id,
             'subscribers': subscribers,
             'avgViews24h': avg_views_24h,
             'language': language,
-            'telegram_id': str(chat.get('id'))
+            'telegram_id': str(chat_id),
+            'is_private': is_private,
+            'bot_is_admin': is_admin
         }
     
+    except requests.Timeout:
+        return {
+            'error': 'timeout',
+            'message': 'Request timed out. Please try again.',
+            'is_private_channel_error': False
+        }
     except requests.RequestException as e:
         print(f"Error validating channel with Telegram: {e}")
-        return None
+        return {
+            'error': 'request_error',
+            'message': 'Network error occurred. Please check your connection and try again.',
+            'is_private_channel_error': False
+        }
     except Exception as e:
         print(f"Unexpected error: {e}")
-        return None
-
+        return {
+            'error': 'unexpected_error',
+            'message': 'An unexpected error occurred. Please try again.',
+            'is_private_channel_error': False
+        }
 
 def add_user_channel(telegram_id, channel_info, topic, selected_days, promos_per_day, 
                      price_settings, time_slots, promo_materials):
