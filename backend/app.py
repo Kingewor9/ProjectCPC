@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask import send_file, Response
 from models import ensure_indexes, init_mock_partners, upsert_user, partners, requests_col, campaigns, users
 from scheduler import start_scheduler, check_and_post_campaigns, cleanup_finished_campaigns
 from bot import send_message, send_open_button_message
@@ -9,6 +10,7 @@ from time_utils import parse_day_time_to_utc, calculate_end_time
 import hmac, hashlib, time
 import datetime
 import os
+import io
 import requests as http_requests
 from models import channels, validate_channel_with_telegram, add_user_channel
 from config import ADMIN_TELEGRAM_ID
@@ -103,19 +105,10 @@ def _normalize_channel_for_frontend(channel):
     if not duration_prices:
         duration_prices = channel.get('durationPrices', {})
     
-    # REFRESH AVATAR URL: If we have a file_id, regenerate the URL on each request
-    # This ensures we always have a fresh, valid URL from Telegram
-    avatar_url = channel.get('avatar', 'https://placehold.co/60x60')
-    avatar_file_id = channel.get('avatar_file_id')
-    if avatar_file_id:
-        try:
-            fresh_url = get_telegram_file_url_from_file_id(avatar_file_id, TELEGRAM_BOT_TOKEN)
-            if fresh_url:
-                avatar_url = fresh_url
-        except Exception as e:
-            # If refresh fails, fall back to stored URL
-            print(f"Failed to refresh avatar URL: {e}")
-            pass
+    # USE PROXIED AVATAR URL INSTEAD OF DIRECT TELEGRAM URL
+    # This solves CORS, expiry, and Telegram Mini App CSP issues
+    channel_id = channel.get('id')
+    avatar_url = f"/api/avatar/{channel_id}"  # Use our proxy endpoint
     
     # REFRESH SUBSCRIBER COUNT: Get live data from Telegram
     current_subscribers = channel.get('subscribers', 0)
@@ -2143,6 +2136,62 @@ def preview_promo(channel_id):
     except Exception as e:
         print(f"Error sending promo preview: {e}")
         return jsonify({'error': 'Failed to send preview'}), 500
+
+#Proxy for channel avatars
+@app.route('/api/avatar/<channel_id>', methods=['GET'])
+def get_channel_avatar(channel_id):
+    """Proxy channel avatar through backend to avoid CORS and expiry issues"""
+    try:
+        # Get channel
+        channel = channels.find_one({'id': channel_id})
+        if not channel:
+            # Return a default avatar
+            return jsonify({'error': 'Channel not found'}), 404
+        
+        # Get avatar file_id
+        avatar_file_id = channel.get('avatar_file_id')
+        if not avatar_file_id:
+            # Try to fetch it
+            telegram_id = channel.get('telegram_id')
+            if telegram_id:
+                from models import get_telegram_file_id_from_chat
+                avatar_file_id, _ = get_telegram_file_id_from_chat(telegram_id, TELEGRAM_BOT_TOKEN)
+                if avatar_file_id:
+                    # Store it for future use
+                    channels.update_one(
+                        {'id': channel_id},
+                        {'$set': {'avatar_file_id': avatar_file_id}}
+                    )
+        
+        if not avatar_file_id:
+            return jsonify({'error': 'No avatar available'}), 404
+        
+        # Get file URL from Telegram
+        from models import get_telegram_file_url_from_file_id
+        file_url = get_telegram_file_url_from_file_id(avatar_file_id, TELEGRAM_BOT_TOKEN)
+        
+        if not file_url:
+            return jsonify({'error': 'Failed to get file URL'}), 500
+        
+        # Fetch the image from Telegram
+        response = http_requests.get(file_url, timeout=10)
+        
+        if response.status_code != 200:
+            return jsonify({'error': 'Failed to fetch image'}), 500
+        
+        # Return the image with proper headers
+        return Response(
+            response.content,
+            mimetype=response.headers.get('Content-Type', 'image/jpeg'),
+            headers={
+                'Cache-Control': 'public, max-age=3600',  # Cache for 1 hour
+                'Access-Control-Allow-Origin': '*'
+            }
+        )
+    
+    except Exception as e:
+        print(f"Error proxying avatar: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 #To keep render awake with a cron job pinging the /health endpoint    
 @app.route('/health', methods=['GET'])
