@@ -2,11 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!-- Telegram Mini App CSP -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        img-src 'self' data: https: http: blob:;
+        style-src 'self' 'unsafe-inline';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org;
+      "
+    />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
     <title>Cross Promotions Gram - Cross-Promo Platform</title>
+
+    <!-- Telegram SDK -->
     <script async src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
+
   <body class="bg-darkBlue-900 text-grey-200">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
