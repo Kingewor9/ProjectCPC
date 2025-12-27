@@ -664,9 +664,22 @@ def end_user_campaign_and_reward(campaign_id, telegram_id):
             'role': 'requester'
         }
     else:
+        #Acceptor's side
         # Check if already rewarded
         if campaign.get('acceptor_reward_given'):
             return {'error': 'Reward already claimed'}
+        
+        # Verify requester has enough balance BEFORE deducting
+        requester_user = users.find_one({'telegram_id': requester_id})
+        if not requester_user:
+            return {'error': 'Requester not found'}
+        
+        requester_balance = requester_user.get('cpcBalance', 0)
+        if requester_balance < cpc_cost:
+            # This shouldn't happen if validation worked, but safety check
+            return {
+                'error': f'Requester has insufficient balance. Required: {cpc_cost}, Available: {requester_balance}'
+            }
         
         # Acceptor gets full CPC cost
         # Deduct from requester, add to acceptor

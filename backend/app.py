@@ -657,11 +657,6 @@ def create_request():
     if current_balance < cpc_cost:
         return jsonify({'error': f'Insufficient balance. You need {cpc_cost} CPC but have {current_balance}.'}), 403
     
-    # Deduct the cost from user's balance
-    users.update_one(
-        {'telegram_id': telegram_id},
-        {'$inc': {'cpcBalance': -cpc_cost}}
-    )
     
     req = {
         'fromChannel': data.get('fromChannel'),
