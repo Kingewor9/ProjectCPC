@@ -19,6 +19,7 @@ interface ChannelValidationResponse {
     avgViews24h: number;
     language: string;
     telegram_id: string;
+    is_private?: boolean;
   };
 }
 
