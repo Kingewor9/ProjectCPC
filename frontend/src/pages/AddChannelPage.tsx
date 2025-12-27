@@ -15,6 +15,7 @@ interface ChannelInfo {
   avgViews24h: number;
   language: string;
   telegram_id: string;
+  is_private?: boolean;
 }
 
 interface PromoMaterial {
@@ -73,6 +74,9 @@ export default function AddChannelPage() {
   const [validating, setValidating] = useState(false);
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPrivateChannel, setIsPrivateChannel] = useState(false);
+  const [privateChannelInstructions, setPrivateChannelInstructions] = useState<string[]>([]);
+
   
   // Step 2: Configuration
   const [selectedTopic, setSelectedTopic] = useState('');
@@ -107,12 +111,14 @@ export default function AddChannelPage() {
 
   const handleValidateChannel = async () => {
     if (!channelInput.trim()) {
-      setError('Please enter a channel link or username');
+      setError('Please enter a channel link, username or channel ID');
       return;
     }
 
     setValidating(true);
     setError(null);
+    setIsPrivateChannel(false);
+    setPrivateChannelInstructions([]);
 
     try {
       const result = await apiService.validateChannel(channelInput);
@@ -125,19 +131,32 @@ export default function AddChannelPage() {
           subscribers: result.channel.subscribers,
           avgViews24h: result.channel.avgViews24h,
           language: result.channel.language,
-          telegram_id: result.channel.telegram_id
+          telegram_id: result.channel.telegram_id,
+          is_private: result.channel.is_private
         });
-        
-        setStep('configure');
-      } else {
-        setError('Invalid channel link. Please check and try again.');
+
+      // Show notice if it's a private channel
+      if (result.channel.is_private) {
+        alert('✅ Private channel validated successfully! The bot has admin access.');
       }
-    } catch (err: any) {
-      setError(err.message || 'Invalid channel link. Please check and try again.');
-    } finally {
-      setValidating(false);
+ 
+       setStep('configure');
     }
-  };
+  } catch (err: any) {
+    const errorData = err.response?.data || {};
+    
+    // Check if this is a private channel error
+    if (errorData.is_private_channel) {
+      setIsPrivateChannel(true);
+      setPrivateChannelInstructions(errorData.instructions || []);
+      setError(errorData.error || 'Bot is not admin of this private channel');
+    } else {
+      setError(errorData.error || err.message || 'Invalid channel. Please check and try again.');
+    }
+  } finally {
+    setValidating(false);
+  }
+};
 
   const toggleDay = (day: string) => {
     setSelectedDays(prev =>
@@ -260,41 +279,97 @@ export default function AddChannelPage() {
   };
 
   if (step === 'validate') {
-    return (
-      <Layout>
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Add Your Channel</h1>
-            <p className="text-grey-400 text-sm sm:text-base">Connect your Telegram channel to start cross-promoting</p>
+   // Update the validation UI section:
+return (
+  <Layout>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Add Your Channel</h1>
+        <p className="text-grey-400 text-sm sm:text-base">
+          Connect your Telegram channel (public or private) to start cross-promoting
+        </p>
+      </div>
+
+      {error && !isPrivateChannel && (
+        <ErrorAlert message={error} onDismiss={() => setError(null)} />
+      )}
+
+      {/* Private Channel Instructions */}
+      {isPrivateChannel && (
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-6 mb-6">
+          <div className="flex items-start gap-3 mb-4">
+            <AlertCircle className="text-orange-400 flex-shrink-0 mt-1" size={24} />
+            <div>
+              <h3 className="text-orange-400 font-bold text-lg mb-2">
+                Private Channel Detected
+              </h3>
+              <p className="text-grey-300 text-sm mb-4">
+                {error}
+              </p>
+            </div>
           </div>
-
-          {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
-
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 sm:p-8">
-            <label className="block text-sm font-medium text-grey-300 mb-3">
-              Channel Link or Username
-            </label>
-            <input
-              type="text"
-              value={channelInput}
-              onChange={(e) => setChannelInput(e.target.value)}
-              placeholder="@yourchannel or https://t.me/yourchannel"
-              className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white placeholder-grey-500 focus:outline-none focus:border-blue-500 mb-4"
-            />
-            <button
-              onClick={handleValidateChannel}
-              disabled={validating}
-              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-grey-600 disabled:to-grey-700 text-white font-bold py-3 rounded-lg transition-all"
-            >
-              {validating ? 'Validating...' : 'Validate Channel'}
-            </button>
+          
+          <div className="bg-darkBlue-800 rounded-lg p-4">
+            <p className="text-white font-medium mb-3">📋 Follow these steps:</p>
+            <ol className="space-y-2 text-grey-300 text-sm">
+              {privateChannelInstructions.map((instruction, index) => (
+                <li key={index} className="flex gap-2">
+                  <span className="text-blue-400 font-bold">{index + 1}.</span>
+                  <span>{instruction}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+          
+          <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <p className="text-blue-300 text-sm">
+              <strong>💡 How to find your Channel ID:</strong>
+            </p>
+            <ol className="mt-2 space-y-1 text-grey-300 text-sm ml-4 list-decimal">
+              <li>Forward any message from your channel to <span className="text-blue-400 font-mono">@userinfobot</span></li>
+              <li>The bot will reply with your channel ID (looks like: -1001234567890)</li>
+              <li>Copy that ID and paste it here</li>
+            </ol>
           </div>
         </div>
-      </Layout>
-    );
-  }
+      )}
 
-  return (
+      <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 sm:p-8">
+        <label className="block text-sm font-medium text-grey-300 mb-3">
+          Channel Link, Username, or Channel ID
+        </label>
+        <input
+          type="text"
+          value={channelInput}
+          onChange={(e) => setChannelInput(e.target.value)}
+          placeholder="@yourchannel, https://t.me/yourchannel, or -1001234567890"
+          className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white placeholder-grey-500 focus:outline-none focus:border-blue-500 mb-4 text-sm sm:text-base"
+        />
+        
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
+          <p className="text-blue-300 text-sm mb-2">
+            <strong>Supported formats:</strong>
+          </p>
+          <ul className="text-grey-300 text-sm space-y-1 ml-4">
+            <li>• <span className="text-blue-400 font-mono">@yourchannel</span> (public channels)</li>
+            <li>• <span className="text-blue-400 font-mono">https://t.me/yourchannel</span> (public channels)</li>
+            <li>• <span className="text-blue-400 font-mono">-1001234567890</span> (private channels - requires bot admin)</li>
+          </ul>
+        </div>
+        
+        <button
+          onClick={handleValidateChannel}
+          disabled={validating}
+          className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-grey-600 disabled:to-grey-700 text-white font-bold py-3 rounded-lg transition-all"
+        >
+          {validating ? 'Validating...' : 'Validate Channel'}
+        </button>
+      </div>
+    </div>
+  </Layout>
+);
+  }
+return (
     <Layout>
       {/* Added pb-20 for mobile and md:pb-8 for desktop to account for bottom nav */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-32 md:pb-8">
