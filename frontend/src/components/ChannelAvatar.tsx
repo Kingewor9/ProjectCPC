@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Image as ImageIcon } from 'lucide-react';
 
 interface ChannelAvatarProps {
@@ -9,8 +9,8 @@ interface ChannelAvatarProps {
 }
 
 /**
- * Channel Avatar component with fallback handling
- * Handles broken/expired Telegram image URLs gracefully
+ * Channel Avatar component optimized for Telegram Mini Apps
+ * Handles Telegram's strict CSP and image loading policies
  */
 export default function ChannelAvatar({ 
   src, 
@@ -20,41 +20,74 @@ export default function ChannelAvatar({
 }: ChannelAvatarProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageSrc, setImageSrc] = useState<string>('');
 
-  const handleError = () => {
-    console.log('Image failed to load:', src); // Debug log
+  useEffect(() => {
+    // Reset states when src changes
+    setHasError(false);
+    setIsLoading(true);
+    
+    // Validate and process the image source
+    if (!src || src.trim() === '') {
+      setHasError(true);
+      setIsLoading(false);
+      return;
+    }
+
+    // For Telegram Mini Apps, we need to ensure the URL is properly formatted
+    let processedSrc = src;
+    
+    // If it's a Telegram file URL, ensure it's using HTTPS
+    if (src.includes('api.telegram.org')) {
+      processedSrc = src.replace('http://', 'https://');
+    }
+    
+    // Test if image can be loaded by creating a test Image object
+    const testImage = new Image();
+    
+    const loadTimeout = setTimeout(() => {
+      // If image takes more than 5 seconds, show fallback
+      setHasError(true);
+      setIsLoading(false);
+    }, 5000);
+    
+    testImage.onload = () => {
+      clearTimeout(loadTimeout);
+      setImageSrc(processedSrc);
+      setIsLoading(false);
+      setHasError(false);
+    };
+    
+    testImage.onerror = () => {
+      clearTimeout(loadTimeout);
+      setHasError(true);
+      setIsLoading(false);
+    };
+    
+    // Start loading the test image
+    testImage.src = processedSrc;
+    
+    return () => {
+      clearTimeout(loadTimeout);
+    };
+  }, [src]);
+
+  const handleImageError = () => {
     setHasError(true);
     setIsLoading(false);
   };
 
-  const handleLoad = () => {
-    console.log('Image loaded successfully:', src); // Debug log
+  const handleImageLoad = () => {
     setIsLoading(false);
   };
 
-  // If no src or empty src, show fallback immediately
-  if (!src || src.trim() === '') {
+  // Show fallback if no src, empty src, or loading failed
+  if (!src || src.trim() === '' || hasError) {
     const initial = channelName ? channelName.charAt(0).toUpperCase() : '📺';
     return (
       <div
         className={`${className} rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0`}
-        title={`No image for ${alt}`}
-      >
-        <div className="flex flex-col items-center justify-center">
-          <ImageIcon size={16} className="text-white/70 mb-0.5" />
-          <span className="text-xs font-bold text-white">{initial}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (hasError) {
-    // Fallback: Show a placeholder with channel icon and initial letter
-    const initial = channelName ? channelName.charAt(0).toUpperCase() : '📺';
-    return (
-      <div
-        className={`${className} rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0`}
-        title={`Image failed to load for ${alt}`}
+        title={hasError ? `Image failed to load for ${alt}` : `No image for ${alt}`}
       >
         <div className="flex flex-col items-center justify-center">
           <ImageIcon size={16} className="text-white/70 mb-0.5" />
@@ -73,14 +106,18 @@ export default function ChannelAvatar({
           </div>
         </div>
       )}
-      <img
-        src={src}
-        alt={alt}
-        onError={handleError}
-        onLoad={handleLoad}
-        className={`w-full h-full object-cover transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-        crossOrigin="anonymous"
-      />
+      {imageSrc && (
+        <img
+          src={imageSrc}
+          alt={alt}
+          onError={handleImageError}
+          onLoad={handleImageLoad}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
+            isLoading ? 'opacity-0' : 'opacity-100'
+          }`}
+          referrerPolicy="no-referrer"
+        />
+      )}
     </div>
   );
 }
