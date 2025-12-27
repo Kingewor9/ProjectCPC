@@ -20,6 +20,8 @@ import json
 import logging
 from models import transactions
 from urllib.parse import parse_qsl
+from urllib.parse import quote, unquote
+import base64
 
 
 # Helper functions for matching durations and finding next available slot
@@ -89,6 +91,22 @@ def find_next_slot_for_channel(channel_doc):
 app = Flask(__name__)
 CORS(app)
 
+#Helper function to generate proxy image URLs
+def get_proxied_image_url(original_url):
+    """
+    Convert an external image URL to a proxied URL
+    Returns None if URL is invalid or empty
+    """
+    if not original_url or not original_url.strip():
+        return None
+    
+    try:
+        # Encode the URL in base64 to safely pass it as a query parameter
+        encoded_url = base64.urlsafe_b64encode(original_url.encode('utf-8')).decode('utf-8')
+        return f"/api/proxy/image?url={encoded_url}"
+    except Exception as e:
+        print(f"Error encoding URL: {e}")
+        return None
 
 def _normalize_channel_for_frontend(channel):
     """Normalize channel document for frontend consumption"""
@@ -2191,6 +2209,67 @@ def get_channel_avatar(channel_id):
     
     except Exception as e:
         print(f"Error proxying avatar: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+    
+@app.route('/api/proxy/image', methods=['GET'])
+def proxy_image():
+    """
+    Proxy external images through backend to avoid CORS and CSP issues
+    Usage: /api/proxy/image?url=<base64_encoded_url>
+    """
+    try:
+        # Get the encoded URL from query parameter
+        encoded_url = request.args.get('url')
+        if not encoded_url:
+            return jsonify({'error': 'URL parameter required'}), 400
+        
+        # Decode the URL
+        try:
+            image_url = base64.urlsafe_b64decode(encoded_url).decode('utf-8')
+        except Exception:
+            return jsonify({'error': 'Invalid URL encoding'}), 400
+        
+        # Validate URL format
+        if not image_url.startswith(('http://', 'https://')):
+            return jsonify({'error': 'Invalid URL format'}), 400
+        
+        # Fetch the image
+        response = http_requests.get(
+            image_url, 
+            timeout=10,
+            headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; CPGramBot/1.0)'
+            }
+        )
+        
+        if response.status_code != 200:
+            return jsonify({'error': f'Failed to fetch image: {response.status_code}'}), 500
+        
+        # Determine content type
+        content_type = response.headers.get('Content-Type', 'image/jpeg')
+        
+        # Only allow image types
+        if not content_type.startswith('image/'):
+            return jsonify({'error': 'URL does not point to an image'}), 400
+        
+        # Return the image with proper headers
+        return Response(
+            response.content,
+            mimetype=content_type,
+            headers={
+                'Cache-Control': 'public, max-age=86400',  # Cache for 24 hours
+                'Access-Control-Allow-Origin': '*',
+                'Content-Length': str(len(response.content))
+            }
+        )
+    
+    except http_requests.Timeout:
+        return jsonify({'error': 'Request timeout'}), 504
+    except http_requests.RequestException as e:
+        print(f"Error proxying image: {e}")
+        return jsonify({'error': 'Failed to fetch image'}), 500
+    except Exception as e:
+        print(f"Unexpected error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
 
 #To keep render awake with a cron job pinging the /health endpoint    
