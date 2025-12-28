@@ -54,6 +54,23 @@ interface ChannelSubmission {
   bot_connected: boolean;
 }
 
+// User Settings interfaces
+interface UserSettings {
+  preferred_language?: string;
+  theme?: 'dark' | 'light' | 'auto';
+  email_notifications?: boolean;
+  push_notifications?: boolean;
+  campaign_updates?: boolean;
+  weekly_report?: boolean;
+}
+
+interface SettingsResponse {
+  ok: boolean;
+  message?: string;
+  settings?: UserSettings;
+  user?: any;
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 class ApiService {
@@ -225,6 +242,16 @@ async endCampaign(campaignId: string): Promise<any> {
     const response = await this.api.delete(`/api/channels/${channelId}`);
     return response.data;
   }
+
+  async getUserSettings(): Promise<SettingsResponse> {
+  const response = await this.api.get('/api/settings');
+  return response.data;
+}
+
+async updateUserSettings(settings: UserSettings): Promise<SettingsResponse> {
+  const response = await this.api.put('/api/settings', settings);
+  return response.data;
+}
 
   // Admin endpoints
 
