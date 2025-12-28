@@ -2328,6 +2328,112 @@ def proxy_image():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+    
+@app.route('/api/settings', methods=['PUT'])
+@token_required
+def update_user_settings():
+    """Update user settings (language, theme, notifications, etc.)"""
+    telegram_id = request.telegram_id
+    data = request.json or {}
+    
+    try:
+        # Get current user
+        user = users.find_one({'telegram_id': telegram_id})
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Prepare update fields
+        update_fields = {}
+        
+        # Language preference
+        if 'preferred_language' in data:
+            preferred_language = data.get('preferred_language', 'en')
+            
+            # Validate language code
+            supported_languages = ['en', 'es', 'fr', 'de', 'zh', 'ru', 'ar', 'pt', 'ja', 'hi', 'ko', 'tr', 'it']
+            if preferred_language not in supported_languages:
+                return jsonify({'error': 'Unsupported language code'}), 400
+            
+            update_fields['preferred_language'] = preferred_language
+        
+        # Theme preference
+        if 'theme' in data:
+            theme = data.get('theme', 'dark')
+            if theme not in ['dark', 'light', 'auto']:
+                return jsonify({'error': 'Invalid theme'}), 400
+            update_fields['theme'] = theme
+        
+        # Notification settings
+        if 'email_notifications' in data:
+            update_fields['email_notifications'] = bool(data.get('email_notifications'))
+        
+        if 'push_notifications' in data:
+            update_fields['push_notifications'] = bool(data.get('push_notifications'))
+        
+        if 'campaign_updates' in data:
+            update_fields['campaign_updates'] = bool(data.get('campaign_updates'))
+        
+        if 'weekly_report' in data:
+            update_fields['weekly_report'] = bool(data.get('weekly_report'))
+        
+        # Update timestamp
+        update_fields['updated_at'] = datetime.datetime.utcnow()
+        
+        # Perform update
+        if update_fields:
+            users.update_one(
+                {'telegram_id': telegram_id},
+                {'$set': update_fields}
+            )
+            
+            # Get updated user
+            updated_user = users.find_one({'telegram_id': telegram_id}, {'_id': 0})
+            
+            return jsonify({
+                'ok': True,
+                'message': 'Settings updated successfully',
+                'user': updated_user
+            })
+        else:
+            return jsonify({'error': 'No valid settings provided'}), 400
+    
+    except Exception as e:
+        print(f"Error updating user settings: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to update settings'}), 500
+
+
+@app.route('/api/settings', methods=['GET'])
+@token_required
+def get_user_settings():
+    """Get user's current settings"""
+    telegram_id = request.telegram_id
+    
+    try:
+        user = users.find_one({'telegram_id': telegram_id}, {'_id': 0})
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Return user settings
+        settings = {
+            'preferred_language': user.get('preferred_language', user.get('language_code', 'en')),
+            'theme': user.get('theme', 'dark'),
+            'email_notifications': user.get('email_notifications', True),
+            'push_notifications': user.get('push_notifications', False),
+            'campaign_updates': user.get('campaign_updates', True),
+            'weekly_report': user.get('weekly_report', True)
+        }
+        
+        return jsonify({
+            'ok': True,
+            'settings': settings
+        })
+    
+    except Exception as e:
+        print(f"Error fetching user settings: {e}")
+        return jsonify({'error': 'Failed to fetch settings'}), 500
 
 #To keep render awake with a cron job pinging the /health endpoint    
 @app.route('/health', methods=['GET'])
