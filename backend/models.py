@@ -137,7 +137,98 @@ def refresh_channel_subscribers_from_telegram(telegram_id, bot_token):
     except Exception as e:
         print(f"Error refreshing channel subscribers: {e}")
         return None
-
+    
+#To detect channel languages
+def detect_language_from_text(text):
+    """
+    Detect language from text using character patterns and common words.
+    Returns language name (e.g., 'English', 'Russian', 'Arabic', etc.)
+    """
+    if not text or len(text.strip()) < 10:
+        return 'English'  # Default fallback
+    
+    text = text.lower()
+    
+    # Count character types
+    cyrillic_count = sum(1 for c in text if '\u0400' <= c <= '\u04FF')
+    arabic_count = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
+    chinese_count = sum(1 for c in text if '\u4E00' <= c <= '\u9FFF')
+    korean_count = sum(1 for c in text if '\uAC00' <= c <= '\uD7AF')
+    hebrew_count = sum(1 for c in text if '\u0590' <= c <= '\u05FF')
+    thai_count = sum(1 for c in text if '\u0E00' <= c <= '\u0E7F')
+    devanagari_count = sum(1 for c in text if '\u0900' <= c <= '\u097F')
+    
+    total_chars = len([c for c in text if c.isalpha()])
+    
+    if total_chars == 0:
+        return 'English'
+    
+    # Calculate percentages
+    cyrillic_percent = (cyrillic_count / total_chars) * 100
+    arabic_percent = (arabic_count / total_chars) * 100
+    chinese_percent = (chinese_count / total_chars) * 100
+    korean_percent = (korean_count / total_chars) * 100
+    hebrew_percent = (hebrew_count / total_chars) * 100
+    thai_percent = (thai_count / total_chars) * 100
+    devanagari_percent = (devanagari_count / total_chars) * 100
+    
+    # Detect based on character frequency (threshold: 30%)
+    if cyrillic_percent > 30:
+        return 'Russian'
+    elif arabic_percent > 30:
+        return 'Arabic'
+    elif chinese_percent > 30:
+        return 'Chinese'
+    elif korean_percent > 30:
+        return 'Korean'
+    elif hebrew_percent > 30:
+        return 'Hebrew'
+    elif thai_percent > 30:
+        return 'Thai'
+    elif devanagari_percent > 30:
+        return 'Hindi'
+    
+    # Check for common language-specific words
+    # Spanish
+    spanish_words = ['el', 'la', 'de', 'en', 'que', 'es', 'por', 'con', 'para', 'una', 'como']
+    spanish_matches = sum(1 for word in spanish_words if f' {word} ' in f' {text} ')
+    
+    # French
+    french_words = ['le', 'la', 'de', 'et', 'est', 'un', 'une', 'dans', 'pour', 'qui', 'avec']
+    french_matches = sum(1 for word in french_words if f' {word} ' in f' {text} ')
+    
+    # German
+    german_words = ['der', 'die', 'das', 'und', 'in', 'ist', 'den', 'von', 'zu', 'mit', 'auf']
+    german_matches = sum(1 for word in german_words if f' {word} ' in f' {text} ')
+    
+    # Portuguese
+    portuguese_words = ['o', 'a', 'de', 'e', 'é', 'do', 'da', 'em', 'um', 'para', 'com']
+    portuguese_matches = sum(1 for word in portuguese_words if f' {word} ' in f' {text} ')
+    
+    # Italian
+    italian_words = ['il', 'di', 'e', 'la', 'per', 'un', 'è', 'in', 'che', 'non', 'con']
+    italian_matches = sum(1 for word in italian_words if f' {word} ' in f' {text} ')
+    
+    # Turkish
+    turkish_words = ['bir', 've', 'bu', 'için', 'ile', 'da', 'de', 'mi', 'var', 'olan']
+    turkish_matches = sum(1 for word in turkish_words if f' {word} ' in f' {text} ')
+    
+    # Find language with most matches (minimum 3 matches required)
+    language_scores = {
+        'Spanish': spanish_matches,
+        'French': french_matches,
+        'German': german_matches,
+        'Portuguese': portuguese_matches,
+        'Italian': italian_matches,
+        'Turkish': turkish_matches
+    }
+    
+    max_lang = max(language_scores, key=language_scores.get)
+    if language_scores[max_lang] >= 3:
+        return max_lang
+    
+    # Default to English if no clear detection
+    return 'English'
 
 def validate_channel_with_telegram(username, bot_token):
     """
@@ -260,10 +351,52 @@ def validate_channel_with_telegram(username, bot_token):
                 if file_url:
                     avatar = file_url
         
-        # Extract language from description or default to English
-        language = 'English'  # Default
-        description = chat.get('description', '')
+       # **IMPROVED LANGUAGE DETECTION**
+        # Try multiple methods to detect language accurately
         
+        language = 'English'  # Default
+        
+        # Method 1: Check channel description
+        description = chat.get('description', '')
+        if description and len(description) >= 20:
+            detected_lang = detect_language_from_text(description)
+            if detected_lang != 'English':
+                language = detected_lang
+        
+        # Method 2: If description didn't help, fetch recent messages
+        if language == 'English' and description:
+            # Try to get recent messages to better detect language
+            try:
+                messages_url = f"https://api.telegram.org/bot{bot_token}/getUpdates"
+                messages_response = requests.get(messages_url, params={'chat_id': chat_id, 'limit': 10}, timeout=10)
+                
+                if messages_response.status_code == 200:
+                    messages_data = messages_response.json()
+                    if messages_data.get('ok'):
+                        # Collect text from recent messages
+                        message_texts = []
+                        for update in messages_data.get('result', []):
+                            if 'channel_post' in update:
+                                text = update['channel_post'].get('text', '')
+                                if text:
+                                    message_texts.append(text)
+                        
+                        # Combine messages and detect language
+                        if message_texts:
+                            combined_text = ' '.join(message_texts[:5])  # Use first 5 messages
+                            detected_lang = detect_language_from_text(combined_text)
+                            if detected_lang != 'English':
+                                language = detected_lang
+            except Exception as e:
+                print(f"Error fetching messages for language detection: {e}")
+        
+        # Method 3: Use channel title if still no detection
+        if language == 'English':
+            title = chat.get('title', '')
+            if title:
+                detected_lang = detect_language_from_text(title)
+                language = detected_lang
+                
         # Estimate 24h views
         avg_views_24h = int(subscribers * 0.15)
         
