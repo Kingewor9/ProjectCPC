@@ -20,6 +20,8 @@ export interface User {
   cpcBalance: number;
   channels: Channel[];
   isAdmin: boolean;
+  preferred_language?: string;
+  language_code?: string;
 }
 
 export interface Channel {
