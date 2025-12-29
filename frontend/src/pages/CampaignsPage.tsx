@@ -48,9 +48,8 @@ export default function CampaignsPage() {
     }
   }, [user]);
 
-  // Timer for campaign deadlines (48 hours) - ONLY when modal is closed
+  // Timer for campaign deadlines (48 hours)
   useEffect(() => {
-    // Don't update deadline timers when modal is open to prevent bouncing
     if (selectedCampaign) return;
 
     const calculateDeadlines = () => {
@@ -62,6 +61,12 @@ export default function CampaignsPage() {
           const now = Date.now();
           const remaining = Math.max(0, deadline - now);
           newDeadlines[campaign.id] = remaining;
+          
+          // ADDED: If deadline reached, trigger refresh to get updated status
+          if (remaining === 0 && !campaign.status.includes('expired')) {
+            // Debounce the refresh to avoid too many calls
+            setTimeout(() => fetchCampaigns(), 1000);
+          }
         }
       });
       
@@ -73,7 +78,7 @@ export default function CampaignsPage() {
     return () => clearInterval(timer);
   }, [campaigns, selectedCampaign]);
 
-  // Timer for active campaigns - ONLY update when modal is open
+  // Timer for active campaigns
   useEffect(() => {
     if (selectedCampaign?.status === 'active' && selectedCampaign.actual_start_at) {
       const calculateTimeLeft = () => {
@@ -147,7 +152,6 @@ export default function CampaignsPage() {
   };
 
   const handleEndCampaign = async (campaign: Campaign) => {
-    // Check if time is up
     if (timeLeft > 0) {
       alert(`Please wait for the campaign to complete. Time remaining: ${formatTimeLeft(timeLeft)}`);
       return;
@@ -170,7 +174,6 @@ export default function CampaignsPage() {
   };
 
   const formatTimeLeft = (ms: number) => {
-    // Add 999ms to round up to the next second
     const totalSeconds = Math.ceil(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -178,8 +181,7 @@ export default function CampaignsPage() {
     return `${hours}h ${minutes}m ${seconds}s`;
   };
 
-    const formatDeadline = (ms: number) => {
-    // Add 999ms to round up to the next second for better UX
+  const formatDeadline = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -189,7 +191,7 @@ export default function CampaignsPage() {
     } else if (minutes > 0) {
       return `${minutes}m left to post`;
     } else {
-      return 'Deadline passed';
+      return 'Expired';
     }
   };
 
@@ -226,8 +228,8 @@ export default function CampaignsPage() {
         <div className="flex flex-col items-end gap-2">
           {getStatusBadge(campaign.status)}
           
-          {/* 48-hour deadline timer - only show for pending */}
-          {campaign.status === 'pending_posting' && campaign.posting_deadline && deadlineTimeLeft[campaign.id] !== undefined && (
+          {/* Deadline timer - only show for pending, hide when expired */}
+          {campaign.status === 'pending_posting' && campaign.posting_deadline && deadlineTimeLeft[campaign.id] !== undefined && deadlineTimeLeft[campaign.id] > 0 && (
             <div className="text-xs text-orange-400 font-medium bg-orange-500/10 px-2 py-1 rounded">
               ⏰ {formatDeadline(deadlineTimeLeft[campaign.id])}
             </div>
@@ -283,7 +285,6 @@ export default function CampaignsPage() {
             <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
               <h3 className="text-white font-semibold mb-3">Promo to Post</h3>
               
-              {/* Using PromoImage component */}
               <PromoImage 
                 src={campaign.promo.image} 
                 alt={campaign.promo.name}
@@ -398,18 +399,21 @@ export default function CampaignsPage() {
             {campaign.status === 'expired' && (
               <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 text-center">
                 <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-                <h4 className="text-white font-medium mb-2">Campaign Expired</h4>
+                <h4 className="text-white font-medium mb-2">Your Campaign Expired</h4>
                 <p className="text-red-300 text-sm mb-3">
                   You failed to post the promo within 48 hours
                 </p>
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-3">
                   <p className="text-red-400 text-sm font-medium">
                     Penalty: -250 CP Coins deducted from your balance
                   </p>
                 </div>
-                <p className="text-grey-400 text-xs mt-3">
-                  Your partner will still receive their reward if they completed their side
-                </p>
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                  <p className="text-blue-300 text-xs">
+                    💡 <strong>Note:</strong> Your partner's campaign continues normally if they posted on time.
+                    Each user's campaign is independent.
+                  </p>
+                </div>
               </div>
             )}
           </div>
