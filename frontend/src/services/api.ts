@@ -160,6 +160,14 @@ class ApiService {
     return response.data;
   }
 
+  
+async declineRequest(requestId: string, reason: string): Promise<{ ok: boolean; message: string }> {
+  const response = await this.api.post(`/api/request/${requestId}/decline`, {
+    reason
+  });
+  return response.data;
+}
+
   // --- Campaigns ---
   async listCampaigns(): Promise<Campaign[]> {
   const response = await this.api.get('/api/campaigns');
