@@ -6,9 +6,8 @@ import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
 import { CrossPromoRequest, Channel, Promo } from '../types';
-import { Clock, CheckCircle, Zap, X } from 'lucide-react';
+import { Clock, CheckCircle, Zap, X, XCircle } from 'lucide-react';
 
-//
 export default function RequestsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -16,9 +15,12 @@ export default function RequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accepting, setAccepting] = useState<string | null>(null);
+  const [declining, setDeclining] = useState<string | null>(null);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CrossPromoRequest | null>(null);
   const [selectedPromo, setSelectedPromo] = useState<Promo | null>(null);
+  const [declineReason, setDeclineReason] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -54,6 +56,18 @@ export default function RequestsPage() {
     setSelectedPromo(null);
   };
 
+  const openDeclineModal = (request: CrossPromoRequest) => {
+    setSelectedRequest(request);
+    setDeclineReason('');
+    setShowDeclineModal(true);
+  };
+
+  const closeDeclineModal = () => {
+    setShowDeclineModal(false);
+    setSelectedRequest(null);
+    setDeclineReason('');
+  };
+
   const handleConfirmAccept = async () => {
     if (!selectedRequest || !selectedPromo) {
       setError('Please select a promo');
@@ -64,16 +78,42 @@ export default function RequestsPage() {
       setAccepting(selectedRequest.id!);
       await apiService.acceptRequest(selectedRequest.id!, selectedPromo);
       
-      // Update request status locally
       setRequests(requests.map(r => 
         r.id === selectedRequest.id ? { ...r, status: 'Accepted' } : r
       ));
       closeAcceptModal();
+      
+      alert('Request accepted! Campaign created. Check your Campaigns page.');
     } catch (err) {
       setError('Failed to accept request');
       console.error('Error accepting request:', err);
     } finally {
       setAccepting(null);
+    }
+  };
+
+  const handleConfirmDecline = async () => {
+    if (!selectedRequest || !declineReason.trim()) {
+      setError('Please provide a reason for declining');
+      return;
+    }
+
+    try {
+      setDeclining(selectedRequest.id!);
+      await apiService.declineRequest(selectedRequest.id!, declineReason);
+      
+      setRequests(requests.map(r => 
+        r.id === selectedRequest.id ? { ...r, status: 'Rejected' } : r
+      ));
+      closeDeclineModal();
+      
+      alert('Request declined. The requester has been notified with your reason.');
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.error || 'Failed to decline request';
+      setError(errorMsg);
+      console.error('Error declining request:', err);
+    } finally {
+      setDeclining(null);
     }
   };
 
@@ -85,31 +125,30 @@ export default function RequestsPage() {
     );
   }
 
-  // Get the channel that the request is being sent TO (the current user's channel)
   const getRecipientChannel = (request: CrossPromoRequest): Channel | undefined => {
     return user.channels.find(ch => ch.id === request.toChannelId);
+  };
+
+  const isIncomingRequest = (request: CrossPromoRequest): boolean => {
+    return user.channels.some(ch => ch.id === request.toChannelId);
+  };
+
+  const isOutgoingRequest = (request: CrossPromoRequest): boolean => {
+    return user.channels.some(ch => ch.id === request.fromChannelId);
   };
 
   const pendingRequests = requests.filter(r => r.status === 'Pending');
   const acceptedRequests = requests.filter(r => r.status === 'Accepted');
   const rejectedRequests = requests.filter(r => r.status === 'Rejected');
 
-  // Helper to check if request is incoming (user is recipient)
-const isIncomingRequest = (request: CrossPromoRequest): boolean => {
-  return user.channels.some(ch => ch.id === request.toChannelId);
-};
-
-// Helper to check if request is outgoing (user is sender)
-const isOutgoingRequest = (request: CrossPromoRequest): boolean => {
-  return user.channels.some(ch => ch.id === request.fromChannelId);
-};
-
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Cross-Promo Requests</h1>
-          <p className="text-grey-400">Manage your incoming and outgoing promotion requests</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Cross-Promo Requests</h1>
+          <p className="text-grey-400 text-sm sm:text-base">
+            Manage your incoming and outgoing promotion requests
+          </p>
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
@@ -118,7 +157,7 @@ const isOutgoingRequest = (request: CrossPromoRequest): boolean => {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <Clock size={24} className="text-yellow-400" />
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className="text-xl sm:text-2xl font-bold text-white">
               Pending ({pendingRequests.length})
             </h2>
           </div>
@@ -128,85 +167,86 @@ const isOutgoingRequest = (request: CrossPromoRequest): boolean => {
               <p className="text-grey-400">No pending requests</p>
             </div>
           ) : (
-            <div className="grid gap-6">
+            <div className="grid gap-4 sm:gap-6">
               {pendingRequests.map((request) => (
                 <div
                   key={request.id}
-                  className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 hover:border-yellow-600/50 transition-all"
+                  className="bg-darkBlue-800 border border-grey-700 rounded-lg p-4 sm:p-6 hover:border-yellow-600/50 transition-all"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              {/* From */}
-                <div>
-                 <p className="text-grey-400 text-sm font-medium mb-2">
-                 FROM {isOutgoingRequest(request) && <span className="text-blue-400">(You)</span>}
-                 </p>
-                 <p className="text-white font-bold text-lg">{request.fromChannel}</p>
-                </div>
-
-              {/* To */}
-                <div>
-                 <p className="text-grey-400 text-sm font-medium mb-2">
-                 TO {isIncomingRequest(request) && <span className="text-green-400">(You)</span>}
-                 </p>
-                 <p className="text-white font-bold text-lg">{request.toChannel}</p>
-                </div>
-
-                    {/* Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
                     <div>
-                      <p className="text-grey-400 text-sm font-medium mb-2">SCHEDULED</p>
-                      <p className="text-white font-bold">
+                      <p className="text-grey-400 text-xs sm:text-sm font-medium mb-2">
+                        FROM {isOutgoingRequest(request) && <span className="text-blue-400">(You)</span>}
+                      </p>
+                      <p className="text-white font-bold text-base sm:text-lg">{request.fromChannel}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-grey-400 text-xs sm:text-sm font-medium mb-2">
+                        TO {isIncomingRequest(request) && <span className="text-green-400">(You)</span>}
+                      </p>
+                      <p className="text-white font-bold text-base sm:text-lg">{request.toChannel}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-grey-400 text-xs sm:text-sm font-medium mb-2">SCHEDULED</p>
+                      <p className="text-white font-bold text-sm sm:text-base">
                         {request.daySelected} {request.timeSelected}
                       </p>
-                      <p className="text-grey-400 text-sm mt-1">
-                        Duration: {request.duration}h • Cost: {request.cpcCost} CPC
+                      <p className="text-grey-400 text-xs sm:text-sm mt-1">
+                        Duration: {request.duration}h • Cost: {request.cpcCost} CP
                       </p>
                     </div>
                   </div>
 
-                  {/* Promo Details */}
-                  <div className="bg-darkBlue-700 rounded-lg p-4 mb-6 border border-grey-700">
-                    <p className="text-white font-bold mb-2">{request.promo.name}</p>
-                    {request.promo.text && <p className="text-grey-300 text-sm mb-2">{request.promo.text}</p>}
+                  <div className="bg-darkBlue-700 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-grey-700">
+                    <p className="text-white font-bold mb-2 text-sm sm:text-base">{request.promo.name}</p>
+                    {request.promo.text && (
+                      <p className="text-grey-300 text-xs sm:text-sm mb-2">{request.promo.text}</p>
+                    )}
                     <a
                       href={request.promo.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 text-sm"
+                      className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm break-all"
                     >
                       {request.promo.link}
                     </a>
                   </div>
 
-        {/* Actions - Only show Accept for incoming requests */}
-        <div className="flex gap-3">
-          {isIncomingRequest(request) ? (
-            <>
-              <button
-                onClick={() => openAcceptModal(request)}
-                disabled={accepting === request.id}
-                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <CheckCircle size={18} />
-                {accepting === request.id ? 'Accepting...' : 'Accept Request'}
-              </button>
-              <button
-                className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-colors"
-              >
-                Decline
-              </button>
-            </>
-          ) : (
-            <div className="flex-1 text-center py-2 text-grey-400 text-sm">
-              Awaiting response from {request.toChannel}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {isIncomingRequest(request) ? (
+                      <>
+                        <button
+                          onClick={() => openAcceptModal(request)}
+                          disabled={accepting === request.id}
+                          className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2.5 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                        >
+                          <CheckCircle size={18} />
+                          {accepting === request.id ? 'Accepting...' : 'Accept Request'}
+                        </button>
+                        <button
+                          onClick={() => openDeclineModal(request)}
+                          disabled={declining === request.id}
+                          className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2.5 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                        >
+                          <XCircle size={18} />
+                          {declining === request.id ? 'Declining...' : 'Decline'}
+                        </button>
+                      </>
+                    ) : (
+                      <div className="flex-1 text-center py-2 text-grey-400 text-xs sm:text-sm">
+                        Awaiting response from {request.toChannel}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
-      </div>
-    ))}
-  </div>
-)}
 
-{/* Accepted Requests */}
+        {/* Accepted Requests */}
         {acceptedRequests.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-4">
@@ -363,7 +403,67 @@ const isOutgoingRequest = (request: CrossPromoRequest): boolean => {
             </div>
           </div>
         )}
-      </div>
+
+        {/* NEW: Decline Modal */}
+        {showDeclineModal && selectedRequest && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-darkBlue-800 border border-grey-700 rounded-xl max-w-md w-full p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-white">Decline Request</h2>
+                <button
+                  onClick={closeDeclineModal}
+                  className="text-grey-400 hover:text-white transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="mb-4 sm:mb-6">
+                <p className="text-grey-300 text-sm mb-4">
+                  You're about to decline the request from <strong className="text-white">{selectedRequest.fromChannel}</strong>.
+                </p>
+                
+                <div className="bg-yellow-600/10 border border-yellow-600/30 rounded-lg p-3 mb-4">
+                  <p className="text-yellow-300 text-xs sm:text-sm">
+                    ⚠️ The requester will be notified with your reason. Please be professional and clear.
+                  </p>
+                </div>
+
+                <label className="block text-white text-sm font-medium mb-2">
+                  Reason for declining <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                  placeholder="E.g., 'Content doesn't match our channel theme' or 'Already fully booked for this time slot'"
+                  rows={4}
+                  maxLength={500}
+                  className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white text-sm placeholder-grey-500 focus:outline-none focus:border-red-500 resize-none"
+                />
+                <p className="text-grey-400 text-xs mt-2">
+                  {declineReason.length}/500 characters
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={closeDeclineModal}
+                  className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 sm:py-3 rounded-lg transition-colors text-sm sm:text-base"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDecline}
+                  disabled={!declineReason.trim() || declining === selectedRequest.id}
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                >
+                  <XCircle size={18} />
+                  {declining === selectedRequest.id ? 'Declining...' : 'Confirm Decline'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );
