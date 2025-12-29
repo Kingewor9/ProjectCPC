@@ -800,6 +800,92 @@ def accept_request(req_id):
         traceback.print_exc()
         return jsonify({'error': 'Failed to create campaign'}), 500
 
+#Decline request endpoint
+@app.route('/api/request/<req_id>/decline', methods=['POST'])
+@token_required
+def decline_request(req_id):
+    telegram_id = request.telegram_id
+    body = request.json or {}
+    reason = body.get('reason', '').strip()
+    
+    if not reason:
+        return jsonify({'error': 'Decline reason is required'}), 400
+    
+    # Get the request
+    req = requests_col.find_one({'id': req_id})
+    if not req:
+        return jsonify({'error': 'Request not found'}), 404
+
+    # Get recipient channel (the one declining)
+    to_ch = channels.find_one({'id': req.get('toChannelId')})
+    if not to_ch:
+        return jsonify({'error': 'Recipient channel not found'}), 404
+    
+    # Verify user is the owner of the recipient channel
+    if to_ch.get('owner_id') != telegram_id:
+        return jsonify({'error': 'You do not have permission to decline this request'}), 403
+
+    # Mark request as declined
+    requests_col.update_one(
+        {'id': req_id}, 
+        {
+            '$set': {
+                'status': 'Rejected',
+                'declined_at': datetime.datetime.utcnow(),
+                'declined_by': telegram_id,
+                'decline_reason': reason
+            }
+        }
+    )
+
+    # Get the requester's channel and owner
+    from_ch = channels.find_one({'id': req.get('fromChannelId')})
+    
+    # Notify requester about the decline
+    if from_ch and from_ch.get('owner_id'):
+        requester_id = from_ch.get('owner_id')
+        
+        decline_message = (
+            f"❌ Cross-Promo Request Declined\n\n"
+            f"Your request to {to_ch.get('name')} was declined.\n\n"
+            f"<b>Reason:</b>\n{reason}\n\n"
+            f"<b>Request Details:</b>\n"
+            f"• From: {req.get('fromChannel')}\n"
+            f"• To: {req.get('toChannel')}\n"
+            f"• Duration: {req.get('duration')}h\n"
+            f"• Cost: {req.get('cpcCost')} CP\n\n"
+            f"You can try sending a different request or contact the channel owner."
+        )
+        
+        try:
+            from bot import send_open_button_message, send_message
+            try:
+                send_open_button_message(requester_id, decline_message)
+            except Exception:
+                # Fallback to simple message
+                send_message(requester_id, decline_message)
+        except Exception as e:
+            print(f"Failed to notify requester about decline: {e}")
+    
+    # Notify admin for monitoring
+    if BOT_ADMIN_CHAT_ID:
+        admin_msg = (
+            f"📉 Request Declined\n\n"
+            f"From: {req.get('fromChannel')}\n"
+            f"To: {req.get('toChannel')}\n"
+            f"Reason: {reason}"
+        )
+        try:
+            from bot import send_message
+            send_message(BOT_ADMIN_CHAT_ID, admin_msg)
+        except Exception:
+            pass
+    
+    return jsonify({
+        'ok': True,
+        'message': 'Request declined successfully'
+    })
+
 #Updated campaign to match new logic
 @app.route('/api/campaigns', methods=['GET'])
 @token_required
