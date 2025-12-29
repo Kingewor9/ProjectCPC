@@ -81,18 +81,18 @@ export default function HelpPage() {
           <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
             <div className="flex items-center gap-3 mb-4">
               <MessageCircle size={24} className="text-blue-400" />
-              <h3 className="text-lg font-bold text-white">Telegram Community</h3>
+              <h3 className="text-lg font-bold text-white">Telegram Support</h3>
             </div>
             <p className="text-grey-400 mb-4">
-              Join our community for updates, tips, and discussions.
+              Reach out to our support team on Telegram.
             </p>
             <a
-              href="https://t.me/growthguruofficial"
+              href="https://t.me/cpgramsupport"
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-400 hover:text-blue-300 font-medium"
             >
-              @growthguruofficial
+              @cpgramsupport
             </a>
           </div>
         </div>
