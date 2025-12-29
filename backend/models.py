@@ -642,6 +642,10 @@ def get_user_campaigns(telegram_id):
     """
     Get all campaigns for channels owned by the user
     """
+    
+     # ADDED: Check and expire campaigns before fetching
+    check_and_expire_campaigns()
+    
     # Get user's channel IDs
     user_channels = list(channels.find({'owner_id': telegram_id}, {'id': 1, '_id': 0}))
     channel_ids = [ch['id'] for ch in user_channels]
@@ -847,3 +851,127 @@ def end_user_campaign_and_reward(campaign_id, telegram_id):
             'reward': cpc_cost,
             'role': 'acceptor'
         }
+        
+def check_and_expire_campaigns():
+    """
+    Check all pending campaigns and expire ONLY the user's side that failed to post.
+    Each side is independent - if requester posts but acceptor doesn't, only acceptor gets penalized.
+    Deduct 250 CP coins from users who failed to post within deadline.
+    """
+    from config import TELEGRAM_BOT_TOKEN
+    from bot import send_message
+    
+    now = datetime.datetime.utcnow()
+    
+    # Find all campaigns that have passed their deadline
+    expired_campaigns = campaigns.find({
+        'posting_deadline': {'$lt': now},
+        '$or': [
+            {'requester_status': 'pending_posting'},
+            {'acceptor_status': 'pending_posting'}
+        ]
+    })
+    
+    for campaign in expired_campaigns:
+        campaign_id = campaign.get('id')
+        from_channel_id = campaign.get('fromChannelId')
+        to_channel_id = campaign.get('toChannelId')
+        
+        # Get channel owners
+        from_channel = channels.find_one({'id': from_channel_id})
+        to_channel = channels.find_one({'id': to_channel_id})
+        
+        if not from_channel or not to_channel:
+            continue
+        
+        requester_id = from_channel.get('owner_id')
+        acceptor_id = to_channel.get('owner_id')
+        
+        requester_status = campaign.get('requester_status')
+        acceptor_status = campaign.get('acceptor_status')
+        
+        penalty = 250  # CP coins penalty
+        
+        # INDEPENDENT EXPIRATION: Handle requester side ONLY if they failed
+        if requester_status == 'pending_posting':
+            # Check requester's balance before deducting
+            requester_user = users.find_one({'telegram_id': requester_id})
+            if requester_user:
+                current_balance = requester_user.get('cpcBalance', 0)
+                # Deduct penalty (can go negative)
+                users.update_one(
+                    {'telegram_id': requester_id},
+                    {
+                        '$inc': {'cpcBalance': -penalty},
+                        '$set': {'updated_at': now}
+                    }
+                )
+                
+                # Update ONLY requester's status to expired
+                campaigns.update_one(
+                    {'id': campaign_id},
+                    {
+                        '$set': {
+                            'requester_status': 'expired',
+                            'requester_expired_at': now,
+                            'updated_at': now
+                        }
+                    }
+                )
+                
+                # Notify requester
+                try:
+                    send_message(
+                        requester_id,
+                        f"⚠️ Your Campaign Expired!\n\n"
+                        f"You failed to post your cross-promo within 48 hours.\n"
+                        f"Penalty: -{penalty} CP Coins deducted from your balance.\n\n"
+                        f"Partner: {to_channel.get('name')}\n\n"
+                        f"Note: Your partner's campaign will continue if they posted on time."
+                    )
+                except Exception as e:
+                    print(f"Failed to notify requester {requester_id}: {e}")
+                
+                print(f"Campaign {campaign_id} - Requester side expired. Penalty applied to {requester_id}")
+        
+        # INDEPENDENT EXPIRATION: Handle acceptor side ONLY if they failed
+        if acceptor_status == 'pending_posting':
+            # Check acceptor's balance before deducting
+            acceptor_user = users.find_one({'telegram_id': acceptor_id})
+            if acceptor_user:
+                current_balance = acceptor_user.get('cpcBalance', 0)
+                # Deduct penalty (can go negative)
+                users.update_one(
+                    {'telegram_id': acceptor_id},
+                    {
+                        '$inc': {'cpcBalance': -penalty},
+                        '$set': {'updated_at': now}
+                    }
+                )
+                
+                # Update ONLY acceptor's status to expired
+                campaigns.update_one(
+                    {'id': campaign_id},
+                    {
+                        '$set': {
+                            'acceptor_status': 'expired',
+                            'acceptor_expired_at': now,
+                            'updated_at': now
+                        }
+                    }
+                )
+                
+                # Notify acceptor
+                try:
+                    send_message(
+                        acceptor_id,
+                        f"⚠️ Your Campaign Expired!\n\n"
+                        f"You failed to post your cross-promo within 48 hours.\n"
+                        f"Penalty: -{penalty} CP Coins deducted from your balance.\n\n"
+                        f"Partner: {from_channel.get('name')}\n\n"
+                        f"Note: Your partner's campaign will continue if they posted on time."
+                    )
+                except Exception as e:
+                    print(f"Failed to notify acceptor {acceptor_id}: {e}")
+                
+                print(f"Campaign {campaign_id} - Acceptor side expired. Penalty applied to {acceptor_id}")
