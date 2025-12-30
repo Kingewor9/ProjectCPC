@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
           analytics.newSubscribers === 0 && (
             <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-8 text-center">
               <p className="text-grey-400">
-                No analytics data yet. Start a promotion to see results here.
+                No analytics data yet. This feature will be added soon.
               </p>
             </div>
           )}
