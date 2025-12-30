@@ -9,11 +9,23 @@ export default function HelpPage() {
     },
     {
       question: 'What happens when I accept a request?',
-      answer: 'When you accept a request, the campaign is automatically scheduled. The promotional content will be posted to your channel at the specified time and automatically removed after the duration expires.',
+      answer: 'When you accept a request, the campaign is added to your scheduled campaigns. And you are expected to post the promotion manually within 48 hours of accepting the request.',
+    },
+    {
+      question: 'What happens if I fail to post within 48 hours?',
+      answer: 'If you fail to post the promotion within 48 hours of accepting the request, your CPC balance will be deducted as a penalty, and your account may be reviewed for further actions.',
+    },
+    {
+      question: 'What is CPC and how do I earn it?',
+      answer: 'CPC stands for "Cross Promotions Coin." You earn CPC by allowing other users to promote their channels on yours. Each successful promotion adds to your CPC balance, which you can use to request promotions on other channels. NOTE: CPC cannot be withdrawn as it currently holds no monetary value.',
     },
     {
       question: 'How is the CPC cost calculated?',
       answer: 'Each partner sets their own pricing for different duration lengths. You can see the exact cost before confirming your request. The cost is deducted from your CPC balance when the campaign starts.',
+    },
+    {
+      question: 'Can I change or cancel a scheduled promotion?',
+      answer: 'Once a promotion is scheduled, it cannot be changed or canceled. Please ensure all details are correct before confirming the request.',
     },
     {
       question: 'Can I schedule promotions for multiple days?',
@@ -23,6 +35,10 @@ export default function HelpPage() {
       question: 'How do I track my campaigns?',
       answer: 'Visit the "Campaigns" page to see all your scheduled, running, and completed campaigns. You can monitor their status, timing, and performance.',
     },
+    {
+      question:  'What are the criterias to get my channel approved on the platform?',
+      answer: 'To get your channel approved on CP Gram, ensure it has atleast 500 subscribers, Atleast 150 average 24 hours views per post, and complies with our content guidelines which prohibit spam, adult content, and copyright violations.',
+    }
   ];
 
   return (
@@ -30,7 +46,7 @@ export default function HelpPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Help & Support</h1>
-          <p className="text-grey-400">Get answers to common questions about Growth Guru</p>
+          <p className="text-grey-400">Get answers to common questions about CP Gram</p>
         </div>
 
         {/* FAQs */}
