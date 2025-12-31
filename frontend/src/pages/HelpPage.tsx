@@ -32,6 +32,11 @@ export default function HelpPage() {
       answer: 'Currently, each request is for a single day and time slot. You can create multiple requests for different days if you want an extended promotion period.',
     },
     {
+      question: 'How do I add an image to my promo?',
+      answer: 'To add an image to your promo, visit an image link generator site like imgbb.com or postimages.org, upload your image there, and copy the direct image link provided. Paste this link into the image URL field when creating your promo.',
+
+    },
+    {
       question: 'How do I track my campaigns?',
       answer: 'Visit the "Campaigns" page to see all your scheduled, running, and completed campaigns. You can monitor their status, timing, and performance.',
     },
