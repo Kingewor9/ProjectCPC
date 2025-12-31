@@ -359,37 +359,36 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
           </div>
 
           {/* Status Toggle */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Channel Status</h2>
-            <p className="text-grey-400 text-sm mb-4">
-              {(() => {
-                const isPaused = !!channel.is_paused;
-                const baseStatus = (channel.status || '').toLowerCase();
-                if (baseStatus === 'approved' && !isPaused) return 'Your channel is active and visible to other users for cross-promotions.';
-                if (baseStatus === 'approved' && isPaused) return 'Your channel is paused and hidden from the partner listings.';
-                return 'Your channel is not active for promotions.';
-              })()}
-            </p>
-            <button
-              onClick={handleToggleStatus}
-              disabled={submitting || (channel.status || '').toLowerCase() === 'pending'}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
-                (channel.status || '').toLowerCase() === 'approved' && !channel.is_paused
-                  ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              {(() => {
-                const baseStatus = (channel.status || '').toLowerCase();
-                const isPaused = !!channel.is_paused;
-                if (baseStatus === 'approved' && !isPaused) {
-                  return (<><Pause size={20} />Pause Channel</>);
-                }
-                // otherwise show activate
-                return (<><Play size={20} />Activate Channel</>);
-              })()}
-            </button>
-          </div>
+<div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
+  <h2 className="text-xl font-bold text-white mb-4">Channel Status</h2>
+  <p className="text-grey-400 text-sm mb-4">
+    {channel.is_paused
+      ? 'Your channel is paused and hidden from the partner listings.'
+      : 'Your channel is active and visible to other users for cross-promotions.'
+    }
+  </p>
+  <button
+    onClick={handleToggleStatus}
+    disabled={submitting}
+    className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
+      channel.is_paused
+        ? 'bg-green-600 hover:bg-green-700 text-white'
+        : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+    } disabled:opacity-50 disabled:cursor-not-allowed`}
+  >
+    {channel.is_paused ? (
+      <>
+        <Play size={20} />
+        Activate Channel
+      </>
+    ) : (
+      <>
+        <Pause size={20} />
+        Pause Channel
+      </>
+    )}
+  </button>
+</div>
 
           {/* Days Selection */}
           <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
