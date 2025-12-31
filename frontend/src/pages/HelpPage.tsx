@@ -90,7 +90,7 @@ export default function HelpPage() {
               href="mailto:support@growthguru.io"
               className="text-blue-400 hover:text-blue-300 font-medium"
             >
-              support@growthguru.io
+              ----
             </a>
           </div>
 
