@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
-import { TrendingUp, Send, Zap, Users, Plus, Shield } from 'lucide-react';
+import { TrendingUp, Send, Zap, Users, Plus, Shield, Radio } from 'lucide-react';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -144,6 +144,20 @@ export default function DashboardPage() {
         </div>
       </button>
     )}
+
+    {/* Broadcast Message Button - Admin Only */}
+{user?.isAdmin && (
+  <button
+    onClick={() => navigate('/admin/broadcast')}
+    className="bg-gradient-to-br from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-3 group"
+  >
+    <Radio size={24} />
+    <div className="text-left">
+      <p className="text-lg">Broadcast Message</p>
+      <p className="text-sm text-orange-200 group-hover:text-orange-100">Send message to all users</p>
+    </div>
+  </button>
+)}
           </div>
         </div>
 
