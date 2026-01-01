@@ -285,6 +285,16 @@ async getAdminStats(): Promise<any> {
   return response.data;
 }
 
+async broadcastMessage(data: {
+  text: string;
+  image?: string;
+  link?: string;
+  cta?: string;
+}): Promise<any> {
+  const response = await this.api.post('/api/admin/broadcast', data);
+  return response.data;
+}
+
 // CP Coins / Tasks endpoints
 
 async getTasks(): Promise<any> {
