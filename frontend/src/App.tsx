@@ -17,6 +17,7 @@ import AdminModerateChannelsPage from './pages/AdminModerateChannelsPage';
 import CPCoinsPage from './pages/CPCoinsPage';
 import BuyCoinsPage from './pages/BuyCoinsPage';
 import EditChannelPage from './pages/EditChannelPage';
+import BroadcastMessagePage from './pages/BroadcastMessagePage';
 
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
         <Route path="/buy-coins" element={<ProtectedRoute><BuyCoinsPage /></ProtectedRoute>} />
         <Route path="/edit-channel/:channelId" element={<ProtectedRoute><EditChannelPage /></ProtectedRoute>} />
         <Route path="/add-channel" element={<ProtectedRoute><AddChannelPage /></ProtectedRoute>} />
+        <Route path="/admin/broadcast" element={<BroadcastMessagePage />} />
         {/* ... other routes */}
         
         {/* Redirect any unknown routes to home */}
