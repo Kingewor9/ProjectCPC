@@ -2828,6 +2828,79 @@ def test_post_campaign(campaign_id):
         logging.exception('Error in test post')
         return jsonify({'error': str(e)}), 500
     
+@app.route('/api/admin/broadcast', methods=['POST'])
+@token_required
+@admin_required
+def broadcast_message():
+    """Send a broadcast message to all users (Admin only)"""
+    data = request.json or {}
+    text = data.get('text', '').strip()
+    image = data.get('image', '').strip()
+    link = data.get('link', '').strip()
+    cta = data.get('cta', 'Learn More').strip()
+    
+    if not text:
+        return jsonify({'error': 'Message text is required'}), 400
+    
+    try:
+        # Get all users
+        all_users = list(users.find({}, {'telegram_id': 1, '_id': 0}))
+        
+        if not all_users:
+            return jsonify({'error': 'No users found'}), 404
+        
+        sent_count = 0
+        failed_count = 0
+        
+        # Send to each user
+        for user in all_users:
+            telegram_id = user.get('telegram_id')
+            if not telegram_id:
+                continue
+            
+            try:
+                # Use broadcast function from bot.py
+                from bot import send_broadcast_message
+                result = send_broadcast_message(
+                    chat_id=telegram_id,
+                    text=text,
+                    image=image,
+                    link=link,
+                    cta=cta
+                )
+                
+                if result and result.get('ok'):
+                    sent_count += 1
+                else:
+                    failed_count += 1
+                    
+            except Exception as e:
+                print(f"Failed to send broadcast to {telegram_id}: {e}")
+                failed_count += 1
+        
+        # Notify admin about completion
+        if BOT_ADMIN_CHAT_ID:
+            summary = (
+                f"📊 Broadcast Complete\n\n"
+                f"✅ Sent: {sent_count}\n"
+                f"❌ Failed: {failed_count}\n"
+                f"📝 Total: {len(all_users)}"
+            )
+            send_message(BOT_ADMIN_CHAT_ID, summary)
+        
+        return jsonify({
+            'ok': True,
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'total_users': len(all_users)
+        })
+    
+    except Exception as e:
+        print(f"Error broadcasting message: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to send broadcast'}), 500
+    
 if __name__ == '__main__':
     # Initialize database
     ensure_indexes()

@@ -295,3 +295,58 @@ def send_campaign_post(chat_id, promo):
     except Exception as e:
         logging.exception(f'Failed to send promo preview to {chat_id}')
         return None
+    
+def send_broadcast_message(chat_id, text, image, link, cta):
+    """
+    Send a broadcast message to a user
+    
+    Args:
+        chat_id: User's Telegram ID
+        text: Broadcast message text
+        image: Optional image URL
+        link: Optional link URL
+        cta: Call-to-action button text
+    
+    Returns:
+        Response from Telegram API
+    """
+    try:
+        # Build the message
+        message_text = text
+        
+        # Create inline keyboard with CTA button if link provided
+        keyboard = None
+        if link and cta:
+            keyboard = {
+                'inline_keyboard': [[
+                    {'text': cta, 'url': link}
+                ]]
+            }
+        
+        # Send with image if available, otherwise just text
+        if image:
+            result = send_photo(
+                chat_id=chat_id,
+                photo_url=image,
+                caption=message_text,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        else:
+            result = send_message(
+                chat_id=chat_id,
+                text=message_text,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        
+        if result and result.get('ok'):
+            logging.info(f"[BOT] Successfully sent broadcast to {chat_id}")
+        else:
+            logging.error(f"[BOT] Failed to send broadcast to {chat_id}: {result}")
+        
+        return result
+    
+    except Exception as e:
+        logging.exception(f'[BOT] Failed to send broadcast to {chat_id}')
+        return None
