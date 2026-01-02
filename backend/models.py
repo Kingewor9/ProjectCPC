@@ -15,6 +15,7 @@ campaigns = db.campaigns
 channels = db.channels
 user_tasks = db.user_tasks
 transactions = db.transactions
+ad_rewards = db.ad_rewards
 
 
 def ensure_indexes():
@@ -29,6 +30,8 @@ def ensure_indexes():
     transactions.create_index('transaction_id', unique=True)
     transactions.create_index('telegram_id')
     transactions.create_index('status')
+    ad_rewards.create_index('user_id')
+    ad_rewards.create_index('timestamp')
 
 
 def init_mock_partners():

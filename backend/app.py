@@ -1898,6 +1898,120 @@ def get_invite_task_status():
     except Exception as e:
         print(f"Error getting invite task status: {e}")
         return jsonify({'error': 'Failed to get status'}), 500
+    
+@app.route('/api/tasks/claim-ad-reward', methods=['POST'])
+@token_required
+def claim_ad_reward():
+    """Claim reward for watching an Adsgram ad"""
+    telegram_id = request.telegram_id
+    
+    try:
+        # Get user
+        user = users.find_one({'telegram_id': telegram_id})
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Check daily limit (optional - prevent abuse)
+        # You can track ad watches per day
+        ad_watches_today = user.get('ad_watches_today', 0)
+        last_ad_date = user.get('last_ad_watch_date')
+        
+        # Reset counter if new day
+        today = datetime.datetime.utcnow().date()
+        if last_ad_date:
+            last_date = last_ad_date.date() if isinstance(last_ad_date, datetime.datetime) else last_ad_date
+            if last_date < today:
+                ad_watches_today = 0
+        
+        # Set daily limit (e.g., 10 ads per day)
+        MAX_ADS_PER_DAY = 10
+        if ad_watches_today >= MAX_ADS_PER_DAY:
+            return jsonify({'error': f'Daily limit reached. You can watch up to {MAX_ADS_PER_DAY} ads per day.'}), 400
+        
+        # Reward amount
+        reward = 75
+        
+        # Update user balance
+        users.update_one(
+            {'telegram_id': telegram_id},
+            {
+                '$inc': {
+                    'cpcBalance': reward,
+                    'ad_watches_today': 1,
+                    'total_ad_watches': 1
+                },
+                '$set': {
+                    'last_ad_watch_date': datetime.datetime.utcnow(),
+                    'updated_at': datetime.datetime.utcnow()
+                }
+            }
+        )
+        
+        # Log ad reward (optional - for analytics)
+        try:
+            from models import ad_rewards  # Create this collection if you want tracking
+            ad_rewards.insert_one({
+                'user_id': telegram_id,
+                'reward': reward,
+                'timestamp': datetime.datetime.utcnow()
+            })
+        except Exception as e:
+            print(f"Failed to log ad reward: {e}")
+        
+        return jsonify({
+            'ok': True,
+            'reward': reward,
+            'message': f'Ad reward claimed! +{reward} CP Coins'
+        })
+    
+    except Exception as e:
+        print(f"Error claiming ad reward: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to claim ad reward'}), 500
+
+#Adsgram S2S Callback Endpoint
+@app.route('/api/adsgram/callback', methods=['POST'])
+def adsgram_callback():
+    """
+    Handle Adsgram S2S callback for ad completion verification
+    More secure than client-side verification
+    """
+    try:
+        data = request.json or {}
+        
+        # Verify callback authenticity (check Adsgram docs for signature verification)
+        # This is just a basic example
+        user_id = data.get('user_id')  # Telegram user ID
+        block_id = data.get('block_id')
+        reward_amount = data.get('reward', 75)
+        
+        if not user_id:
+            return jsonify({'error': 'Invalid callback data'}), 400
+        
+        # Update user balance
+        users.update_one(
+            {'telegram_id': str(user_id)},
+            {
+                '$inc': {'cpcBalance': reward_amount},
+                '$set': {'updated_at': datetime.datetime.utcnow()}
+            }
+        )
+        
+        # Notify user
+        try:
+            send_message(
+                str(user_id),
+                f"✅ Ad Reward Received!\n\nYou earned {reward_amount} CP Coins for watching an ad."
+            )
+        except Exception as e:
+            print(f"Failed to notify user: {e}")
+        
+        return jsonify({'ok': True})
+    
+    except Exception as e:
+        print(f"Error processing Adsgram callback: {e}")
+        return jsonify({'error': 'Failed to process callback'}), 500
 
 # Exchange rate configuration (can be moved to config.py)
 STARS_PER_CPC = 1  # 1 Star = 1 CP Coin
