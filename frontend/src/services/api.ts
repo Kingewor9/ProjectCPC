@@ -370,6 +370,12 @@ async completeInviteTask(taskId: string): Promise<any> {
   return response.data;
 }
 
+//Ads Reward Task
+async claimAdReward(): Promise<any> {
+  const response = await this.api.post('/api/tasks/claim-ad-reward');
+  return response.data;
+}
+
 // Purchase / Transactions endpoints
 
 async getExchangeRate(): Promise<any> {
