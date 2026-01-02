@@ -1,4 +1,11 @@
-import { useState, useEffect } from 'react';
+// Type declaration for Adsgram SDK
+declare global {
+  interface Window {
+    Adsgram: any;
+  }
+}
+
+import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
@@ -40,6 +47,8 @@ export default function CPCoinsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [processingTask, setProcessingTask] = useState<string | null>(null);
+  const [isAdLoading, setIsAdLoading] = useState(false);
+  const adControllerRef = useRef<any>(null);
 
   // Invite task states
   const [showChannelSelector, setShowChannelSelector] = useState(false);
@@ -73,6 +82,26 @@ export default function CPCoinsPage() {
       return () => clearInterval(timer);
     }
   }, [activeInviteTask]);
+
+  // Initialize Adsgram
+useEffect(() => {
+  if (window.Adsgram) {
+    const blockId = import.meta.env.VITE_ADSGRAM_BLOCK_ID;
+    
+    if (!blockId) {
+      console.error('Adsgram Block ID not configured');
+      setError('Ad system not configured. Please contact support.');
+      return;
+    }
+    
+    adControllerRef.current = window.Adsgram.init({ 
+      blockId: blockId, // ✅ From environment variable
+      debug: import.meta.env.DEV // Automatically true in dev, false in production
+    });
+    
+    console.log('Adsgram initialized with block ID:', blockId);
+  }
+}, []);
 
   const fetchTasks = async () => {
     try {
@@ -255,6 +284,41 @@ export default function CPCoinsPage() {
     );
   }
 
+  // Ad watch handler
+const handleWatchAd = async () => {
+  if (!adControllerRef.current) {
+    setError("Ad system not ready. Please refresh.");
+    return;
+  }
+
+  setIsAdLoading(true);
+
+  adControllerRef.current.show()
+    .then(async (result: any) => {
+     console.log('Ad completed:', result);
+      // User finished the ad
+      setProcessingTask('ad_reward');
+      try {
+        const res = await apiService.claimAdReward(); 
+        if (res.ok) {
+          setSuccess(`🎉 Awesome! +${res.reward} CP Coins added to your balance.`);
+          await fetchUser();
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.error || "Failed to claim ad reward");
+      } finally {
+        setProcessingTask(null);
+      }
+    })
+    .catch((result: any) => {
+      console.error("Ad error:", result);
+      setError("You must watch the ad until the end to claim rewards.");
+    })
+    .finally(() => {
+      setIsAdLoading(false);
+    });
+};
+
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
@@ -306,6 +370,38 @@ export default function CPCoinsPage() {
 
         {/* Tasks List */}
         <div className="space-y-4">
+          {/* Earn Free 75 CP Coins Ad Task */}
+<div className="bg-darkBlue-800 border border-blue-500/50 rounded-lg p-6 mb-4 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+  <div className="flex items-start justify-between gap-4">
+    <div className="flex items-start gap-4 flex-1">
+      <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+        <Zap className="text-blue-400" size={24} />
+      </div>
+      <div className="flex-1">
+        <h3 className="text-xl font-bold text-white mb-1">Earn Free 75 CP Coins</h3>
+        <p className="text-grey-400 text-sm mb-3">
+          Watch a short video until the end to claim your reward. No skipping allowed!
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold text-blue-400">+75</span>
+          <span className="text-grey-400">CP Coins</span>
+        </div>
+      </div>
+    </div>
+    
+    <button
+      onClick={handleWatchAd}
+      disabled={isAdLoading || processingTask === 'ad_reward'}
+      className={`px-6 py-3 rounded-lg font-bold transition-all flex-shrink-0 ${
+        isAdLoading 
+          ? 'bg-grey-700 text-grey-400 cursor-not-allowed'
+          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20'
+      }`}
+    >
+      {isAdLoading ? 'Loading Ad...' : 'Watch & Earn'}
+    </button>
+  </div>
+</div>
           {/* Welcome Bonus */}
           <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
             <div className="flex items-start justify-between gap-4">
