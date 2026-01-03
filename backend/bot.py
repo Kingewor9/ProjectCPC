@@ -5,7 +5,7 @@ import logging
 
 API_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
 
-
+# Send a text message to a chat
 def send_message(chat_id, text, parse_mode='HTML', reply_markup=None):
     url = f"{API_URL}/sendMessage"
     payload = {'chat_id': chat_id, 'text': text, 'parse_mode': parse_mode}
