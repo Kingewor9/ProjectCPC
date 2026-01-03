@@ -24,7 +24,7 @@ from urllib.parse import parse_qsl
 from urllib.parse import quote, unquote
 import base64
 
-
+#
 # Helper functions for matching durations and finding next available slot
 def find_best_duration(channel_doc, requested_hours):
     try:
