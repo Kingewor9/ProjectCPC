@@ -374,7 +374,7 @@ def setup_telegram_webhook():
         import requests
         
         # Your webhook URL - replace with your actual domain
-        webhook_url = f"https://project-cpc-fc4y.vercel.app/bot{TELEGRAM_BOT_TOKEN}"
+        webhook_url = f"https://projectcpc.onrender.com/bot{TELEGRAM_BOT_TOKEN}"
         
         # For local development, you can use ngrok
         # webhook_url = f"https://your-ngrok-url.ngrok.io/bot{TELEGRAM_BOT_TOKEN}"
