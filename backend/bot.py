@@ -350,3 +350,54 @@ def send_broadcast_message(chat_id, text, image, link, cta):
     except Exception as e:
         logging.exception(f'[BOT] Failed to send broadcast to {chat_id}')
         return None
+    
+def send_welcome_message(chat_id):
+    """
+    Send welcome message when user starts the bot with /start command
+    
+    Args:
+        chat_id: User's Telegram ID
+    
+    Returns:
+        Response from Telegram API
+    """
+    try:
+        welcome_text = (
+            "<b>Welcome to CP Gram 👋</b>\n\n"
+            "CP Gram is a cross-promotion ecosystem built to help Telegram channel owners "
+            "grow through fair, structured collaborations.\n\n"
+            "<b>Here, you can:</b>\n"
+            "• Connect with similar channels\n"
+            "• Control promotions with manual posting\n"
+            "• Exchange subscribers using a fair pricing system\n"
+            "• Earn rewards while growing your channel\n\n"
+            "Everything you need is already set up inside this mini app — just connect your "
+            "channel and start exploring opportunities.\n\n"
+            "We wish you growth, success, and meaningful collaborations 🚀\n\n"
+            "If you need help at any point, we're always here."
+        )
+        
+        # Create inline keyboard with "Open" button
+        keyboard = {
+            'inline_keyboard': [[
+                {'text': '🚀 Open', 'url': BOT_URL}
+            ]]
+        }
+        
+        result = send_message(
+            chat_id=chat_id,
+            text=welcome_text,
+            parse_mode='HTML',
+            reply_markup=keyboard
+        )
+        
+        if result and result.get('ok'):
+            logging.info(f"[BOT] Successfully sent welcome message to {chat_id}")
+        else:
+            logging.error(f"[BOT] Failed to send welcome message to {chat_id}: {result}")
+        
+        return result
+    
+    except Exception as e:
+        logging.exception(f'[BOT] Failed to send welcome message to {chat_id}')
+        return None

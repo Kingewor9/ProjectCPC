@@ -6,6 +6,7 @@ from scheduler import start_scheduler, check_and_post_campaigns, cleanup_finishe
 from bot import send_message, send_open_button_message
 from config import STARS_PER_CPC, TELEGRAM_BOT_TOKEN, BOT_ADMIN_CHAT_ID, APP_URL, BOT_URL
 from auth import create_token, verify_token, token_required
+from bot_handler import bot_webhook
 from time_utils import parse_day_time_to_utc, calculate_end_time
 import hmac, hashlib, time
 import datetime
@@ -90,6 +91,9 @@ def find_next_slot_for_channel(channel_doc):
 
 app = Flask(__name__)
 CORS(app)
+
+# Register bot webhook blueprint
+app.register_blueprint(bot_webhook)
 
 #Helper function to generate proxy image URLs
 def get_proxied_image_url(original_url):
@@ -360,6 +364,40 @@ def admin_required(f):
         
         return f(*args, **kwargs)
     return decorated_function
+
+def setup_telegram_webhook():
+    """
+    Set up webhook with Telegram
+    Call this once when starting the app
+    """
+    try:
+        import requests
+        
+        # Your webhook URL - replace with your actual domain
+        webhook_url = f"https://project-cpc-fc4y.vercel.app/bot{TELEGRAM_BOT_TOKEN}"
+        
+        # For local development, you can use ngrok
+        # webhook_url = f"https://your-ngrok-url.ngrok.io/bot{TELEGRAM_BOT_TOKEN}"
+        
+        api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
+        
+        response = requests.post(api_url, json={'url': webhook_url})
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('ok'):
+                print(f"✅ Webhook set successfully: {webhook_url}")
+                return True
+            else:
+                print(f"❌ Failed to set webhook: {result}")
+                return False
+        else:
+            print(f"❌ HTTP Error: {response.status_code}")
+            return False
+    
+    except Exception as e:
+        print(f"❌ Error setting webhook: {e}")
+        return False
 
 #Api routes
 
@@ -3014,6 +3052,33 @@ def broadcast_message():
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Failed to send broadcast'}), 500
+
+#Webhook setup endpoint for admin 
+@app.route('/setup-webhook', methods=['POST'])
+@token_required
+@admin_required
+def setup_webhook_endpoint():
+    """Admin endpoint to set up webhook"""
+    data = request.json or {}
+    webhook_url = data.get('webhook_url')
+    
+    if not webhook_url:
+        return jsonify({'error': 'webhook_url is required'}), 400
+    
+    try:
+        import requests as http_requests
+        
+        api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
+        response = http_requests.post(api_url, json={'url': webhook_url})
+        
+        if response.status_code == 200:
+            result = response.json()
+            return jsonify(result)
+        else:
+            return jsonify({'error': 'Failed to set webhook'}), 500
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
     
 if __name__ == '__main__':
     # Initialize database
@@ -3022,6 +3087,9 @@ if __name__ == '__main__':
     
     # Always start scheduler
     start_scheduler()
-    
+
+    # Setup Telegram webhook
+    setup_telegram_webhook()
+
     # Local development server
     app.run(host='0.0.0.0', port=5000, debug=True)
