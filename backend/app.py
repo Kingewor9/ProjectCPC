@@ -94,6 +94,7 @@ CORS(app)
 
 # Register bot webhook blueprint
 app.register_blueprint(bot_webhook)
+logging.info(f"[APP] Bot webhook registered at /bot{TELEGRAM_BOT_TOKEN}")
 
 #Helper function to generate proxy image URLs
 def get_proxied_image_url(original_url):
@@ -3079,6 +3080,99 @@ def setup_webhook_endpoint():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/admin/check-webhook', methods=['GET'])
+@token_required
+@admin_required
+def check_webhook_status():
+    """Check current webhook configuration"""
+    try:
+        api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getWebhookInfo"
+        response = http_requests.get(api_url, timeout=10)
+        
+        if response.status_code == 200:
+            result = response.json()
+            return jsonify({
+                'ok': True,
+                'webhook_info': result.get('result', {})
+            })
+        else:
+            return jsonify({'error': 'Failed to get webhook info'}), 500
+    
+    except Exception as e:
+        print(f"Error checking webhook: {e}")
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/admin/setup-webhook', methods=['POST'])
+@token_required
+@admin_required
+def setup_webhook_admin():
+    """
+    Admin endpoint to set up webhook
+    Call this once after deployment
+    """
+    try:
+        # Get your Render app URL from environment or config
+        # Format: https://your-app-name.onrender.com
+        base_url = os.environ.get('VITE_API_URL') or request.host_url.rstrip('/')
+        
+        # Construct webhook URL
+        webhook_url = f"{base_url}/bot{TELEGRAM_BOT_TOKEN}"
+        
+        logging.info(f"[WEBHOOK SETUP] Setting webhook to: {webhook_url}")
+        
+        # Set webhook with Telegram
+        api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
+        
+        payload = {
+            'url': webhook_url,
+            'allowed_updates': ['message', 'callback_query']  # Specify what updates you want
+        }
+        
+        response = http_requests.post(api_url, json=payload, timeout=10)
+        
+        if response.status_code == 200:
+            result = response.json()
+            
+            if result.get('ok'):
+                logging.info(f"[WEBHOOK SETUP] ✅ Webhook set successfully!")
+                logging.info(f"[WEBHOOK SETUP] Response: {result}")
+                
+                return jsonify({
+                    'ok': True,
+                    'message': 'Webhook configured successfully',
+                    'webhook_url': webhook_url,
+                    'telegram_response': result
+                })
+            else:
+                logging.error(f"[WEBHOOK SETUP] ❌ Telegram returned error: {result}")
+                return jsonify({
+                    'ok': False,
+                    'error': result.get('description', 'Unknown error'),
+                    'telegram_response': result
+                }), 500
+        else:
+            logging.error(f"[WEBHOOK SETUP] ❌ HTTP error: {response.status_code}")
+            return jsonify({
+                'ok': False,
+                'error': f'HTTP {response.status_code}'
+            }), 500
+    
+    except Exception as e:
+        logging.error(f"[WEBHOOK SETUP] ❌ Exception: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'ok': False, 'error': str(e)}), 500
+    
+@app.route('/webhook-test', methods=['GET'])
+def test_webhook_route():
+    """Public endpoint to test if server is receiving requests"""
+    return jsonify({
+        'ok': True,
+        'message': 'Server is running',
+        'webhook_endpoint': f'/bot{TELEGRAM_BOT_TOKEN}',
+        'note': 'Webhook endpoint should be accessible at the path above'
+    })
     
 if __name__ == '__main__':
     # Initialize database
