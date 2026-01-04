@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Image as ImageIcon } from 'lucide-react';
 
 interface ChannelAvatarProps {
   src: string;
@@ -8,10 +7,6 @@ interface ChannelAvatarProps {
   channelName?: string;
 }
 
-/**
- * Channel Avatar component optimized for Telegram Mini Apps
- * Handles Telegram's strict CSP and image loading policies
- */
 export default function ChannelAvatar({ 
   src, 
   alt, 
@@ -20,79 +15,55 @@ export default function ChannelAvatar({
 }: ChannelAvatarProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [imageSrc, setImageSrc] = useState<string>('');
 
   useEffect(() => {
-    // Reset states when src changes
+    // Reset when src changes
     setHasError(false);
     setIsLoading(true);
     
-    // Validate and process the image source
     if (!src || src.trim() === '') {
       setHasError(true);
       setIsLoading(false);
       return;
     }
 
-    // For Telegram Mini Apps, we need to ensure the URL is properly formatted
-    let processedSrc = src;
+    // Preload image
+    const img = new Image();
     
-    // If it's a Telegram file URL, ensure it's using HTTPS
-    if (src.includes('api.telegram.org')) {
-      processedSrc = src.replace('http://', 'https://');
-    }
-    
-    // Test if image can be loaded by creating a test Image object
-    const testImage = new Image();
-    
-    const loadTimeout = setTimeout(() => {
-      // If image takes more than 5 seconds, show fallback
+    const timeout = setTimeout(() => {
+      console.warn(`[ChannelAvatar] Timeout loading: ${src}`);
       setHasError(true);
       setIsLoading(false);
-    }, 5000);
+    }, 8000); // Increased to 8 seconds
     
-    testImage.onload = () => {
-      clearTimeout(loadTimeout);
-      setImageSrc(processedSrc);
+    img.onload = () => {
+      clearTimeout(timeout);
       setIsLoading(false);
       setHasError(false);
+      console.log(`[ChannelAvatar] Successfully loaded: ${src}`);
     };
     
-    testImage.onerror = () => {
-      clearTimeout(loadTimeout);
+    img.onerror = (e) => {
+      clearTimeout(timeout);
+      console.error(`[ChannelAvatar] Failed to load: ${src}`, e);
       setHasError(true);
       setIsLoading(false);
     };
     
-    // Start loading the test image
-    testImage.src = processedSrc;
+    img.src = src;
     
-    return () => {
-      clearTimeout(loadTimeout);
-    };
+    return () => clearTimeout(timeout);
   }, [src]);
 
-  const handleImageError = () => {
-    setHasError(true);
-    setIsLoading(false);
-  };
-
-  const handleImageLoad = () => {
-    setIsLoading(false);
-  };
-
-  // Show fallback if no src, empty src, or loading failed
+  // Fallback UI
   if (!src || src.trim() === '' || hasError) {
     const initial = channelName ? channelName.charAt(0).toUpperCase() : '📺';
     return (
       <div
         className={`${className} rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0`}
-        title={hasError ? `Image failed to load for ${alt}` : `No image for ${alt}`}
+        title={alt}
       >
-        <div className="flex flex-col items-center justify-center">
-          <ImageIcon size={16} className="text-white/70 mb-0.5" />
-          <span className="text-xs font-bold text-white">{initial}</span>
-        </div>
+        <span className="text-lg font-bold text-white">{initial}</span>
       </div>
     );
   }
@@ -100,24 +71,20 @@ export default function ChannelAvatar({
   return (
     <div className={`${className} rounded-lg bg-grey-700 flex items-center justify-center overflow-hidden flex-shrink-0 relative`}>
       {isLoading && (
-        <div className="absolute inset-0 bg-grey-700 flex items-center justify-center z-10">
-          <div className="animate-pulse">
-            <ImageIcon size={20} className="text-grey-600" />
-          </div>
+        <div className="absolute inset-0 bg-grey-700 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
-      {imageSrc && (
-        <img
-          src={imageSrc}
-          alt={alt}
-          onError={handleImageError}
-          onLoad={handleImageLoad}
-          className={`w-full h-full object-cover transition-opacity duration-200 ${
-            isLoading ? 'opacity-0' : 'opacity-100'
-          }`}
-          referrerPolicy="no-referrer"
-        />
-      )}
+      <img
+        src={src}
+        alt={alt}
+        onError={() => setHasError(true)}
+        onLoad={() => setIsLoading(false)}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${
+          isLoading ? 'opacity-0' : 'opacity-100'
+        }`}
+        crossOrigin="anonymous"
+      />
     </div>
   );
 }
