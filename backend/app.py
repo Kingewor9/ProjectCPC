@@ -1264,6 +1264,24 @@ def create_channel():
         return jsonify({'error': f'Must select exactly {promos_per_day} time slot(s)'}), 400
     
     try:
+        channel_info = data['channel_info']
+        
+        # ADDED: Ensure avatar file_id is saved
+        avatar_file_id = channel_info.get('avatar_file_id')
+        telegram_channel_id = channel_info.get('telegram_id')
+        
+        # If no avatar_file_id but we have telegram_id, try to fetch it
+        if not avatar_file_id and telegram_channel_id:
+            print(f"[CREATE CHANNEL] Fetching avatar for channel: {channel_info.get('name')}")
+            from models import get_telegram_file_id_from_chat
+            avatar_file_id, _ = get_telegram_file_id_from_chat(telegram_channel_id, TELEGRAM_BOT_TOKEN)
+            
+            if avatar_file_id:
+                print(f"[CREATE CHANNEL] Got avatar file_id: {avatar_file_id}")
+                channel_info['avatar_file_id'] = avatar_file_id
+            else:
+                print(f"[CREATE CHANNEL] No avatar available for channel")
+        
         # Add channel to database
         channel_id = add_user_channel(
             telegram_id=telegram_id,
@@ -2456,55 +2474,79 @@ def preview_promo(channel_id):
 def get_channel_avatar(channel_id):
     """Proxy channel avatar through backend to avoid CORS and expiry issues"""
     try:
+        print(f"[AVATAR] Fetching avatar for channel: {channel_id}")
+        
         # Get channel
         channel = channels.find_one({'id': channel_id})
         if not channel:
-            # Return a default avatar
+            print(f"[AVATAR] Channel not found: {channel_id}")
             return jsonify({'error': 'Channel not found'}), 404
         
         # Get avatar file_id
         avatar_file_id = channel.get('avatar_file_id')
-        if not avatar_file_id:
-            # Try to fetch it
-            telegram_id = channel.get('telegram_id')
-            if telegram_id:
-                from models import get_telegram_file_id_from_chat
-                avatar_file_id, _ = get_telegram_file_id_from_chat(telegram_id, TELEGRAM_BOT_TOKEN)
-                if avatar_file_id:
-                    # Store it for future use
-                    channels.update_one(
-                        {'id': channel_id},
-                        {'$set': {'avatar_file_id': avatar_file_id}}
-                    )
+        telegram_id = channel.get('telegram_id')
+        
+        print(f"[AVATAR] Channel: {channel.get('name')}")
+        print(f"[AVATAR] Avatar file_id: {avatar_file_id}")
+        print(f"[AVATAR] Telegram ID: {telegram_id}")
+        
+        # If no file_id, try to fetch it from Telegram
+        if not avatar_file_id and telegram_id:
+            print(f"[AVATAR] No file_id stored, fetching from Telegram...")
+            from models import get_telegram_file_id_from_chat
+            avatar_file_id, _ = get_telegram_file_id_from_chat(telegram_id, TELEGRAM_BOT_TOKEN)
+            
+            if avatar_file_id:
+                print(f"[AVATAR] Got file_id from Telegram: {avatar_file_id}")
+                # Store it for future use
+                channels.update_one(
+                    {'id': channel_id},
+                    {'$set': {'avatar_file_id': avatar_file_id}}
+                )
+            else:
+                print(f"[AVATAR] No avatar available from Telegram")
         
         if not avatar_file_id:
+            print(f"[AVATAR] No avatar file_id available")
+            # Return a placeholder/default image
             return jsonify({'error': 'No avatar available'}), 404
         
-        # Get file URL from Telegram
+        # Get fresh file URL from Telegram
         from models import get_telegram_file_url_from_file_id
         file_url = get_telegram_file_url_from_file_id(avatar_file_id, TELEGRAM_BOT_TOKEN)
         
+        print(f"[AVATAR] File URL from Telegram: {file_url}")
+        
         if not file_url:
+            print(f"[AVATAR] Failed to get file URL from Telegram")
             return jsonify({'error': 'Failed to get file URL'}), 500
         
         # Fetch the image from Telegram
+        print(f"[AVATAR] Fetching image from Telegram...")
         response = http_requests.get(file_url, timeout=10)
         
         if response.status_code != 200:
-            return jsonify({'error': 'Failed to fetch image'}), 500
+            print(f"[AVATAR] Failed to fetch image: HTTP {response.status_code}")
+            return jsonify({'error': f'Failed to fetch image: {response.status_code}'}), 500
+        
+        print(f"[AVATAR] Successfully fetched image, size: {len(response.content)} bytes")
         
         # Return the image with proper headers
         return Response(
             response.content,
             mimetype=response.headers.get('Content-Type', 'image/jpeg'),
             headers={
-                'Cache-Control': 'public, max-age=3600',  # Cache for 1 hour
-                'Access-Control-Allow-Origin': '*'
+                'Cache-Control': 'public, max-age=86400',  # Cache for 24 hours
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET',
+                'Access-Control-Allow-Headers': 'Content-Type'
             }
         )
     
     except Exception as e:
-        print(f"Error proxying avatar: {e}")
+        print(f"[AVATAR] Error proxying avatar: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': 'Internal server error'}), 500
     
 @app.route('/api/proxy/image', methods=['GET'])
@@ -3173,6 +3215,35 @@ def test_webhook_route():
         'webhook_endpoint': f'/bot{TELEGRAM_BOT_TOKEN}',
         'note': 'Webhook endpoint should be accessible at the path above'
     })
+
+#Channel avatar debug endpoint  
+@app.route('/api/debug/channel/<channel_id>', methods=['GET'])
+@token_required
+def debug_channel_avatar(channel_id):
+    """Debug endpoint to check channel avatar data"""
+    try:
+        channel = channels.find_one({'id': channel_id}, {'_id': 0})
+        
+        if not channel:
+            return jsonify({'error': 'Channel not found'}), 404
+        
+        return jsonify({
+            'channel_id': channel_id,
+            'channel_name': channel.get('name'),
+            'avatar_url': channel.get('avatar'),
+            'avatar_file_id': channel.get('avatar_file_id'),
+            'telegram_id': channel.get('telegram_id'),
+            'has_avatar_file_id': bool(channel.get('avatar_file_id')),
+            'has_telegram_id': bool(channel.get('telegram_id'))
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+#Call this for one of your channels to see what's stored:
+
+#GET https://your-app.onrender.com/api/debug/channel/ch_xxxxx
     
 if __name__ == '__main__':
     # Initialize database
