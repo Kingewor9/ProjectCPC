@@ -13,7 +13,7 @@ JWT_EXPIRY_HOURS = 24
 ADMIN_TELEGRAM_ID = os.getenv('ADMIN_TELEGRAM_ID', '123456789')
 APP_URL = os.getenv('APP_URL', 'http://localhost:3000')
 BOT_URL = os.getenv('BOT_URL', APP_URL)  # Fall back to APP_URL if BOT_URL not set
-
+BASE_URL = os.environ.get('VITE_API_URL') or os.environ.get('APP_URL') or 'http://localhost:5000'
 
 def telegram_secret_key():
     # Per Telegram login widget verification: secret key is SHA256 of bot token

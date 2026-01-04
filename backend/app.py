@@ -4,7 +4,7 @@ from flask import send_file, Response
 from models import ensure_indexes, init_mock_partners, upsert_user, partners, requests_col, campaigns, users
 from scheduler import start_scheduler, check_and_post_campaigns, cleanup_finished_campaigns
 from bot import send_message, send_open_button_message
-from config import STARS_PER_CPC, TELEGRAM_BOT_TOKEN, BOT_ADMIN_CHAT_ID, APP_URL, BOT_URL
+from config import STARS_PER_CPC, TELEGRAM_BOT_TOKEN, BOT_ADMIN_CHAT_ID, APP_URL, BOT_URL, BASE_URL
 from auth import create_token, verify_token, token_required
 from bot_handler import bot_webhook
 from time_utils import parse_day_time_to_utc, calculate_end_time
@@ -131,7 +131,7 @@ def _normalize_channel_for_frontend(channel):
     # USE PROXIED AVATAR URL INSTEAD OF DIRECT TELEGRAM URL
     # This solves CORS, expiry, and Telegram Mini App CSP issues
     channel_id = channel.get('id')
-    avatar_url = f"/api/avatar/{channel_id}"  # Use our proxy endpoint
+    avatar_url = f"{BASE_URL}/api/avatar/{channel_id}"  # Use our proxy endpoint
     
     # REFRESH SUBSCRIBER COUNT: Get live data from Telegram
     current_subscribers = channel.get('subscribers', 0)
