@@ -593,7 +593,7 @@ def list_partners():
                 'topic': channel.get('topic'),
                 'subs': channel.get('subscribers', 0),
                 'lang': channel.get('language', 'en'),
-                'avatar': channel.get('avatar_url', 'https://placehold.co/60x60'),
+                'avatar': 'avatar_url',
                 'acceptedDays': accepted_days,
                 'availableTimeSlots': available_time_slots,
                 'durationPrices': duration_prices,
