@@ -513,24 +513,21 @@ def get_me():
     }
     #return jsonify(demo_user)
 
-
 @app.route('/api/partners', methods=['GET'])
-@token_required  # ADDED: Require authentication
+@token_required
 def list_partners():
     """Get partner channels - channels the user has cross-promoted with"""
-    telegram_id = request.telegram_id  # ADDED: Get authenticated user
+    telegram_id = request.telegram_id
     
     try:
-        # CHANGED: Get user's completed campaigns to find actual partners
+        # Get user's completed campaigns to find actual partners
         user_channels = list(channels.find({'owner_id': telegram_id}, {'_id': 0}))
         channel_ids = [ch.get('id') for ch in user_channels]
         
         if not channel_ids:
-            # No channels, return empty list
             return jsonify([])
         
         # Find all channels that user has successfully cross-promoted with
-        # Either as sender or receiver
         completed_requests = list(requests_col.find({
             'status': 'Accepted',
             '$or': [
@@ -555,64 +552,20 @@ def list_partners():
         if not partner_ids:
             return jsonify([])
         
-        partner_channels = list(channels.find({
+        partner_channels_raw = list(channels.find({
             'id': {'$in': list(partner_ids)},
             'status': 'approved'
         }, {'_id': 0}))
         
-        # Format partners to match expected structure
-        formatted_partners = []
-        for channel in partner_channels:
-            # Build duration prices from price_settings
-            duration_prices = {}
-            price_settings = channel.get('price_settings', {})
-            for hours, settings in price_settings.items():
-                if settings.get('enabled'):
-                    duration_prices[hours] = settings.get('price', 0)
-            
-            # If no duration prices, try durationPrices field (backward compatibility)
-            if not duration_prices:
-                duration_prices = channel.get('durationPrices', {})
-            
-            # Get accepted days (handle both snake_case and camelCase)
-            accepted_days = channel.get('selected_days', [])
-            if not accepted_days:
-                accepted_days = channel.get('acceptedDays', [])
-            
-            # Get available time slots (handle both snake_case and camelCase)
-            available_time_slots = channel.get('time_slots', [])
-            if not available_time_slots:
-                available_time_slots = channel.get('availableTimeSlots', [])
-            
-            # Get promos per day (handle both snake_case and camelCase)
-            promos_per_day = channel.get('promos_per_day', channel.get('promosPerDay', 1))
-            
-            partner = {
-                'id': channel.get('id'),
-                'name': channel.get('name'),
-                'topic': channel.get('topic'),
-                'subs': channel.get('subscribers', 0),
-                'lang': channel.get('language', 'en'),
-                'avatar': 'avatar_url',
-                'acceptedDays': accepted_days,
-                'availableTimeSlots': available_time_slots,
-                'durationPrices': duration_prices,
-                'telegram_chat': channel.get('username', ''),
-                'promosPerDay': promos_per_day,
-                'xExchanges': requests_col.count_documents({
-                    'status': 'Accepted',
-                    '$or': [
-                        {'fromChannelId': channel.get('id')},
-                        {'toChannelId': channel.get('id')}
-                    ]
-                })
-            }
-            formatted_partners.append(partner)
+        # ✅ USE THE NORMALIZATION FUNCTION INSTEAD OF MANUAL FORMATTING
+        formatted_partners = [_normalize_channel_for_frontend(ch) for ch in partner_channels_raw]
         
         return jsonify(formatted_partners)
     
     except Exception as e:
         print(f"Error fetching partners: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify([])
 
 @app.route('/api/channels/all', methods=['GET'])
