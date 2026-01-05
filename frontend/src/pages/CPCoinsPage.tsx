@@ -83,7 +83,7 @@ export default function CPCoinsPage() {
     }
   }, [activeInviteTask]);
 
-  // Initialize Adsgram
+  // Initialize Adsgram...
 useEffect(() => {
   if (window.Adsgram) {
     const blockId = import.meta.env.VITE_ADSGRAM_BLOCK_ID;
