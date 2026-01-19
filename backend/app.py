@@ -2757,7 +2757,17 @@ def moderate_channel(channel_id):
             message += f"\nReason: {reason}"
 
         if action == 'approve':
-            message += f"\n\n✅ Your channel is now live and visible to other users!"
+            message += (f"\n\n✅ Your channel is now live and visible to other users!"
+                         f"<b>Next Steps:</b>\n"
+                f"Claim your Free CP Coins Rewards 🎁\n\n"
+                f"• Visit your dashboard, navigate to your CP coins wallet and engage on the earn CP Coins task section\n"
+                f"• Claim your <b>welcome bonus</b> → 500 CP Coins\n"
+                f"• Join the <b>official news channel</b> → 250 CP Coins\n"
+                f"• <b>Invite other admins</b> to CP Gram by posting our official promo to your approved channel → 5,000 CP Coins\n\n"
+                f"With these CP Coins in place, you can now send your first cross promotion request to your favourite channel.\n\n"
+                f"Get started now! 🚀"
+            )
+
 
         try:
             if owner_id:
