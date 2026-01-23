@@ -3,6 +3,7 @@ from config import MONGO_URI
 import requests
 import datetime
 import uuid
+import logging
 
 client = MongoClient(MONGO_URI)
 db = client.get_default_database()
@@ -16,6 +17,7 @@ channels = db.channels
 user_tasks = db.user_tasks
 transactions = db.transactions
 ad_rewards = db.ad_rewards
+user_onboarding = db.user_onboarding
 
 
 def ensure_indexes():
@@ -32,6 +34,9 @@ def ensure_indexes():
     transactions.create_index('status')
     ad_rewards.create_index('user_id')
     ad_rewards.create_index('timestamp')
+    user_onboarding.create_index('telegram_id', unique=True)
+    user_onboarding.create_index('last_start_at')
+    user_onboarding.create_index('next_message_at')
 
 
 def init_mock_partners():
@@ -978,3 +983,153 @@ def check_and_expire_campaigns():
                     print(f"Failed to notify acceptor {acceptor_id}: {e}")
                 
                 print(f"Campaign {campaign_id} - Acceptor side expired. Penalty applied to {acceptor_id}")
+                
+import datetime
+
+# Define follow-up messages configuration
+FOLLOW_UP_MESSAGES = [
+    {
+        'message_number': 1,
+        'delay_hours': 1,
+        'text': (
+            "📖 <b>New to CP Gram? Here's your Roadmap!</b>\n\n"
+            "We just released our official docs to help you grow your Telegram channel faster and smarter.\n\n"
+            "<b>Inside, you'll find:</b>\n"
+            "1️⃣ How to add your channel (Public & Private)\n"
+            "2️⃣ How to claim your CP Coin rewards\n"
+            "3️⃣ Best practices for high-converting promotions\n\n"
+            "Don't miss out on the best ways to scale your audience."
+        ),
+        'cta_text': '📚 Read Docs',
+        'cta_link': 'https://cross-promotions-gram.gitbook.io/cross-promotions-gram-docs/'
+    },
+    {
+        'message_number': 2,
+        'delay_hours': 24,
+        'text': (
+            "<b>CP Gram is not an ad network and it does not auto-post on your channel.</b>\n\n"
+            "You stay in full control of what gets posted, when it gets posted, and who you work with.\n\n"
+            "Adding your channel simply makes you visible to other serious admins.\n\n"
+            "Open CP Gram to add your channel."
+        ),
+        'cta_text': '🚀 Open CP Gram',
+        'cta_link': 'BOT_URL'  # Will be replaced with actual BOT_URL
+    },
+    {
+        'message_number': 3,
+        'delay_hours': 48,
+        'text': (
+            "<b>You never get forced into a promotion on CP Gram.</b>\n\n"
+            "Every request can be accepted or declined.\n\n"
+            "No auto-posting. No random promos.\n\n"
+            "Your channel rules still apply — always."
+        ),
+        'cta_text': '🚀 Open CP Gram',
+        'cta_link': 'BOT_URL'
+    },
+    {
+        'message_number': 4,
+        'delay_hours': 72,
+        'text': (
+            "<b>New channels are being approved and listed regularly.</b>\n\n"
+            "Admins are already browsing, sending requests, and earning CP Coins.\n\n"
+            "If your channel isn't listed, it simply won't be seen."
+        ),
+        'cta_text': '🚀 Open CP Gram',
+        'cta_link': 'BOT_URL'
+    },
+    {
+        'message_number': 5,
+        'delay_hours': 96,
+        'text': (
+            "<b>Manual cross promotions usually mean endless DMs and wasted time.</b>\n\n"
+            "CP Gram removes negotiations by showing promo prices, durations, and schedules upfront.\n\n"
+            "One setup, then everything runs smoother."
+        ),
+        'cta_text': '🚀 Open CP Gram',
+        'cta_link': 'BOT_URL'
+    },
+    {
+        'message_number': 6,
+        'delay_hours': 120,
+        'text': (
+            "<b>Bigger channels don't exploit smaller ones on CP Gram.</b>\n\n"
+            "CP Coins make sure every promotion has a clear value — regardless of size.\n\n"
+            "You decide your price. You decide your limits."
+        ),
+        'cta_text': '🚀 Open CP Gram',
+        'cta_link': 'BOT_URL'
+    },
+    {
+        'message_number': 7,
+        'delay_hours': 144,
+        'text': (
+            "<b>If your channel has 500+ subscribers, good views, and clean content, it's eligible.</b>\n\n"
+            "No hidden requirements. No favoritism.\n\n"
+            "Legit channels get approved."
+        ),
+        'cta_text': '🚀 Open CP Gram',
+        'cta_link': 'BOT_URL'
+    },
+    {
+        'message_number': 8,
+        'delay_hours': 168,
+        'text': (
+            "<b>Every day your channel isn't listed is a missed opportunity for visibility and fair growth.</b>\n\n"
+            "CP Gram only works for channels that are actually on the platform.\n\n"
+            "Add your channel when you're ready."
+        ),
+        'cta_text': '🚀 Open CP Gram',
+        'cta_link': 'BOT_URL'
+    }
+]
+
+def initialize_user_onboarding(telegram_id):
+    """
+    Initialize or reset onboarding sequence for a user
+    Called when user sends /start command
+    """
+    try:
+        now = datetime.datetime.utcnow()
+        
+        # Calculate when first follow-up message should be sent (1 hour from now)
+        first_message_time = now + datetime.timedelta(hours=FOLLOW_UP_MESSAGES[0]['delay_hours'])
+        
+        # Upsert onboarding record
+        user_onboarding.update_one(
+            {'telegram_id': telegram_id},
+            {
+                '$set': {
+                    'telegram_id': telegram_id,
+                    'last_start_at': now,
+                    'current_message_index': 0,
+                    'next_message_at': first_message_time,
+                    'sequence_active': True,
+                    'messages_sent': [],
+                    'updated_at': now
+                }
+            },
+            upsert=True
+        )
+        
+        logging.info(f"[ONBOARDING] Initialized sequence for {telegram_id}, first message at {first_message_time}")
+        return True
+        
+    except Exception as e:
+        logging.error(f"[ONBOARDING] Error initializing onboarding for {telegram_id}: {e}")
+        return False
+
+
+def get_pending_followup_messages():
+    """
+    Get all users who are due to receive their next follow-up message
+    """
+    now = datetime.datetime.utcnow()
+    
+    pending = list(user_onboarding.find({
+        'sequence_active': True,
+        'next_message_at': {'$lte': now},
+        'current_message_index': {'$lt': len(FOLLOW_UP_MESSAGES)}
+    }))
+    
+    return pending

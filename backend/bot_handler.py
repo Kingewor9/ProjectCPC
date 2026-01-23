@@ -55,6 +55,10 @@ def handle_webhook():
                     result = send_welcome_message(chat_id)
                     
                     if result and result.get('ok'):
+                         # ✅ INITIALIZE FOLLOW-UP SEQUENCE
+                        from models import initialize_user_onboarding
+                        initialize_user_onboarding(str(chat_id))
+                        
                         logging.info(f"[WEBHOOK] Welcome message sent successfully to {chat_id}")
                         return jsonify({'ok': True, 'message': 'Welcome message sent'})
                     else:

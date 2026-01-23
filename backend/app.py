@@ -3139,6 +3139,39 @@ def get_broadcast_status(broadcast_id):
         'progress_percentage': round((status['sent'] + status['failed']) / status['total'] * 100, 1)
     })
 
+#Test follow-up system for a user  
+@app.route('/api/admin/test-followup/<telegram_id>', methods=['POST'])
+@token_required
+@admin_required
+def test_followup_system(telegram_id):
+    """Test follow-up message system for a specific user"""
+    try:
+        from models import initialize_user_onboarding, user_onboarding, FOLLOW_UP_MESSAGES
+        
+        # Initialize onboarding
+        initialize_user_onboarding(telegram_id)
+        
+        # Get current status
+        status = user_onboarding.find_one({'telegram_id': telegram_id}, {'_id': 0})
+        
+        return jsonify({
+            'ok': True,
+            'message': 'Follow-up sequence initialized',
+            'status': status,
+            'total_messages': len(FOLLOW_UP_MESSAGES),
+            'schedule': [
+                {
+                    'message': i + 1,
+                    'delay_hours': msg['delay_hours'],
+                    'preview': msg['text'][:50] + '...'
+                }
+                for i, msg in enumerate(FOLLOW_UP_MESSAGES)
+            ]
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 #Webhook setup endpoint for admin 
 @app.route('/setup-webhook', methods=['POST'])
 @token_required

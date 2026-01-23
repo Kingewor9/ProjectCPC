@@ -566,3 +566,110 @@ def process_broadcast(broadcast_id, user_ids, text, image, link, cta, admin_id):
                 
         except Exception as e:
             logging.error(f"[BROADCAST] Failed to notify admin: {e}")
+            
+def process_followup_messages():
+    """
+    Process and send pending follow-up messages
+    Runs every 5 minutes
+    """
+    try:
+        from models import get_pending_followup_messages, FOLLOW_UP_MESSAGES, user_onboarding
+        from bot import send_followup_message
+        import datetime
+        
+        pending = get_pending_followup_messages()
+        
+        if not pending:
+            return
+        
+        logging.info(f"[FOLLOWUP] Processing {len(pending)} pending follow-up messages")
+        
+        for user in pending:
+            try:
+                telegram_id = user.get('telegram_id')
+                current_index = user.get('current_message_index', 0)
+                
+                # Get message config
+                if current_index >= len(FOLLOW_UP_MESSAGES):
+                    # Sequence complete
+                    user_onboarding.update_one(
+                        {'telegram_id': telegram_id},
+                        {
+                            '$set': {
+                                'sequence_active': False,
+                                'completed_at': datetime.datetime.utcnow()
+                            }
+                        }
+                    )
+                    continue
+                
+                message_config = FOLLOW_UP_MESSAGES[current_index]
+                
+                # Send message
+                result = send_followup_message(telegram_id, message_config)
+                
+                if result and result.get('ok'):
+                    # Update onboarding record
+                    next_index = current_index + 1
+                    
+                    # Calculate next message time
+                    if next_index < len(FOLLOW_UP_MESSAGES):
+                        next_config = FOLLOW_UP_MESSAGES[next_index]
+                        next_message_time = datetime.datetime.utcnow() + datetime.timedelta(
+                            hours=next_config['delay_hours'] - message_config['delay_hours']
+                        )
+                    else:
+                        next_message_time = None
+                    
+                    # Update database
+                    update_data = {
+                        'current_message_index': next_index,
+                        'messages_sent': user.get('messages_sent', []) + [message_config['message_number']],
+                        'updated_at': datetime.datetime.utcnow()
+                    }
+                    
+                    if next_message_time:
+                        update_data['next_message_at'] = next_message_time
+                    else:
+                        update_data['sequence_active'] = False
+                        update_data['completed_at'] = datetime.datetime.utcnow()
+                    
+                    user_onboarding.update_one(
+                        {'telegram_id': telegram_id},
+                        {'$set': update_data}
+                    )
+                    
+                    logging.info(f"[FOLLOWUP] Sent message {message_config['message_number']} to {telegram_id}")
+                else:
+                    logging.error(f"[FOLLOWUP] Failed to send to {telegram_id}")
+                    
+            except Exception as e:
+                logging.error(f"[FOLLOWUP] Error processing user {user.get('telegram_id')}: {e}")
+                
+    except Exception as e:
+        logging.error(f"[FOLLOWUP] Error in process_followup_messages: {e}")
+        import traceback
+        traceback.print_exc()
+
+
+# Update start_scheduler function
+def start_scheduler():
+    if not TELEGRAM_BOT_TOKEN:
+        logging.warning('[SCHEDULER] TELEGRAM_BOT_TOKEN is not set.')
+
+    # Existing jobs
+    s.add_job(check_and_post_campaigns, 'interval', seconds=20, id='campaign_checker')
+    s.add_job(cleanup_finished_campaigns, 'interval', seconds=30, id='campaign_cleanup')
+    s.add_job(check_and_notify_expired_campaigns, 'interval', minutes=1, id='expiry_notifier')
+    
+    # ✅ NEW JOB: Process follow-up messages every 5 minutes
+    s.add_job(
+        process_followup_messages,
+        'interval',
+        minutes=5,
+        id='followup_processor',
+        replace_existing=True
+    )
+
+    s.start()
+    logging.info("[SCHEDULER] Scheduler started with follow-up message processing")

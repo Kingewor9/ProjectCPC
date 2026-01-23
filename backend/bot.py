@@ -401,3 +401,50 @@ def send_welcome_message(chat_id):
     except Exception as e:
         logging.exception(f'[BOT] Failed to send welcome message to {chat_id}')
         return None
+    
+def send_followup_message(chat_id, message_config):
+    """
+    Send a follow-up message with inline button
+    
+    Args:
+        chat_id: User's Telegram ID
+        message_config: Dictionary containing message text, CTA, etc.
+    
+    Returns:
+        Response from Telegram API
+    """
+    try:
+        from config import BOT_URL
+        
+        text = message_config['text']
+        cta_text = message_config['cta_text']
+        cta_link = message_config['cta_link']
+        
+        # Replace BOT_URL placeholder with actual URL
+        if cta_link == 'BOT_URL':
+            cta_link = BOT_URL
+        
+        # Create inline keyboard
+        keyboard = {
+            'inline_keyboard': [[
+                {'text': cta_text, 'url': cta_link}
+            ]]
+        }
+        
+        result = send_message(
+            chat_id=chat_id,
+            text=text,
+            parse_mode='HTML',
+            reply_markup=keyboard
+        )
+        
+        if result and result.get('ok'):
+            logging.info(f"[BOT] Successfully sent follow-up message to {chat_id}")
+        else:
+            logging.error(f"[BOT] Failed to send follow-up to {chat_id}: {result}")
+        
+        return result
+    
+    except Exception as e:
+        logging.exception(f'[BOT] Failed to send follow-up message to {chat_id}')
+        return None
