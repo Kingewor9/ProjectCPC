@@ -1,9 +1,10 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 from models import campaigns, channels, users, requests_col
-from bot import  send_message, send_photo, delete_message,  send_invite_campaign_post, send_campaign_post, send_open_button_message
+from bot import  send_message, send_photo, delete_message, send_broadcast_message, send_invite_campaign_post, send_campaign_post, send_open_button_message
 from config import APP_URL, TELEGRAM_BOT_TOKEN
 import logging
+import threading
 
 s = BackgroundScheduler()
 
@@ -474,3 +475,94 @@ def process_invite_campaigns():
                 {'id': campaign_id},
                 {'$set': {'status': 'completed'}}
             )
+
+# Store for tracking broadcast status
+broadcast_status = {}
+
+def schedule_broadcast_task(broadcast_id, user_ids, text, image, link, cta, admin_id):
+    """
+    Schedule a broadcast task to run in background
+    """
+    broadcast_status[broadcast_id] = {
+        'status': 'processing',
+        'total': len(user_ids),
+        'sent': 0,
+        'failed': 0
+    }
+    
+    # Start broadcast in a background thread
+    thread = threading.Thread(
+        target=process_broadcast,
+        args=(broadcast_id, user_ids, text, image, link, cta, admin_id)
+    )
+    thread.daemon = True
+    thread.start()
+    
+    logging.info(f"[BROADCAST] Task {broadcast_id} scheduled for {len(user_ids)} users")
+
+
+def process_broadcast(broadcast_id, user_ids, text, image, link, cta, admin_id):
+    """
+    Process broadcast in background
+    Sends messages to all users and notifies admin when complete
+    """
+    import time
+    
+    sent_count = 0
+    failed_count = 0
+    
+    logging.info(f"[BROADCAST] Starting broadcast {broadcast_id} to {len(user_ids)} users")
+    
+    for telegram_id in user_ids:
+        if not telegram_id:
+            continue
+        
+        try:
+            result = send_broadcast_message(
+                chat_id=str(telegram_id),
+                text=text,
+                image=image,
+                link=link,
+                cta=cta
+            )
+            
+            if result and result.get('ok'):
+                sent_count += 1
+            else:
+                failed_count += 1
+                logging.warning(f"[BROADCAST] Failed to send to {telegram_id}: {result}")
+            
+            # Update status
+            broadcast_status[broadcast_id]['sent'] = sent_count
+            broadcast_status[broadcast_id]['failed'] = failed_count
+            
+            # Small delay to avoid rate limiting (Telegram limit: ~30 messages/second)
+            time.sleep(0.05)  # 50ms delay = ~20 messages/second (safe)
+            
+        except Exception as e:
+            failed_count += 1
+            logging.error(f"[BROADCAST] Exception sending to {telegram_id}: {e}")
+    
+    # Mark as complete
+    broadcast_status[broadcast_id]['status'] = 'completed'
+    
+    logging.info(f"[BROADCAST] Completed {broadcast_id}: {sent_count} sent, {failed_count} failed")
+    
+    # Notify admin about completion
+    if admin_id:
+        try:
+            summary = (
+                f"📊 <b>Broadcast Complete</b>\n\n"
+                f"✅ Successfully sent: <b>{sent_count}</b>\n"
+                f"❌ Failed: <b>{failed_count}</b>\n"
+                f"📝 Total users: <b>{len(user_ids)}</b>\n\n"
+                f"Broadcast ID: <code>{broadcast_id}</code>"
+            )
+            
+            try:
+                send_open_button_message(str(admin_id), summary, button_text='View Dashboard')
+            except:
+                send_message(str(admin_id), summary)
+                
+        except Exception as e:
+            logging.error(f"[BROADCAST] Failed to notify admin: {e}")

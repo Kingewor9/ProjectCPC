@@ -2986,7 +2986,7 @@ def test_post_campaign(campaign_id):
         logging.exception('Error in test post')
         return jsonify({'error': str(e)}), 500
     
-@app.route('/api/admin/broadcast', methods=['POST'])
+#@app.route('/api/admin/broadcast', methods=['POST'])
 @token_required
 @admin_required
 def broadcast_message():
@@ -3058,6 +3058,86 @@ def broadcast_message():
         import traceback
         traceback.print_exc()
         return jsonify({'error': 'Failed to send broadcast'}), 500
+    
+#New broadcast endpoint   
+@app.route('/api/admin/broadcast', methods=['POST'])
+@token_required
+@admin_required
+def broadcast_message():
+    """Send a broadcast message to all users (Admin only) - Async version"""
+    data = request.json or {}
+    text = data.get('text', '').strip()
+    image = data.get('image', '').strip()
+    link = data.get('link', '').strip()
+    cta = data.get('cta', 'Learn More').strip()
+    
+    if not text:
+        return jsonify({'error': 'Message text is required'}), 400
+    
+    try:
+        # Get all users
+        all_users = list(users.find({}, {'telegram_id': 1, '_id': 0}))
+        
+        if not all_users:
+            return jsonify({'error': 'No users found'}), 404
+        
+        total_users = len(all_users)
+        admin_telegram_id = request.telegram_id
+        
+        # ✅ START BACKGROUND BROADCAST TASK
+        # Schedule the broadcast to run in background
+        from scheduler import schedule_broadcast_task
+        
+        broadcast_id = f"bc_{uuid.uuid4().hex[:12]}"
+        
+        # Schedule the task
+        schedule_broadcast_task(
+            broadcast_id=broadcast_id,
+            user_ids=[u.get('telegram_id') for u in all_users],
+            text=text,
+            image=image,
+            link=link,
+            cta=cta,
+            admin_id=admin_telegram_id
+        )
+        
+        # Return immediately with broadcast initiated status
+        return jsonify({
+            'ok': True,
+            'message': f'Broadcast initiated! Sending to {total_users} users...',
+            'broadcast_id': broadcast_id,
+            'total_users': total_users,
+            'status': 'processing'
+        })
+    
+    except Exception as e:
+        print(f"Error initiating broadcast: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to initiate broadcast'}), 500
+
+#Broadcast status endpoint   
+@app.route('/api/admin/broadcast/<broadcast_id>/status', methods=['GET'])
+@token_required
+@admin_required
+def get_broadcast_status(broadcast_id):
+    """Get status of a broadcast"""
+    from scheduler import broadcast_status
+    
+    status = broadcast_status.get(broadcast_id)
+    
+    if not status:
+        return jsonify({'error': 'Broadcast not found'}), 404
+    
+    return jsonify({
+        'ok': True,
+        'broadcast_id': broadcast_id,
+        'status': status['status'],
+        'total': status['total'],
+        'sent': status['sent'],
+        'failed': status['failed'],
+        'progress_percentage': round((status['sent'] + status['failed']) / status['total'] * 100, 1)
+    })
 
 #Webhook setup endpoint for admin 
 @app.route('/setup-webhook', methods=['POST'])
