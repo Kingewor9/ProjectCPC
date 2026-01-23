@@ -17,43 +17,81 @@ export default function BroadcastMessagePage() {
     cta: 'Learn More'
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!formData.text.trim()) {
+    setError('Message text is required');
+    return;
+  }
+
+  setLoading(true);
+  setError('');
+  setSuccess('');
+
+  try {
+    const response = await api.broadcastMessage(formData);
     
-    if (!formData.text.trim()) {
-      setError('Message text is required');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      const response = await api.broadcastMessage(formData);
+    if (response.ok) {
+      const broadcastId = response.broadcast_id;
       
-      if (response.ok) {
-        setSuccess(`Broadcast sent successfully to ${response.sent_count} users!`);
-        
-        // Reset after 3 seconds
-        setTimeout(() => {
-          setFormData({
-            text: '',
-            image: '',
-            link: '',
-            cta: 'Learn More'
-          });
-          setSuccess('');
-        }, 3000);
-      } else {
-        setError(response.error || 'Failed to send broadcast');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to send broadcast message');
-    } finally {
+      // Show initial success
+      setSuccess(`✅ Broadcast initiated! Sending to ${response.total_users} users...`);
+      
+      // Poll for status updates
+      const pollStatus = async () => {
+        try {
+          const statusResponse = await api.getBroadcastStatus(broadcastId);
+          
+          if (statusResponse.ok) {
+            if (statusResponse.status === 'completed') {
+              setSuccess(
+                `🎉 Broadcast Complete!\n\n` +
+                `✅ Sent: ${statusResponse.sent}\n` +
+                `❌ Failed: ${statusResponse.failed}\n` +
+                `📝 Total: ${statusResponse.total}`
+              );
+              setLoading(false);
+              
+              // Reset form after 3 seconds
+              setTimeout(() => {
+                setFormData({
+                  text: '',
+                  image: '',
+                  link: '',
+                  cta: 'Learn More'
+                });
+                setSuccess('');
+              }, 5000);
+            } else {
+              // Still processing, update status
+              setSuccess(
+                `⏳ Broadcasting... ${statusResponse.progress_percentage}% complete\n\n` +
+                `✅ Sent: ${statusResponse.sent} / ${statusResponse.total}`
+              );
+              
+              // Poll again in 2 seconds
+              setTimeout(pollStatus, 2000);
+            }
+          }
+        } catch (err) {
+          console.error('Error polling status:', err);
+          setLoading(false);
+        }
+      };
+      
+      // Start polling after 2 seconds
+      setTimeout(pollStatus, 2000);
+      
+    } else {
+      setError(response.error || 'Failed to send broadcast');
       setLoading(false);
     }
-  };
+  } catch (err: any) {
+    setError(err.response?.data?.error || 'Failed to send broadcast message');
+    setLoading(false);
+  }
+};
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
