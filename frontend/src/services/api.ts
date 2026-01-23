@@ -295,6 +295,11 @@ async broadcastMessage(data: {
   return response.data;
 }
 
+async getBroadcastStatus(broadcastId: string): Promise<any> {
+  const response = await this.api.get(`/api/admin/broadcast/${broadcastId}/status`);
+  return response.data;
+}
+
 // CP Coins / Tasks endpoints
 
 async getTasks(): Promise<any> {
