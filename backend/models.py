@@ -410,9 +410,13 @@ def validate_channel_with_telegram(username, bot_token):
         
         # For private channels, generate a display username
         display_username = chat.get('username')
+        is_private = display_username is None
+        
+        # UPDATED: For private channels, store telegram_id as username for internal use
+        # This allows the system to work without breaking link validation
         if not display_username:
-            # Private channel - use channel name
-            display_username = f"Private_{chat.get('title', 'Channel')[:20].replace(' ', '_')}"
+           display_username = str(chat_id)  # Store the actual chat ID, not a fake username
+        
         
         return {
             'name': chat.get('title', 'Unknown Channel'),
