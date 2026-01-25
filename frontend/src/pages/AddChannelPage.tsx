@@ -192,11 +192,21 @@ export default function AddChannelPage() {
       return;
     }
 
-    // Validate that promo link matches channel
-    if (!newPromo.link.includes(channelInfo?.username.replace('@', '') || '')) {
-      setError('Promo link must be from your channel');
+     // UPDATED: Skip username validation for private channels
+  if (channelInfo?.is_private) {
+    // For private channels, just validate it's a Telegram link
+    if (!newPromo.link.includes('t.me/')) {
+      setError('Promo link must be a valid Telegram link (e.g., https://t.me/c/1234567890/123 or invite link)');
       return;
     }
+  } else {
+    // For public channels, validate that link matches channel username
+    const channelUsername = channelInfo?.username?.replace('@', '') || '';
+    if (!newPromo.link.includes(channelUsername)) {
+      setError(`Promo link must be from your channel (@${channelUsername})`);
+      return;
+    }
+  }
 
     if (promoMaterials.length >= 3) {
       setError('Maximum 3 promo materials allowed');
@@ -611,15 +621,29 @@ return (
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">Promo Link</label>
-                  <input
-                    type="text"
-                    value={newPromo.link}
-                    onChange={(e) => setNewPromo({...newPromo, link: e.target.value})}
-                    placeholder={`https://t.me/${channelInfo?.username.replace('@', '')}/123`}
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
-                  />
-                </div>
+  <label className="block text-sm font-medium text-grey-300 mb-2">Promo Link</label>
+  <input
+    type="text"
+    value={newPromo.link}
+    onChange={(e) => setNewPromo({...newPromo, link: e.target.value})}
+    placeholder={
+      channelInfo?.is_private 
+        ? "https://t.me/c/1234567890/123 or https://t.me/+AbCdEfGhIjK"
+        : `https://t.me/${channelInfo?.username.replace('@', '')}/123`
+    }
+    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500 text-sm sm:text-base"
+  />
+  {channelInfo?.is_private && (
+    <p className="text-grey-400 text-xs mt-2">
+      💡 For private channels, use a post link from your channel or an invite link
+    </p>
+  )}
+  {!channelInfo?.is_private && (
+    <p className="text-grey-400 text-xs mt-2">
+      💡 Link must be from your channel (e.g., https://t.me/{channelInfo?.username.replace('@', '')}/123)
+    </p>
+  )}
+</div>
 
                 <div>
                   <label className="block text-sm font-medium text-grey-300 mb-2">Call-to-Action</label>
