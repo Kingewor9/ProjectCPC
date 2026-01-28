@@ -177,10 +177,24 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
       return;
     }
 
-    if (!newPromo.link.includes(channel?.username.replace('@', '') || '')) {
-      setError('Promo link must be from your channel');
+    // UPDATED: Different validation for private vs public channels
+  // Check if channel is private by checking if username is a numeric ID
+  const isPrivateChannel = channel?.username && /^-?\d+$/.test(channel.username);
+  
+  if (isPrivateChannel) {
+    // For private channels, just validate it's a Telegram link
+    if (!newPromo.link.includes('t.me/')) {
+      setError('Promo link must be a valid Telegram link (t.me/c/... or invite link)');
       return;
     }
+  } else {
+    // For public channels, validate that link matches channel username
+    const channelUsername = channel?.username?.replace('@', '') || '';
+    if (!newPromo.link.includes(channelUsername)) {
+      setError(`Promo link must be from your channel (@${channelUsername})`);
+      return;
+    }
+  }
 
     if (promoMaterials.length >= 3) {
       setError('Maximum 3 promo materials allowed');
@@ -558,9 +572,33 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
                     type="text"
                     value={newPromo.link}
                     onChange={(e) => setNewPromo({...newPromo, link: e.target.value})}
-                    placeholder={`https://t.me/${channel.username.replace('@', '')}/123`}
+                    placeholder={
+                      channel?.username && /^-?\d+$/.test(channel.username)
+        ?             "https://t.me/c/1234567890/123 or https://t.me/+InviteCode"
+                     : `https://t.me/${channel.username.replace('@', '')}/123`
+                    }
                     className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
                   />
+
+                  {/* Helper text for private channels */}
+  {channel?.username && /^-?\d+$/.test(channel.username) && (
+    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-2">
+      <p className="text-blue-300 text-xs">
+        <strong>💡 Private Channel Link:</strong>
+      </p>
+      <ul className="text-grey-300 text-xs mt-1 space-y-1">
+        <li>• Copy a post link from your channel (looks like: t.me/c/1234567890/123)</li>
+        <li>• Or use your channel's invite link (looks like: t.me/+AbCdEfGhIjK)</li>
+      </ul>
+    </div>
+  )}
+  
+  {/* Helper text for public channels */}
+  {channel?.username && !/^-?\d+$/.test(channel.username) && (
+    <p className="text-grey-400 text-xs mt-2">
+      Link must be from your channel (e.g., https://t.me/{channel.username.replace('@', '')}/123)
+    </p>
+  )}
                 </div>
 
                 <div>
