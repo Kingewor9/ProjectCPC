@@ -108,12 +108,12 @@ export default function HelpPage() {
               Reach out to our support team on Telegram.
             </p>
             <a
-              href="https://t.me/cpgramsupport"
+              href="https://t.me/Mike_cpgram"
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-400 hover:text-blue-300 font-medium"
             >
-              @cpgramsupport
+              @Mike_cpgram
             </a>
           </div>
         </div>
