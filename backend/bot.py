@@ -136,7 +136,7 @@ def send_campaign_promo_for_posting(chat_id, promo_text, promo_link, promo_image
     """
     try:
         # Build the message WITHOUT any preview labels
-        caption = promo_text
+        caption = f"{promo_text}\n\n<a href='{BOT_URL}'>Powered by CP Gram</a>"
         
         # Create inline keyboard with CTA button if link provided
         keyboard = None
