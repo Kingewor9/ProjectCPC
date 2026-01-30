@@ -1,5 +1,5 @@
 import Layout from '../components/Layout';
-import { HelpCircle, Mail, MessageCircle } from 'lucide-react';
+import { HelpCircle, Mail, MessageCircle, FileText } from 'lucide-react';
 
 export default function HelpPage() {
   const faqs = [
@@ -114,6 +114,24 @@ export default function HelpPage() {
               className="text-blue-400 hover:text-blue-300 font-medium"
             >
               @Mike_cpgram
+            </a>
+          </div>
+
+          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <FileText size={24} className="text-blue-400" />
+              <h3 className="text-lg font-bold text-white">Documentation</h3>
+            </div>
+            <p className="text-grey-400 mb-4">
+              Read our documentation for detailed information & guidance.
+            </p>
+            <a
+              href="https://cross-promotions-gram.gitbook.io/cross-promotions-gram-docs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 font-medium"
+            >
+              Read Docs
             </a>
           </div>
         </div>
