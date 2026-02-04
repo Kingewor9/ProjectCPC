@@ -88,6 +88,11 @@ export default function SendRequestPage() {
     };
 
     fetchData();
+      const refreshInterval = setInterval(() => {
+    fetchData();
+  }, 5 * 60 * 1000);
+  
+  return () => clearInterval(refreshInterval);
   }, [user, navigate]);
 
   // CHANGED: Set initial values when partner is selected

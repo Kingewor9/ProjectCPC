@@ -11,16 +11,21 @@ export default function DashboardPage() {
   const { user, loading, fetchUser } = useAuth();
 
   useEffect(() => {
+  // Always fetch fresh user data when dashboard loads
+  fetchUser();
+}, [fetchUser]);
+
+  useEffect(() => {
     if (!localStorage.getItem('authToken')) {
       navigate('/login');
     }
   }, [navigate]);
 
-  useEffect(() => {
-    if (!user) {
-      fetchUser();
-    }
-  }, [user, fetchUser]);
+  //useEffect(() => {
+  //  if (!user) {
+   //   fetchUser();
+   /// }
+ // }, [user, fetchUser]);
 
   if (loading || !user) {
     return (

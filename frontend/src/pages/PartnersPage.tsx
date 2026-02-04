@@ -38,6 +38,14 @@ export default function PartnersPage() {
     };
 
     fetchPartners();
+
+    // ADDED: Refresh partner data every 5 minutes for live counts
+  const refreshInterval = setInterval(() => {
+    fetchPartners();
+  }, 5 * 60 * 1000); // 5 minutes
+  
+  // Cleanup interval on unmount
+  return () => clearInterval(refreshInterval);
   }, [user, navigate]);
 
   if (loading || !user) {
