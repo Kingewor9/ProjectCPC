@@ -52,6 +52,9 @@ const TIME_SLOTS = [
   '20:00 - 21:00 UTC', '21:00 - 22:00 UTC', '22:00 - 23:00 UTC', '23:00 - 00:00 UTC'
 ];
 
+const MIN_PRICE = 1000;
+const MAX_PRICE = 750000;
+
 export default function EditChannelPage() {
   const navigate = useNavigate();
   const { channelId } = useParams<{ channelId: string }>();
@@ -223,6 +226,15 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
     }
     if (!Object.values(priceSettings).some(p => p.enabled)) {
       setError('Please enable at least one duration price');
+      return;
+    }
+    const enabledPrices = Object.values(priceSettings).filter(p => p.enabled);
+    const invalidPrices = enabledPrices.filter(
+      p => p.price < MIN_PRICE || p.price > MAX_PRICE
+    );
+    
+    if (invalidPrices.length > 0) {
+      setError(`All prices must be between ${MIN_PRICE.toLocaleString()} and ${MAX_PRICE.toLocaleString()} CP Coins`);
       return;
     }
     if (selectedTimeSlots.length === 0) {
@@ -442,35 +454,63 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
           </div>
 
           {/* Price Settings */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Duration Prices</h2>
-            <div className="space-y-3">
-              {Object.entries(priceSettings).map(([hours, settings]) => (
-                <div key={hours} className="flex items-center gap-4 bg-darkBlue-700 p-4 rounded-lg">
-                  <button
-                    onClick={() => togglePriceSetting(hours as keyof PriceSettings)}
-                    className={`w-12 h-6 rounded-full transition-all relative ${
-                      settings.enabled ? 'bg-blue-600' : 'bg-grey-600'
-                    }`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
-                      settings.enabled ? 'right-0.5' : 'left-0.5'
-                    }`} />
-                  </button>
-                  <span className="text-white font-medium w-20">{hours} hours</span>
-                  <input
-                    type="number"
-                    value={settings.price}
-                    onChange={(e) => updatePrice(hours as keyof PriceSettings, Number(e.target.value))}
-                    disabled={!settings.enabled}
-                    placeholder="Price"
-                    className="flex-1 bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-blue-500"
-                  />
-                  <span className="text-grey-400">CP</span>
-                </div>
-              ))}
-            </div>
+<div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
+  <h2 className="text-xl font-bold text-white mb-4">Duration Prices</h2>
+  
+  {/* Price range info */}
+  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
+    <p className="text-blue-300 text-sm">
+      <strong>💰 Price Range:</strong> Minimum {MIN_PRICE.toLocaleString()} CP - Maximum {MAX_PRICE.toLocaleString()} CP Coins
+    </p>
+  </div>
+  
+  <div className="space-y-3">
+    {Object.entries(priceSettings).map(([hours, settings]) => {
+      const isInvalidPrice = settings.enabled && (settings.price < MIN_PRICE || settings.price > MAX_PRICE);
+      
+      return (
+        <div key={hours}>
+          <div className="flex items-center gap-4 bg-darkBlue-700 p-4 rounded-lg">
+            <button
+              onClick={() => togglePriceSetting(hours as keyof PriceSettings)}
+              className={`w-12 h-6 rounded-full transition-all relative ${
+                settings.enabled ? 'bg-blue-600' : 'bg-grey-600'
+              }`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
+                settings.enabled ? 'right-0.5' : 'left-0.5'
+              }`} />
+            </button>
+            <span className="text-white font-medium w-20">{hours} hours</span>
+            <input
+              type="number"
+              value={settings.price}
+              onChange={(e) => updatePrice(hours as keyof PriceSettings, Number(e.target.value))}
+              disabled={!settings.enabled}
+              placeholder={`${MIN_PRICE} - ${MAX_PRICE}`}
+              min={MIN_PRICE}
+              max={MAX_PRICE}
+              className={`flex-1 bg-darkBlue-600 border ${
+                isInvalidPrice ? 'border-red-500' : 'border-grey-600'
+              } rounded-lg px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-blue-500`}
+            />
+            <span className="text-grey-400">CP</span>
           </div>
+          
+          {/* Validation message */}
+          {isInvalidPrice && (
+            <p className="text-red-400 text-xs mt-1 ml-20">
+              {settings.price < MIN_PRICE 
+                ? `Minimum price is ${MIN_PRICE.toLocaleString()} CP` 
+                : `Maximum price is ${MAX_PRICE.toLocaleString()} CP`
+              }
+            </p>
+          )}
+        </div>
+      );
+    })}
+  </div>
+</div>
 
           {/* Time Slots */}
           <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
