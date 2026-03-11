@@ -5,7 +5,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { Star, Wallet, ArrowRight, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Star, Wallet, ArrowRight, CheckCircle, Info } from 'lucide-react';
 
 interface ExchangeRate {
   stars_per_cpc: number;
@@ -135,127 +135,141 @@ export default function BuyCoinsPage() {
 
   return (
     <Layout>
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-32 animate-fade-in-up">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-10 sm:mb-12 text-center sm:text-left">
           <button
             onClick={() => navigate('/cp-coins')}
-            className="text-blue-400 hover:text-blue-300 mb-4 flex items-center gap-2"
+            className="text-contentMuted hover:text-white mb-6 flex items-center justify-center sm:justify-start gap-2 transition-colors font-bold tracking-wide text-sm mx-auto sm:mx-0"
           >
-            ← Back to CP Coins
+            ← BACK TO CP COINS
           </button>
-          <h1 className="text-4xl font-bold text-white mb-2">Buy CP Coins</h1>
-          <p className="text-grey-400">Purchase CP Coins using Telegram Stars</p>
+          <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Buy CP Coins</h1>
+          <p className="text-contentMuted text-lg font-sans">Purchase CP Coins using Telegram Stars</p>
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
         
         {success && (
-          <div className="mb-6 bg-green-600/10 border border-green-600/30 rounded-lg p-4">
+          <div className="mb-8 bg-neon-emerald/10 border border-neon-emerald/30 rounded-xl p-5 shadow-[0_0_15px_rgba(0,255,157,0.1)]">
             <div className="flex items-center gap-3">
-              <CheckCircle className="text-green-400" size={20} />
-              <p className="text-green-400">{success}</p>
+              <CheckCircle className="text-neon-emerald" size={24} />
+              <p className="text-neon-emerald font-bold tracking-wide">{success}</p>
             </div>
           </div>
         )}
 
         {/* Current Balance */}
-        <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 mb-8">
-          <div className="flex items-center justify-between">
+        <div className="glass-panel p-6 sm:p-8 mb-8 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-neon-cyan/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-neon-cyan/10 transition-colors"></div>
+          <div className="flex items-center justify-between relative z-10">
             <div>
-              <p className="text-grey-400 text-sm mb-1">Current Balance</p>
-              <p className="text-3xl font-bold text-white">{user?.cpcBalance || 0} CP</p>
+              <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-2">Current Balance</p>
+              <p className="text-3xl sm:text-4xl font-mono font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)] group-hover:text-neon-cyan transition-colors">
+                {user?.cpcBalance?.toLocaleString() || 0} <span className="text-xl text-neon-cyan/80">CP</span>
+              </p>
             </div>
-            <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-              <Wallet className="text-blue-400" size={24} />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-neon-cyan/10 border border-neon-cyan/30 rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.15)] group-hover:scale-110 transition-transform">
+              <Wallet className="text-neon-cyan" size={28} />
             </div>
           </div>
         </div>
 
         {/* Exchange Rate Info */}
-        <div className="bg-blue-600/10 border border-blue-600/30 rounded-lg p-6 mb-8">
-          <div className="flex items-start gap-3">
-            <Info className="text-blue-400 flex-shrink-0 mt-1" size={20} />
-            <div>
-              <p className="text-blue-300 font-medium mb-2">Exchange Rate</p>
-              <p className="text-blue-200 text-lg">
-                <span className="font-bold">1 Star</span> = <span className="font-bold">1 CP Coin</span>
+        <div className="bg-neon-violet/10 border border-neon-violet/30 rounded-xl p-6 sm:p-8 mb-8 shadow-[0_0_20px_rgba(138,43,226,0.1)]">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="hidden sm:flex items-center justify-center w-12 h-12 bg-neon-violet/20 rounded-full flex-shrink-0">
+              <Info className="text-neon-violet" size={24} />
+            </div>
+            <div className="flex-1">
+              <p className="text-white font-heading font-bold text-lg mb-3 flex items-center gap-2">
+                <span className="sm:hidden text-neon-violet"><Info size={20} /></span>
+                Exchange Rate
               </p>
-              <p className="text-blue-200 text-sm mt-2">
-                Minimum purchase: {exchangeRate.minimum_purchase} CP Coins
+              <div className="flex flex-wrap items-center gap-3 bg-charcoal/50 p-3 rounded-lg border border-surfaceBorder mb-3">
+                <span className="font-bold text-yellow-400 flex items-center gap-1.5"><Star size={18} fill="currentColor"/> 1 Star</span> 
+                <span className="text-contentMuted">=</span> 
+                <span className="font-bold text-neon-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.3)]">1 CP Coin</span>
+              </div>
+              <p className="text-contentMuted text-sm font-mono flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>
+                Minimum purchase: <span className="text-white font-bold">{exchangeRate.minimum_purchase.toLocaleString()} CP</span>
               </p>
             </div>
           </div>
         </div>
 
         {/* Purchase Form */}
-        <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-8">
-          <h2 className="text-2xl font-bold text-white mb-6">Purchase Amount</h2>
+        <div className="glass-panel p-6 sm:p-8 mb-8">
+          <h2 className="text-2xl font-heading font-bold text-white mb-8 flex items-center gap-3">
+            <span className="text-neon-cyan">💎</span> Purchase Amount
+          </h2>
 
           {/* Amount Input */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-grey-300 mb-3">
+          <div className="mb-8">
+            <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-3 ml-1">
               How many CP Coins do you want to buy?
             </label>
-            <div className="relative">
+            <div className="relative group">
               <input
                 type="text"
                 value={cpcAmount}
                 onChange={(e) => handleAmountChange(e.target.value)}
                 placeholder="Enter amount"
-                className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-4 text-white text-2xl font-bold focus:outline-none focus:border-blue-500"
+                className="w-full bg-charcoal border border-surfaceBorder rounded-2xl px-6 py-5 text-white text-3xl font-mono font-bold focus:outline-none focus:border-neon-cyan focus:shadow-[0_0_20px_rgba(0,240,255,0.15)] transition-all group-hover:border-neon-cyan/50"
               />
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                <span className="text-grey-400 text-lg">CP</span>
+              <div className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-charcoal pl-2">
+                <span className="text-neon-cyan font-bold text-xl tracking-widest">CP</span>
               </div>
             </div>
           </div>
 
           {/* Quick Amount Buttons */}
-          <div className="mb-8">
-            <p className="text-sm text-grey-400 mb-3">Quick Select:</p>
-            <div className="grid grid-cols-3 gap-3">
+          <div className="mb-10">
+            <p className="text-xs font-bold tracking-widest uppercase text-contentMuted mb-4 ml-1">Quick Select</p>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {quickAmounts.map((amount) => (
                 <button
                   key={amount}
                   onClick={() => setQuickAmount(amount)}
-                  className={`py-3 rounded-lg font-medium transition-all ${
+                  className={`py-3 rounded-xl font-mono font-bold tracking-wide transition-all duration-300 ${
                     cpcAmount === amount.toString()
-                      ? 'bg-blue-600 text-white border-2 border-blue-400'
-                      : 'bg-darkBlue-700 text-grey-300 hover:bg-darkBlue-600 border-2 border-transparent'
+                      ? 'bg-neon-cyan/20 border border-neon-cyan text-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)] transform scale-105'
+                      : 'bg-surface border border-surfaceBorder text-contentMuted hover:border-neon-cyan/50 hover:text-white'
                   }`}
                 >
-                  {amount.toLocaleString()} CP
+                  {amount >= 1000 ? `${amount / 1000}k` : amount}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Cost Display */}
-          <div className="bg-darkBlue-700 rounded-lg p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-grey-400 text-sm mb-1">You will receive</p>
-                <p className="text-3xl font-bold text-white">
-                  {parseInt(cpcAmount) || 0} CP
+          <div className="bg-charcoal border border-surfaceBorder rounded-2xl p-6 sm:p-8 mb-8 relative overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-neon-cyan via-neon-violet to-neon-cyan opacity-50"></div>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+              <div className="text-center sm:text-left w-full sm:w-auto">
+                <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-2">You will receive</p>
+                <p className="text-3xl sm:text-4xl font-mono font-bold text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                  {(parseInt(cpcAmount) || 0).toLocaleString()} <span className="text-xl text-neon-cyan">CP</span>
                 </p>
               </div>
-              <ArrowRight className="text-grey-500" size={32} />
-              <div>
-                <p className="text-grey-400 text-sm mb-1">You will pay</p>
-                <div className="flex items-center gap-2">
-                  <Star className="text-yellow-400" size={24} fill="currentColor" />
-                  <p className="text-3xl font-bold text-yellow-400">
+              
+              <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-surface border border-surfaceBorder flex-shrink-0">
+                <ArrowRight className="text-contentMuted" size={24} />
+              </div>
+              <div className="sm:hidden flex items-center justify-center w-8 h-8 rounded-full bg-surface border border-surfaceBorder my-2">
+                <ArrowRight className="text-contentMuted rotate-90" size={16} />
+              </div>
+
+              <div className="text-center sm:text-right w-full sm:w-auto bg-yellow-500/10 sm:bg-transparent p-5 sm:p-0 rounded-xl border border-yellow-500/20 sm:border-transparent">
+                <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-2">You will pay</p>
+                <div className="flex items-center justify-center sm:justify-end gap-3">
+                  <Star className="text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" size={32} fill="currentColor" />
+                  <p className="text-3xl sm:text-4xl font-mono font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.3)]">
                     {starsRequired.toLocaleString()}
                   </p>
                 </div>
-              </div>
-            </div>
-
-            <div className="border-t border-grey-600 pt-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-grey-400">Exchange Rate:</span>
-                <span className="text-white">1 Star = 1 CP</span>
               </div>
             </div>
           </div>
@@ -264,60 +278,60 @@ export default function BuyCoinsPage() {
           <button
             onClick={handlePurchase}
             disabled={purchasing || !cpcAmount || parseInt(cpcAmount) < exchangeRate.minimum_purchase}
-            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-grey-600 disabled:to-grey-700 disabled:cursor-not-allowed text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-3 text-lg"
+            className="w-full bg-neon-cyan hover:bg-white text-charcoal font-extrabold py-5 rounded-2xl transition-all flex items-center justify-center gap-3 text-lg tracking-widest shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neon-cyan disabled:hover:shadow-[0_0_20px_rgba(0,240,255,0.3)] group relative overflow-hidden"
           >
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none"></div>
             {purchasing ? (
               <>
                 <LoadingSpinner />
-                Processing...
+                <span>PROCESSING...</span>
               </>
             ) : (
               <>
-                <Star size={24} fill="currentColor" />
-                Buy {parseInt(cpcAmount) || 0} CP with {starsRequired} Stars
+                <Star size={24} className="fill-current group-hover:scale-110 transition-transform" />
+                <span>BUY {(parseInt(cpcAmount) || 0).toLocaleString()} CP</span>
               </>
             )}
           </button>
 
           {/* Info Text */}
-          <p className="text-grey-400 text-xs text-center mt-4">
+          <p className="text-contentMuted text-xs font-mono text-center mt-6">
             You will be redirected to Telegram to complete the payment
           </p>
         </div>
 
         {/* How It Works */}
-        <div className="mt-8 bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <AlertCircle className="text-blue-400" size={20} />
-            How it works
+        <div className="glass-panel p-6 sm:p-8 mb-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-neon-violet/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          <h3 className="text-xl sm:text-2xl font-heading font-bold text-white mb-6 flex items-center gap-3 relative z-10">
+            <span className="text-neon-violet">ℹ️</span> How it works
           </h3>
-          <ol className="space-y-3 text-grey-300">
-            <li className="flex items-start gap-3">
-              <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">1</span>
-              <span>Enter the amount of CP Coins you want to purchase</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">2</span>
-              <span>Click the "Buy" button to initiate the payment</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">3</span>
-              <span>You'll be redirected to Telegram to complete the payment using Stars</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">4</span>
-              <span>After successful payment, CP Coins will be instantly added to your balance</span>
-            </li>
-          </ol>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
+            {[
+              "Enter the amount of CP Coins you want to purchase",
+              "Click the \"Buy\" button to initiate the payment",
+              "You'll be redirected to Telegram to pay using Stars",
+              "After successful payment, CP Coins will be added instantly"
+            ].map((step, index) => (
+              <div key={index} className="flex items-start gap-4 p-4 bg-surface/50 border border-surfaceBorder rounded-xl hover:border-neon-violet/30 transition-colors">
+                <span className="w-8 h-8 rounded-lg bg-neon-violet/10 border border-neon-violet/30 flex items-center justify-center text-neon-violet font-mono font-bold flex-shrink-0 shadow-[0_0_10px_rgba(138,43,226,0.1)]">
+                  {index + 1}
+                </span>
+                <span className="mt-1 leading-snug text-sm text-contentMuted hover:text-white transition-colors">{step}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Security Notice */}
-        <div className="mt-6 bg-green-600/10 border border-green-600/30 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <CheckCircle className="text-green-400 flex-shrink-0 mt-1" size={20} />
-            <div className="text-sm text-green-200">
-              <p className="font-medium mb-1">Secure Payment</p>
-              <p>All payments are processed securely through Telegram's official payment system. We never store your payment information.</p>
+        <div className="bg-neon-emerald/5 border border-neon-emerald/20 rounded-xl p-6 shadow-[0_0_15px_rgba(0,255,157,0.05)]">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
+            <div className="w-12 h-12 rounded-full bg-neon-emerald/10 flex items-center justify-center flex-shrink-0">
+               <CheckCircle className="text-neon-emerald" size={24} />
+            </div>
+            <div className="text-sm text-neon-emerald/80 leading-relaxed font-mono">
+              <p className="font-bold tracking-widest text-neon-emerald mb-2 uppercase text-base">Secure Payment</p>
+              <p>All payments are processed securely through Telegram's official payment system. We never store your payment information on our servers.</p>
             </div>
           </div>
         </div>

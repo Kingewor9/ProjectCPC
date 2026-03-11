@@ -63,24 +63,24 @@ export default function PartnersPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Partner Channels</h1>
-          <p className="text-grey-400">Browse and connect with channels in your industry</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-32 animate-fade-in-up">
+        <div className="mb-10 sm:mb-12">
+          <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Partner Channels</h1>
+          <p className="text-contentMuted text-lg font-sans">Browse and connect with channels in your industry</p>
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
 
         {/* Topic Filter */}
         {topics.length > 0 && (
-          <div className="mb-8">
-            <div className="flex flex-wrap gap-3">
+          <div className="mb-10 overflow-x-auto pb-4 scrollbar-hide">
+            <div className="flex gap-3 min-w-max">
               <button
                 onClick={() => setSelectedTopic(null)}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-5 py-2.5 rounded-full font-bold tracking-widest text-xs uppercase transition-all ${
                   selectedTopic === null
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-darkBlue-700 text-grey-300 hover:text-white'
+                    ? 'bg-neon-cyan text-charcoal shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                    : 'bg-surface border border-surfaceBorder text-contentMuted hover:text-white hover:border-contentMuted'
                 }`}
               >
                 All Topics
@@ -89,10 +89,10 @@ export default function PartnersPage() {
                 <button
                   key={topic}
                   onClick={() => setSelectedTopic(topic)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`px-5 py-2.5 rounded-full font-bold tracking-widest text-xs uppercase transition-all ${
                     selectedTopic === topic
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-darkBlue-700 text-grey-300 hover:text-white'
+                      ? 'bg-neon-cyan text-charcoal shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                      : 'bg-surface border border-surfaceBorder text-contentMuted hover:text-white hover:border-contentMuted'
                   }`}
                 >
                   {topic}
@@ -103,122 +103,129 @@ export default function PartnersPage() {
         )}
 
         {/* Partners Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPartners.map((partner) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredPartners.map((partner, index) => (
             <div
               key={partner.id}
-              className="bg-darkBlue-800 border border-grey-700 rounded-lg overflow-hidden hover:border-blue-500 transition-all group"
+              className="glass-panel group relative overflow-hidden flex flex-col justify-between"
+              style={{ animationDelay: `${index * 50}ms` }}
             >
               {/* Header */}
-              <div className="h-32 bg-gradient-to-br from-blue-600/20 to-darkBlue-700 relative">
-                <div className="absolute bottom-4 left-4 group-hover:scale-105 transition-transform">
+              <div className="h-28 bg-gradient-to-br from-neon-cyan/20 to-surface relative border-b border-surfaceBorder/50">
+                <div className="absolute -bottom-6 left-6 group-hover:scale-105 transition-transform duration-300">
                   <ChannelAvatar
                     src={partner.avatar}
                     alt={partner.name}
-                    className="w-16 h-16 border-2 border-darkBlue-800"
+                    className="w-16 h-16 border-4 border-charcoal shadow-lg"
                     channelName={partner.name}
                   />
+                </div>
+                <div className="absolute top-4 right-4 bg-charcoal/80 backdrop-blur-sm border border-surfaceBorder px-2.5 py-1 rounded text-[10px] font-bold tracking-widest uppercase text-neon-cyan">
+                  {partner.topic}
                 </div>
               </div>
 
               {/* Content */}
-              <div className="p-6 pt-8">
-                <div className="mb-4">
-                  <h3 className="text-lg font-bold text-white">{partner.name}</h3>
-                  <p className="text-blue-400 text-sm font-medium">{partner.topic}</p>
-                </div>
-
-                {/* Stats */}
-                <div className="space-y-3 mb-6 py-4 border-y border-grey-700">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-grey-400">Subscribers</span>
-                    <span className="text-white font-bold">{partner.subs.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-grey-400">Language</span>
-                    <span className="text-white font-bold">{partner.lang}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-grey-400">Cross-Exchanges</span>
-                    <span className="text-white font-bold">{partner.xExchanges}</span>
+              <div className="p-6 pt-10 flex flex-col flex-1">
+                <div className="mb-5 border-b border-surfaceBorder/50 pb-5">
+                  <h3 className="text-xl font-heading font-bold text-white mb-1 truncate">{partner.name}</h3>
+                  <div className="flex items-center gap-4 mt-3">
+                    <div>
+                      <span className="block text-contentMuted text-[10px] uppercase tracking-widest font-bold mb-1">Subscribers</span>
+                      <span className="text-white font-mono font-bold">{partner.subs.toLocaleString()}</span>
+                    </div>
+                    <div className="w-px h-6 bg-surfaceBorder/50"></div>
+                    <div>
+                      <span className="block text-contentMuted text-[10px] uppercase tracking-widest font-bold mb-1">Language</span>
+                      <span className="text-white font-mono font-bold">{partner.lang}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Days & Times */}
-                <div className="mb-4">
-                  <p className="text-xs text-grey-400 font-medium mb-2">ACCEPTED DAYS</p>
-                  <div className="flex flex-wrap gap-2">
-                    {partner.acceptedDays.map((day) => (
-                      <span
-                        key={day}
-                        className="bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded"
-                      >
-                        {day.slice(0, 3)}
-                      </span>
-                    ))}
+                <div className="space-y-4 mb-6 flex-1">
+                  <div>
+                    <span className="block text-contentMuted text-[10px] uppercase tracking-widest font-bold mb-2">Accepted Days</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {partner.acceptedDays.map((day) => (
+                        <span
+                          key={day}
+                          className="bg-neon-violet/10 border border-neon-violet/20 text-neon-violet text-[10px] uppercase tracking-widest font-bold px-2 py-1 rounded"
+                        >
+                          {day.slice(0, 3)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="mb-6">
-                  <p className="text-xs text-grey-400 font-medium mb-2">TIME SLOTS</p>
-                  <div className="space-y-1">
-                    {partner.availableTimeSlots.map((slot) => (
-                      <div key={slot} className="text-xs text-grey-300">
-                        {slot}
+                  <div>
+                    <span className="block text-contentMuted text-[10px] uppercase tracking-widest font-bold mb-2">Time Slots</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {partner.availableTimeSlots.map((slot) => (
+                        <span
+                          key={slot}
+                          className="bg-surface border border-surfaceBorder text-white text-[10px] font-mono px-2 py-1 rounded"
+                        >
+                          {slot}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {Object.keys(partner.durationPrices).length > 0 && (
+                    <div>
+                      <span className="block text-contentMuted text-[10px] uppercase tracking-widest font-bold mb-2">Pricing</span>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(partner.durationPrices).map(([hours, price]) => (
+                          <div
+                            key={hours}
+                            className="bg-neon-emerald/5 border border-neon-emerald/20 rounded px-2.5 py-1 text-center"
+                          >
+                            <span className="text-neon-emerald text-[10px] font-bold tracking-widest uppercase mr-1.5">{hours}h</span>
+                            <span className="text-white font-mono tracking-tight font-bold">{price} CP</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Pricing */}
-                <div className="mb-6">
-                  <p className="text-xs text-grey-400 font-medium mb-2">PRICING</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(partner.durationPrices).map(([hours, price]) => (
-                      <div
-                        key={hours}
-                        className="bg-darkBlue-700 rounded px-2 py-1 text-center border border-grey-700"
-                      >
-                        <p className="text-xs text-grey-400">{hours}h</p>
-                        <p className="text-sm font-bold text-white">{price} CPC</p>
-                      </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* View Channel Button */}
                 <a
-                  href={`https://t.me/${partner.telegram_chat?.replace('@', '') || partner.telegram_chat?.replace('@', '')}`}
+                  href={`https://t.me/${partner.telegram_chat?.replace('@', '') || partner.name}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="w-full btn-secondary py-3 flex items-center justify-center gap-2 group-hover:border-neon-cyan/50 group-hover:text-neon-cyan transition-colors"
                 >
                   <ExternalLink size={16} />
-                  View Channel
+                  <span>VIEW CHANNEL</span>
                 </a>
               </div>
             </div>
           ))}
         </div>
 
-  {filteredPartners.length === 0 && !loading && (
-  <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-12 text-center">
-    <Users size={40} className="mx-auto mb-4 text-grey-600" />
-    <h2 className="text-2xl font-bold text-white mb-2">No Partners Yet</h2>
-    <p className="text-grey-400 mb-4">
-      {selectedTopic 
-        ? `No partners found in ${selectedTopic} category` 
-        : 'Start cross-promoting to build your partner network'}
-    </p>
-    <button
-      onClick={() => navigate('/send-request')}
-      className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 px-6 rounded-lg transition-all"
-    >
-      Send Your First Promotion
-    </button>
-  </div>
-)}
-</div>
-</Layout>
- );
+        {filteredPartners.length === 0 && !loading && (
+          <div className="glass-panel p-12 text-center border-dashed border-2 border-surfaceBorder/50 max-w-lg mx-auto mt-12 relative overflow-hidden group mix-blend-screen">
+            <div className="absolute inset-0 bg-neon-cyan/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+            <div className="w-20 h-20 bg-surface border border-surfaceBorder rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,0,0,0.3)] mx-auto mb-6 relative z-10 group-hover:border-neon-cyan/50 transition-colors duration-500">
+              <Users size={32} className="text-contentMuted group-hover:text-neon-cyan transition-colors duration-500" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-heading font-extrabold text-white mb-3 relative z-10">No Partners Yet</h2>
+            <p className="text-contentMuted mb-8 font-sans relative z-10">
+              {selectedTopic 
+                ? `We couldn't find any partners matching the "${selectedTopic}" category.` 
+                : 'Start cross-promoting to build your partner network and discover new creators.'}
+            </p>
+            <button
+              onClick={() => navigate('/send-request')}
+              className="btn-primary px-8 py-4 relative z-10 w-full sm:w-auto overflow-hidden group/btn"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/0 via-neon-cyan/20 to-neon-cyan/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000"></div>
+              <span className="relative z-10 tracking-widest font-bold">SEND YOUR FIRST PROMO</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </Layout>
+  );
 }

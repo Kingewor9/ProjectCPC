@@ -212,104 +212,109 @@ export default function AdminModerateChannelsPage() {
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-32 animate-fade-in-up">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Channel Moderation</h1>
-          <p className="text-grey-400">Review and approve channel submissions</p>
+        <div className="mb-10 sm:mb-12">
+          <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Channel Moderation</h1>
+          <p className="text-contentMuted text-lg font-sans">Review and approve channel submissions</p>
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
         
         {success && (
-          <div className="mb-6 bg-green-600/10 border border-green-600/30 rounded-lg p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="text-green-400" size={20} />
-              <p className="text-green-400">{success}</p>
-            </div>
+          <div className="mb-8 bg-neon-emerald/10 border border-neon-emerald/30 rounded-xl p-5 shadow-[0_0_15px_rgba(0,255,157,0.1)] flex items-start gap-3">
+            <CheckCircle className="text-neon-emerald flex-shrink-0 mt-0.5" size={24} />
+            <p className="text-neon-emerald font-bold tracking-wide">{success}</p>
           </div>
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-center justify-between">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <div className="glass-panel p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-xl -translate-y-1/2 translate-x-1/2 group-hover:bg-yellow-500/10 transition-colors pointer-events-none"></div>
+            <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-grey-400 text-sm font-medium">Pending</p>
-                <p className="text-3xl font-bold text-yellow-400 mt-2">{stats.pending}</p>
+                <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-2">Pending</p>
+                <p className="text-4xl font-mono font-bold text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]">{stats.pending}</p>
               </div>
-              <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
-                <Calendar className="text-yellow-400" size={24} />
+              <div className="w-14 h-14 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl flex items-center justify-center shadow-[0_0_10px_rgba(234,179,8,0.1)] group-hover:scale-110 transition-transform">
+                <Calendar className="text-yellow-500" size={28} />
               </div>
             </div>
           </div>
 
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-center justify-between">
+          <div className="glass-panel p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-neon-emerald/5 rounded-full blur-xl -translate-y-1/2 translate-x-1/2 group-hover:bg-neon-emerald/10 transition-colors pointer-events-none"></div>
+            <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-grey-400 text-sm font-medium">Approved</p>
-                <p className="text-3xl font-bold text-green-400 mt-2">{stats.approved}</p>
+                <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-2">Approved</p>
+                <p className="text-4xl font-mono font-bold text-neon-emerald drop-shadow-[0_0_10px_rgba(0,255,157,0.3)]">{stats.approved}</p>
               </div>
-              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
-                <CheckCircle className="text-green-400" size={24} />
+              <div className="w-14 h-14 bg-neon-emerald/10 border border-neon-emerald/30 rounded-2xl flex items-center justify-center shadow-[0_0_10px_rgba(0,255,157,0.1)] group-hover:scale-110 transition-transform">
+                <CheckCircle className="text-neon-emerald" size={28} />
               </div>
             </div>
           </div>
 
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-center justify-between">
+          <div className="glass-panel p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-red-400/5 rounded-full blur-xl -translate-y-1/2 translate-x-1/2 group-hover:bg-red-400/10 transition-colors pointer-events-none"></div>
+            <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-grey-400 text-sm font-medium">Rejected</p>
-                <p className="text-3xl font-bold text-red-400 mt-2">{stats.rejected}</p>
+                <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-2">Rejected</p>
+                <p className="text-4xl font-mono font-bold text-red-400 drop-shadow-[0_0_10px_rgba(248,113,113,0.3)]">{stats.rejected}</p>
               </div>
-              <div className="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center">
-                <XCircle className="text-red-400" size={24} />
+              <div className="w-14 h-14 bg-red-400/10 border border-red-400/30 rounded-2xl flex items-center justify-center shadow-[0_0_10px_rgba(248,113,113,0.1)] group-hover:scale-110 transition-transform">
+                <XCircle className="text-red-400" size={28} />
               </div>
             </div>
           </div>
 
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-center justify-between">
+          <div className="glass-panel p-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-neon-cyan/5 rounded-full blur-xl -translate-y-1/2 translate-x-1/2 group-hover:bg-neon-cyan/10 transition-colors pointer-events-none"></div>
+            <div className="flex items-center justify-between relative z-10">
               <div>
-                <p className="text-grey-400 text-sm font-medium">Total</p>
-                <p className="text-3xl font-bold text-white mt-2">{stats.total}</p>
+                <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-2">Total</p>
+                <p className="text-4xl font-mono font-bold text-neon-cyan drop-shadow-[0_0_10px_rgba(0,240,255,0.3)]">{stats.total}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                <TrendingUp className="text-blue-400" size={24} />
+              <div className="w-14 h-14 bg-neon-cyan/10 border border-neon-cyan/30 rounded-2xl flex items-center justify-center shadow-[0_0_10px_rgba(0,240,255,0.1)] group-hover:scale-110 transition-transform">
+                <TrendingUp className="text-neon-cyan" size={28} />
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 mb-8">
+        <div className="glass-panel p-6 mb-8 border-neon-violet/20 bg-gradient-to-r from-surface to-surface/50">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-grey-400" size={20} />
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-contentMuted group-focus-within:text-neon-cyan transition-colors" size={20} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search channels, owners, topics..."
-                className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg pl-10 pr-4 py-3 text-white placeholder-grey-500 focus:outline-none focus:border-blue-500"
+                className="input-glass w-full pl-12 py-3.5 focus:shadow-[0_0_15px_rgba(0,240,255,0.1)] font-sans"
               />
             </div>
 
             {/* Status Filter */}
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-grey-400" size={20} />
+            <div className="relative group">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 text-contentMuted group-focus-within:text-neon-violet transition-colors pointer-events-none" size={20} />
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg pl-10 pr-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                className="input-glass w-full pl-12 py-3.5 appearance-none cursor-pointer focus:border-neon-violet focus:shadow-[0_0_15px_rgba(138,43,226,0.1)] font-sans"
               >
-                <option value="all">All Channels</option>
-                <option value="pending">Pending Only</option>
-                <option value="approved">Approved Only</option>
-                <option value="rejected">Rejected Only</option>
-                <option value="paused">Paused Only</option>
+                <option value="all" className="bg-charcoal text-white">All Channels</option>
+                <option value="pending" className="bg-charcoal text-white">Pending Only</option>
+                <option value="approved" className="bg-charcoal text-white">Approved Only</option>
+                <option value="rejected" className="bg-charcoal text-white">Rejected Only</option>
+                <option value="paused" className="bg-charcoal text-white">Paused Only</option>
               </select>
+              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg className="fill-current h-4 w-4 text-contentMuted group-focus-within:text-neon-violet transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+              </div>
             </div>
           </div>
         </div>
@@ -317,8 +322,12 @@ export default function AdminModerateChannelsPage() {
         {/* Channels List */}
         <div className="space-y-6">
           {filteredChannels.length === 0 ? (
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-12 text-center">
-              <p className="text-grey-400 text-lg">No channels found</p>
+            <div className="glass-panel p-16 text-center border-dashed border-2 flex flex-col items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-surface border border-surfaceBorder flex items-center justify-center mb-4">
+                <Search className="text-contentMuted" size={24} />
+              </div>
+              <p className="text-white font-heading font-bold text-xl mb-2">No channels found</p>
+              <p className="text-contentMuted font-sans">Try modifying your search or filters.</p>
             </div>
           ) : (
             filteredChannels.map((channel) => {
@@ -330,124 +339,126 @@ export default function AdminModerateChannelsPage() {
               return (
                 <div
                   key={channel.id}
-                  className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 hover:border-blue-500 transition-all"
+                  className="glass-panel p-6 sm:p-8 hover:border-neon-cyan/50 hover:shadow-[0_0_20px_rgba(0,240,255,0.05)] transition-all group relative overflow-hidden"
                 >
-                  <div className="flex items-start gap-6">
-                    {/* Channel Avatar */}
-                    <ChannelAvatar
-                      src={channel.avatar || ''}
-                      alt={channel.name || 'Channel'}
-                      className="w-24 h-24 flex-shrink-0"
-                      channelName={channel.name || 'Unknown'}
-                    />
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-transparent via-surfaceBorder to-transparent group-hover:via-neon-cyan transition-colors"></div>
+                  
+                  <div className="flex flex-col xl:flex-row gap-8 items-start">
+                    {/* Channel Avatar & Primary Info */}
+                    <div className="flex items-start gap-6 w-full xl:w-1/3 min-w-0">
+                      <div className="relative shrink-0">
+                        <ChannelAvatar
+                          src={channel.avatar || ''}
+                          alt={channel.name || 'Channel'}
+                          className="w-24 h-24 ring-4 ring-surface shadow-[0_0_15px_rgba(0,0,0,0.5)] group-hover:ring-neon-cyan/20 transition-all rounded-full"
+                          channelName={channel.name || 'Unknown'}
+                        />
+                        <div className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-2 border-charcoal flex items-center justify-center shadow-lg ${
+                            channel.status === 'approved' ? 'bg-neon-emerald text-charcoal' :
+                            channel.status === 'pending' ? 'bg-yellow-500 text-charcoal' :
+                            channel.status === 'paused' ? 'bg-blue-400 text-charcoal' :
+                            'bg-red-500 text-white'
+                          }`}
+                          title={`Status: ${channel.status}`}
+                        >
+                          {channel.status === 'approved' && <CheckCircle size={14} className="stroke-[3px]" />}
+                          {channel.status === 'pending' && <Calendar size={14} className="stroke-[3px]" />}
+                          {channel.status === 'rejected' && <XCircle size={14} className="stroke-[3px]" />}
+                          {channel.status === 'paused' && <TrendingUp size={14} className="stroke-[3px]" />}
+                        </div>
+                      </div>
 
-                    {/* Channel Info */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-2xl font-bold text-white">{channel.name || 'Unknown Channel'}</h3>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                              channel.status === 'approved' ? 'bg-green-500/20 text-green-300' :
-                              channel.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' :
-                              channel.status === 'paused' ? 'bg-blue-500/20 text-blue-300' :
-                              'bg-red-500/20 text-red-300'
-                            }`}>
-                              {(channel.status || 'PENDING').toUpperCase()}
-                            </span>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-2xl font-bold font-heading text-white truncate drop-shadow-[0_0_8px_rgba(255,255,255,0.1)] mb-1" title={channel.name}>{channel.name || 'Unknown Channel'}</h3>
+                        <p className="text-contentMuted font-mono text-sm mb-2 truncate">@{channel.username || 'N/A'}</p>
+                        <div className="inline-flex mt-1">
+                          <span className="bg-surface border border-surfaceBorder px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase text-neon-cyan">
+                            {channel.topic || 'N/A'}
+                          </span>
+                        </div>
+                        
+                        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+                          <div className="flex items-center gap-2">
+                             <span className="text-contentMuted text-[10px] font-bold tracking-widest uppercase">Subscribers</span>
+                             <span className="text-white font-mono font-bold text-sm">{safeNumber(channel.subscribers).toLocaleString()}</span>
                           </div>
-                          <p className="text-grey-400 mb-1">{channel.username || 'N/A'}</p>
-                          <p className="text-blue-400 text-sm">Topic: {channel.topic || 'N/A'}</p>
+                          <div className="flex items-center gap-2">
+                             <span className="text-contentMuted text-[10px] font-bold tracking-widest uppercase">Language</span>
+                             <span className="text-white font-mono font-bold text-sm">{channel.language || 'N/A'}</span>
+                          </div>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Stats Grid */}
-                      <div className="grid grid-cols-4 gap-4 mb-4 bg-darkBlue-700 p-4 rounded-lg">
-                        <div>
-                          <p className="text-grey-400 text-xs mb-1">Subscribers</p>
-                          <p className="text-white font-bold text-lg">{safeNumber(channel.subscribers).toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-grey-400 text-xs mb-1">Avg 24h Views</p>
-                          <p className="text-white font-bold text-lg">{safeNumber(channel.avgViews24h).toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-grey-400 text-xs mb-1">Language</p>
-                          <p className="text-white font-bold text-lg">{channel.language || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-grey-400 text-xs mb-1">Promos/Day</p>
-                          <p className="text-white font-bold text-lg">{safeNumber(channel.promosPerDay)}</p>
+                    {/* Secondary Metrics */}
+                    <div className="w-full xl:w-auto xl:flex-1 grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-2 gap-4">
+                      <div className="bg-surface/50 border border-surfaceBorder rounded-xl p-4 flex flex-col justify-center">
+                        <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-1">24h Views</p>
+                        <p className="text-white font-mono font-bold text-xl">{safeNumber(channel.avgViews24h).toLocaleString()}</p>
+                      </div>
+                      <div className="bg-surface/50 border border-surfaceBorder rounded-xl p-4 flex flex-col justify-center">
+                        <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-1">Promos/Day</p>
+                        <p className="text-white font-mono font-bold text-xl">{safeNumber(channel.promosPerDay)}</p>
+                      </div>
+                      {/* Condensed Quick Info */}
+                      <div className="bg-surface/50 border border-surfaceBorder rounded-xl p-4 flex flex-col justify-center">
+                        <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-1">Settings</p>
+                        <div className="flex items-center gap-3">
+                           <span className="text-neon-cyan font-mono font-bold text-sm flex items-center gap-1" title="Accepted Days"><Calendar size={14}/> {acceptedDays.length}</span>
+                           <span className="text-neon-violet font-mono font-bold text-sm flex items-center gap-1" title="Time Slots"><Users size={14}/> {timeSlots.length}</span>
                         </div>
                       </div>
+                      <div className="bg-surface/50 border border-surfaceBorder rounded-xl p-4 flex flex-col justify-center">
+                        <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-1">Materials</p>
+                        <p className="text-neon-emerald font-mono font-bold text-xl flex items-center gap-2">
+                           <TrendingUp size={20}/> {promoMaterials.length}
+                        </p>
+                      </div>
+                    </div>
 
-                      {/* Owner Info */}
+                    {/* Owner & Actions */}
+                    <div className="w-full xl:w-1/4 flex flex-col gap-4">
                       {owner && (
-                        <div className="bg-darkBlue-700 p-4 rounded-lg mb-4">
-                          <p className="text-grey-400 text-xs mb-2">CHANNEL OWNER</p>
-                          <div className="flex items-center gap-3">
-                            <div>
-                              <p className="text-white font-medium">
-                                {safeString(owner.first_name)} {safeString(owner.last_name)}
-                              </p>
-                              {owner.username && (
-                                <p className="text-grey-400 text-sm">@{owner.username}</p>
-                              )}
-                              <p className="text-grey-500 text-xs">ID: {owner.telegram_id || 'N/A'}</p>
-                            </div>
+                        <div className="bg-charcoal/50 border border-surfaceBorder rounded-xl p-4">
+                          <p className="text-contentMuted text-[10px] font-bold tracking-widest uppercase mb-2">Owner Identity</p>
+                          <div className="flex flex-col">
+                            <p className="text-white font-bold text-sm truncate">
+                              {safeString(owner.first_name)} {safeString(owner.last_name)}
+                            </p>
+                            {owner.username && (
+                              <p className="text-contentMuted text-xs font-mono truncate mt-0.5">@{owner.username}</p>
+                            )}
+                            <p className="text-surfaceBorder/60 text-[10px] font-mono mt-1">ID: {owner.telegram_id || 'N/A'}</p>
                           </div>
                         </div>
                       )}
 
-                      {/* Quick Info */}
-                      <div className="flex flex-wrap gap-4 text-sm mb-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="text-grey-400" size={16} />
-                          <span className="text-grey-400">
-                            Days: {acceptedDays.length}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="text-grey-400" size={16} />
-                          <span className="text-grey-400">
-                            Time Slots: {timeSlots.length}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="text-grey-400" size={16} />
-                          <span className="text-grey-400">
-                            Promos: {promoMaterials.length}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-3">
+                      <div className="flex flex-col sm:flex-row xl:flex-col gap-2 mt-auto">
                         <button
                           onClick={() => setSelectedChannel(channel)}
-                          className="flex-1 bg-darkBlue-700 hover:bg-darkBlue-600 border border-grey-600 hover:border-blue-600 text-white font-medium py-2 rounded-lg transition-all flex items-center justify-center gap-2"
+                          className="flex-1 btn-secondary py-2.5 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 group/btn"
                         >
-                          <Eye size={18} />
-                          View Details
+                          <Eye size={16} className="text-contentMuted group-hover/btn:text-white" />
+                          VIEW DETAILS
                         </button>
 
                         {channel.status === 'pending' && (
-                          <>
+                          <div className="flex gap-2">
                             <button
                               onClick={() => handleAction(channel, 'approve')}
-                              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition-all flex items-center justify-center gap-2"
+                              className="flex-1 bg-neon-emerald/10 hover:bg-neon-emerald/20 border border-neon-emerald/30 hover:border-neon-emerald text-neon-emerald font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 text-sm"
                             >
-                              <CheckCircle size={18} />
-                              Approve
+                              <CheckCircle size={16} />
+                              APPROVE
                             </button>
                             <button
                               onClick={() => handleAction(channel, 'reject')}
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition-all flex items-center justify-center gap-2"
+                              className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500 text-red-500 font-bold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 text-sm"
                             >
-                              <XCircle size={18} />
-                              Reject
+                              <XCircle size={16} />
+                              REJECT
                             </button>
-                          </>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -460,30 +471,39 @@ export default function AdminModerateChannelsPage() {
 
         {/* Action Modal */}
         {showModal && selectedChannel && actionType && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 max-w-md w-full">
-              <h3 className="text-xl font-bold text-white mb-4">
+          <div className="fixed inset-0 bg-obsidian/90 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="glass-panel p-6 sm:p-8 max-w-md w-full relative overflow-hidden shadow-2xl scale-in-center">
+              <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none ${
+                actionType === 'approve' ? 'bg-neon-emerald/10' : 'bg-red-500/10'
+              }`}></div>
+              
+              <h3 className="text-2xl font-heading font-extrabold text-white mb-2 flex items-center gap-3 relative z-10">
+                {actionType === 'approve' ? (
+                  <CheckCircle className="text-neon-emerald" size={28} />
+                ) : (
+                  <XCircle className="text-red-500" size={28} />
+                )}
                 {actionType === 'approve' ? 'Approve' : 'Reject'} Channel
               </h3>
               
-              <p className="text-grey-400 mb-4">
-                Are you sure you want to {actionType} "<span className="text-white">{selectedChannel.name}</span>"?
+              <p className="text-contentMuted mb-6 relative z-10 font-sans">
+                Are you sure you want to {actionType} <span className="text-white font-bold">"{selectedChannel.name}"</span>?
               </p>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-grey-300 mb-2">
-                  Reason (Optional)
+              <div className="mb-6 relative z-10">
+                <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-3 ml-1">
+                  Reason <span className="normal-case opacity-50">(Optional)</span>
                 </label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder={`Add a ${actionType === 'approve' ? 'note' : 'reason for rejection'}...`}
                   rows={3}
-                  className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                  className="input-glass w-full resize-none bg-surface/50"
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 relative z-10">
                 <button
                   onClick={() => {
                     setShowModal(false);
@@ -492,20 +512,24 @@ export default function AdminModerateChannelsPage() {
                     setReason('');
                   }}
                   disabled={processing}
-                  className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-all disabled:opacity-50"
+                  className="w-full sm:w-1/2 bg-surface hover:bg-surface/80 border border-surfaceBorder hover:border-contentMuted text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
                   onClick={confirmAction}
                   disabled={processing}
-                  className={`flex-1 ${
+                  className={`w-full sm:w-1/2 ${
                     actionType === 'approve'
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-red-600 hover:bg-red-700'
-                  } text-white font-bold py-2 rounded-lg transition-all disabled:opacity-50`}
+                      ? 'bg-neon-emerald/20 hover:bg-neon-emerald text-neon-emerald hover:text-charcoal border border-neon-emerald'
+                      : 'bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500'
+                  } font-extrabold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2`}
                 >
-                  {processing ? 'Processing...' : `Confirm ${actionType === 'approve' ? 'Approval' : 'Rejection'}`}
+                  {processing ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />
+                  ) : (
+                     actionType === 'approve' ? 'CONFIRM APPROVE' : 'CONFIRM REJECT'
+                  )}
                 </button>
               </div>
             </div>
@@ -514,116 +538,158 @@ export default function AdminModerateChannelsPage() {
 
         {/* Details Modal */}
         {selectedChannel && !showModal && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 overflow-y-auto">
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 max-w-3xl w-full my-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-white">Channel Details</h3>
+          <div className="fixed inset-0 bg-obsidian/90 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto w-full animate-in fade-in duration-200">
+            <div className="glass-panel p-6 sm:p-8 max-w-4xl w-full my-8 relative overflow-hidden shadow-2xl border-neon-cyan/20">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-neon-cyan/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-surfaceBorder relative z-10">
+                <div className="flex items-center gap-4">
+                  <div className="p-2.5 bg-neon-cyan/10 rounded-xl border border-neon-cyan/20">
+                    <Eye className="text-neon-cyan" size={24} />
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl font-heading font-extrabold text-white">Channel Details</h3>
+                </div>
                 <button
                   onClick={() => setSelectedChannel(null)}
-                  className="text-grey-400 hover:text-white"
+                  className="text-contentMuted hover:text-white bg-surface hover:bg-surfaceBorder p-2 rounded-full transition-colors"
                 >
-                  <XCircle size={24} />
+                  <XCircle size={28} />
                 </button>
               </div>
 
-              <div className="space-y-6">
-                {/* Basic Info - Always Show */}
-                <div className="bg-darkBlue-700 p-4 rounded-lg">
-                  <h4 className="text-white font-bold mb-3">Channel Information</h4>
-                  <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-8 relative z-10">
+                {/* Basic Info */}
+                <div>
+                  <h4 className="text-white font-heading font-bold mb-4 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-neon-cyan rounded-full"></span>
+                    Primary Information
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-surface/30 p-5 rounded-2xl border border-surfaceBorder">
                     <div>
-                      <p className="text-grey-400 text-xs mb-1">Channel Name</p>
-                      <p className="text-white font-bold">{selectedChannel.name}</p>
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-1">Channel Name</p>
+                      <p className="text-white font-bold text-sm sm:text-base">{selectedChannel.name}</p>
                     </div>
                     <div>
-                      <p className="text-grey-400 text-xs mb-1">Username</p>
-                      <p className="text-white font-bold">@{selectedChannel.username}</p>
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-1">Username</p>
+                      <p className="text-neon-cyan font-mono font-bold text-sm sm:text-base">@{selectedChannel.username}</p>
                     </div>
                     <div>
-                      <p className="text-grey-400 text-xs mb-1">Topic</p>
-                      <p className="text-white font-bold">{selectedChannel.topic}</p>
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-1">Topic</p>
+                      <p className="text-white font-bold text-sm sm:text-base">{selectedChannel.topic}</p>
                     </div>
                     <div>
-                      <p className="text-grey-400 text-xs mb-1">Language</p>
-                      <p className="text-white font-bold">{selectedChannel.language}</p>
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-1">Language</p>
+                      <p className="text-white font-bold text-sm sm:text-base">{selectedChannel.language}</p>
                     </div>
                     <div>
-                      <p className="text-grey-400 text-xs mb-1">Subscribers</p>
-                      <p className="text-white font-bold">{selectedChannel.subscribers.toLocaleString()}</p>
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-1">Subscribers</p>
+                      <p className="text-white font-mono font-bold text-sm sm:text-base">{selectedChannel.subscribers.toLocaleString()}</p>
                     </div>
                     <div>
-                      <p className="text-grey-400 text-xs mb-1">Status</p>
-                      <p className="text-white font-bold">{selectedChannel.status.toUpperCase()}</p>
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-1">Current Status</p>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold uppercase tracking-widest ${
+                        selectedChannel.status === 'approved' ? 'bg-neon-emerald/20 text-neon-emerald border border-neon-emerald/30' :
+                        selectedChannel.status === 'pending' ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
+                        selectedChannel.status === 'paused' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' :
+                        'bg-red-500/20 text-red-500 border border-red-500/30'
+                      }`}>
+                        {selectedChannel.status}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Prices */}
-                {selectedChannel.durationPrices && Object.keys(selectedChannel.durationPrices).length > 0 && (
-                  <div>
-                    <h4 className="text-white font-bold mb-3">Pricing</h4>
-                    <div className="grid grid-cols-3 gap-3">
-                      {Object.entries(selectedChannel.durationPrices).map(([hours, price]) => (
-                        <div key={hours} className="bg-darkBlue-700 p-3 rounded-lg">
-                          <p className="text-grey-400 text-sm">{hours} hours</p>
-                          <p className="text-white font-bold">{price} CP</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* Prices */}
+                  {selectedChannel.durationPrices && Object.keys(selectedChannel.durationPrices).length > 0 && (
+                    <div>
+                      <h4 className="text-white font-heading font-bold mb-4 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-neon-emerald rounded-full"></span>
+                        Placement Pricing
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {Object.entries(selectedChannel.durationPrices).map(([hours, price]) => (
+                          <div key={hours} className="bg-surface/50 p-4 rounded-xl border border-surfaceBorder/50 flex flex-col items-center justify-center text-center">
+                            <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-1">{hours} hours</p>
+                            <p className="text-neon-emerald font-mono font-bold text-lg">{price} CP</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-8">
+                    {/* Days */}
+                    {safeArray<string>(selectedChannel?.acceptedDays).length > 0 && (
+                      <div>
+                        <h4 className="text-white font-heading font-bold mb-4 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                          Accepted Days
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {safeArray<string>(selectedChannel.acceptedDays).map(day => (
+                            <span key={day} className="bg-surface border border-surfaceBorder text-contentMuted px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest">
+                              {day.slice(0, 3)}
+                            </span>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    )}
 
-                {/* Days */}
-                {safeArray<string>(selectedChannel?.acceptedDays).length > 0 && (
-                  <div>
-                    <h4 className="text-white font-bold mb-3">Accepted Days</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {safeArray<string>(selectedChannel.acceptedDays).map(day => (
-                        <span key={day} className="bg-blue-600/20 text-blue-300 px-3 py-1 rounded-lg text-sm">
-                          {day}
-                        </span>
-                      ))}
-                    </div>
+                    {/* Time Slots */}
+                    {safeArray(selectedChannel?.availableTimeSlots).length > 0 && (
+                      <div>
+                        <h4 className="text-white font-heading font-bold mb-4 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-neon-violet rounded-full"></span>
+                          Time Slots
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {safeArray(selectedChannel.availableTimeSlots).map((slot, index) => (
+                            <span key={index} className="bg-neon-violet/10 border border-neon-violet/20 text-neon-violet px-3 py-1.5 rounded-lg text-xs font-mono font-bold">
+                              {safeString(slot)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-
-                {/* Time Slots */}
-                {safeArray(selectedChannel?.availableTimeSlots).length > 0 && (
-                  <div>
-                    <h4 className="text-white font-bold mb-3">Available Time Slots</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {safeArray(selectedChannel.availableTimeSlots).map((slot, index) => (
-                        <span key={index} className="bg-darkBlue-700 text-grey-300 px-3 py-1 rounded-lg text-sm">
-                          {safeString(slot)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                </div>
 
                 {/* Promo Materials */}
                 {safeArray<Channel['promoMaterials'][0]>(selectedChannel?.promoMaterials).length > 0 && (
                   <div>
-                    <h4 className="text-white font-bold mb-3">Promo Materials ({safeArray<Channel['promoMaterials'][0]>(selectedChannel.promoMaterials).length})</h4>
-                    <div className="space-y-3">
-                      {safeArray<Channel['promoMaterials'][0]>(selectedChannel.promoMaterials).map((promo) => (
-                        <div key={promo.id} className="bg-darkBlue-700 p-4 rounded-lg">
-                          <h5 className="text-white font-bold mb-2">{promo.name}</h5>
-                          <p className="text-grey-300 text-sm mb-2">{promo.text}</p>
-                          <div className="flex items-center gap-4 text-sm">
-                            <span className="text-grey-400">CTA:</span>
-                            <span className="text-blue-400">{promo.cta}</span>
+                    <h4 className="text-white font-heading font-bold mb-4 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></span>
+                      Promo Materials <span className="text-contentMuted ml-1 text-sm font-normal">({safeArray<Channel['promoMaterials'][0]>(selectedChannel.promoMaterials).length})</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {safeArray<Channel['promoMaterials'][0]>(selectedChannel.promoMaterials).map((promo, idx) => (
+                        <div key={promo.id} className="bg-surface/30 p-5 rounded-2xl border border-surfaceBorder relative">
+                          <span className="absolute top-4 right-4 text-[10px] font-bold tracking-widest uppercase text-contentMuted bg-charcoal px-2 py-1 rounded">#{idx + 1}</span>
+                          <h5 className="text-white font-bold font-heading mb-3 pr-8">{promo.name}</h5>
+                          <div className="bg-charcoal/80 p-3 rounded-xl border border-surfaceBorder mb-4 max-h-32 overflow-y-auto custom-scrollbar">
+                             <p className="text-contentMuted text-[13px] leading-relaxed whitespace-pre-wrap font-sans">{promo.text}</p>
                           </div>
-                          {promo.link && (
-                            <a
-                              href={promo.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400 hover:text-blue-300 text-sm"
-                            >
-                              {promo.link}
-                            </a>
-                          )}
+                          
+                          <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-3 text-sm">
+                              <span className="text-contentMuted text-[10px] font-bold tracking-widest uppercase shrink-0">Button CTA</span>
+                              <span className="text-white font-bold bg-surface px-2.5 py-1 rounded border border-surfaceBorder truncate">{promo.cta}</span>
+                            </div>
+                            {promo.link && (
+                              <div className="flex items-center gap-3 text-sm">
+                                <span className="text-contentMuted text-[10px] font-bold tracking-widest uppercase shrink-0">Link</span>
+                                <a
+                                  href={promo.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-neon-cyan hover:text-white font-mono truncate hover:underline hover:underline-offset-4 transition-colors"
+                                >
+                                  {promo.link}
+                                </a>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -632,24 +698,24 @@ export default function AdminModerateChannelsPage() {
               </div>
 
               {selectedChannel.status === 'pending' && (
-                <div className="flex gap-3 mt-6 pt-6 border-t border-grey-700">
+                <div className="flex flex-col sm:flex-row gap-4 mt-10 pt-8 border-t border-surfaceBorder relative z-10 w-full">
                   <button
                     onClick={() => {
                       handleAction(selectedChannel, 'approve');
                     }}
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                    className="flex-1 bg-neon-emerald/10 hover:bg-neon-emerald/20 border-2 border-neon-emerald/30 hover:border-neon-emerald text-neon-emerald font-extrabold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-2 group tracking-widest shadow-[0_0_15px_rgba(0,255,157,0.1)] hover:shadow-[0_0_20px_rgba(0,255,157,0.3)]"
                   >
-                    <CheckCircle size={18} />
-                    Approve Channel
+                    <CheckCircle size={20} className="group-hover:scale-110 transition-transform" />
+                    APPROVE CHANNEL
                   </button>
                   <button
                     onClick={() => {
                       handleAction(selectedChannel, 'reject');
                     }}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                    className="flex-1 bg-red-500/10 hover:bg-red-500/20 border-2 border-red-500/30 hover:border-red-500 text-red-500 font-extrabold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-2 group tracking-widest shadow-[0_0_15px_rgba(239,68,68,0.1)] hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]"
                   >
-                    <XCircle size={18} />
-                    Reject Channel
+                    <XCircle size={20} className="group-hover:scale-110 transition-transform" />
+                    REJECT CHANNEL
                   </button>
                 </div>
               )}

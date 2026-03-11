@@ -33,44 +33,50 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar - Hidden on mobile (md:flex) */}
-      <aside className="hidden md:flex w-64 bg-darkBlue-800 border-r border-grey-700 min-h-screen flex-col">
+      <aside className="hidden md:flex w-72 glass-panel !rounded-none !border-y-0 !border-l-0 border-r-surfaceBorder h-full flex-col z-20">
         {/* Main Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {navigation.map((item) => {
+        <nav className="flex-1 px-4 py-8 space-y-3 overflow-y-auto">
+          {navigation.map((item, i) => {
             const Icon = item.icon;
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActive(item.href)
-                    ? 'bg-blue-600 text-white'
-                    : 'text-grey-300 hover:bg-darkBlue-700 hover:text-white'
+                className={`group relative flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-300 overflow-hidden ${
+                  active
+                    ? 'bg-neon-violet/10 text-white shadow-[0_0_15px_rgba(138,43,226,0.15)] border border-neon-violet/30'
+                    : 'text-contentMuted hover:bg-surface hover:text-white border border-transparent hover:border-surfaceBorder'
                 }`}
+                style={{animationDelay: `${i * 50}ms`}}
               >
-                <Icon size={20} />
-                <span className="font-medium">{item.name}</span>
+                {active && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-violet shadow-[0_0_10px_rgba(138,43,226,0.8)]"></div>
+                )}
+                <Icon size={22} className={`transition-colors duration-300 ${active ? 'text-neon-violet drop-shadow-[0_0_5px_rgba(138,43,226,0.5)]' : 'group-hover:text-white'}`} />
+                <span className="font-medium tracking-wide font-sans">{item.name}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* Bottom Navigation */}
-        <nav className="px-4 py-4 space-y-2 border-t border-grey-700">
+        <nav className="px-4 py-6 space-y-3 border-t border-surfaceBorder bg-black/20">
           {bottomNavigation.map((item) => {
             const Icon = item.icon;
+            const active = isActive(item.href);
             return (
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  isActive(item.href)
-                    ? 'bg-blue-600 text-white'
-                    : 'text-grey-400 hover:bg-darkBlue-700 hover:text-grey-200'
+                className={`group relative flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 ${
+                  active
+                    ? 'bg-surface text-white border border-surfaceBorder'
+                    : 'text-contentMuted hover:bg-surface hover:text-white border border-transparent'
                 }`}
               >
-                <Icon size={20} />
-                <span className="font-medium text-sm">{item.name}</span>
+                <Icon size={20} className={active ? 'text-white' : 'group-hover:text-white transition-colors'} />
+                <span className="font-medium text-sm tracking-wide">{item.name}</span>
               </Link>
             );
           })}
@@ -78,8 +84,8 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile Bottom Navigation - Fixed at bottom, only visible on mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-darkBlue-800 border-t border-grey-700 z-50 safe-area-inset-bottom">
-        <div className="grid grid-cols-6 gap-1 px-2 py-2">
+      <nav className="md:hidden glass-panel !rounded-none !border-b-0 !border-x-0 !border-t-surfaceBorder fixed bottom-0 left-0 right-0 z-50 safe-area-inset-bottom pb-2">
+        <div className="flex justify-around items-center px-1 py-1 h-16">
           {navigation.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -87,14 +93,17 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all ${
+                className={`relative flex flex-col items-center justify-center p-2 rounded-xl transition-all h-full min-w-[3.5rem] ${
                   active
-                    ? 'bg-blue-600 text-white'
-                    : 'text-grey-400 active:bg-darkBlue-700'
+                    ? 'text-neon-violet'
+                    : 'text-contentMuted hover:text-white'
                 }`}
               >
-                <Icon size={20} className="mb-1" />
-                <span className="text-[10px] font-medium truncate w-full text-center leading-tight">
+                {active && (
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-neon-violet shadow-[0_0_8px_rgba(138,43,226,0.8)] rounded-b-full"></div>
+                )}
+                <Icon size={22} className={`mb-1 transition-transform ${active ? 'scale-110 drop-shadow-[0_0_5px_rgba(138,43,226,0.4)]' : ''}`} />
+                <span className={`text-[10px] font-bold tracking-wider leading-none uppercase ${active ? 'opacity-100' : 'opacity-70'}`}>
                   {item.name.split(' ')[0]}
                 </span>
               </Link>

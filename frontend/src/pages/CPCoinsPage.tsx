@@ -321,102 +321,107 @@ const handleWatchAd = async () => {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">CP Coins</h1>
-          <p className="text-grey-400">Manage your balance and earn rewards</p>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8 animate-fade-in-up">
+        <div className="mb-10 text-center sm:text-left">
+          <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">CP Coins</h1>
+          <p className="text-contentMuted text-lg font-sans">Manage your balance and earn rewards</p>
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
         
         {success && (
-          <div className="mb-6 bg-green-600/10 border border-green-600/30 rounded-lg p-4">
+          <div className="mb-6 bg-neon-emerald/10 border border-neon-emerald/30 shadow-[0_0_15px_rgba(0,255,157,0.1)] rounded-xl p-4">
             <div className="flex items-start gap-3">
-              <CheckCircle className="text-green-400 flex-shrink-0 mt-1" size={20} />
-              <p className="text-green-400">{success}</p>
+              <CheckCircle className="text-neon-emerald flex-shrink-0 mt-1 drop-shadow-[0_0_8px_rgba(0,255,157,0.6)]" size={20} />
+              <p className="text-neon-emerald font-bold tracking-wide">{success}</p>
             </div>
           </div>
         )}
 
         {/* Balance Card */}
-        <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-8 mb-8 shadow-lg">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-              <Wallet className="text-white" size={24} />
+        <div className="glass-panel relative overflow-hidden p-8 mb-12 group hover:shadow-glow-cyan transition-all duration-500">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-neon-cyan/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:bg-neon-cyan/20 transition-colors pointer-events-none"></div>
+
+          <div className="flex items-center gap-4 mb-6 relative z-10">
+            <div className="w-16 h-16 bg-neon-cyan/10 border border-neon-cyan/20 rounded-2xl flex items-center justify-center">
+              <Wallet className="text-neon-cyan drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]" size={32} />
             </div>
             <div>
-              <p className="text-blue-200 text-sm font-medium">Your Balance</p>
-              <p className="text-5xl font-bold text-white">{user?.cpcBalance || 0}</p>
+              <p className="text-contentMuted text-sm font-bold tracking-widest uppercase mb-1">Your Balance</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-6xl font-mono font-bold neon-text-cyan tracking-tight">{user?.cpcBalance?.toLocaleString() || 0}</p>
+                <span className="text-neon-cyan/70 font-mono font-bold text-xl">CPC</span>
+              </div>
             </div>
           </div>
-          <p className="text-blue-100 text-sm mb-6">CP Coins</p>
           
           <button
             onClick={() => window.location.href = '/buy-coins'}
-            className="w-full bg-white hover:bg-grey-100 text-blue-600 font-bold py-3 rounded-lg transition-all"
+            className="btn-primary w-full sm:w-auto relative z-10 text-lg px-8 py-4"
           >
             Buy CP Coins
           </button>
         </div>
 
         {/* Earn Section */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-            <Gift className="text-blue-400" size={28} />
+        <div className="mb-8">
+          <h2 className="text-3xl font-heading font-bold text-white mb-3 flex items-center gap-3">
+            <Gift className="text-neon-violet" size={32} />
             Earn CP Coins
           </h2>
-          <p className="text-grey-400 mb-6">Complete tasks below to earn free CP Coins</p>
+          <p className="text-contentMuted font-sans">Complete tasks below to earn free CP Coins instantly</p>
         </div>
 
         {/* Tasks List */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Earn Free 75 CP Coins Ad Task */}
-<div className="bg-darkBlue-800 border border-blue-500/50 rounded-lg p-6 mb-4 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
-  <div className="flex items-start justify-between gap-4">
-    <div className="flex items-start gap-4 flex-1">
-      <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-        <Zap className="text-blue-400" size={24} />
-      </div>
-      <div className="flex-1">
-        <h3 className="text-xl font-bold text-white mb-1">Earn Free 75 CP Coins</h3>
-        <p className="text-grey-400 text-sm mb-3">
-          Watch a short video until the end to claim your reward. No skipping allowed!
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-blue-400">+75</span>
-          <span className="text-grey-400">CP Coins</span>
-        </div>
-      </div>
-    </div>
-    
-    <button
-      onClick={handleWatchAd}
-      disabled={isAdLoading || processingTask === 'ad_reward'}
-      className={`px-6 py-3 rounded-lg font-bold transition-all flex-shrink-0 ${
-        isAdLoading 
-          ? 'bg-grey-700 text-grey-400 cursor-not-allowed'
-          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20'
-      }`}
-    >
-      {isAdLoading ? 'Loading Ad...' : 'Watch & Earn'}
-    </button>
-  </div>
-</div>
-          {/* Welcome Bonus */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4 flex-1">
-                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Gift className="text-green-400" size={24} />
+          <div className="glass-panel p-6 group hover:shadow-glow-cyan hover:border-neon-cyan/30 transition-all duration-300">
+            <div className="flex items-start sm:items-center justify-between gap-6 flex-col sm:flex-row">
+              <div className="flex items-start gap-5 flex-1 w-full">
+                <div className="w-14 h-14 bg-neon-cyan/10 border border-neon-cyan/20 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Zap className="text-neon-cyan drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]" size={28} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-1">Welcome Bonus</h3>
-                  <p className="text-grey-400 text-sm mb-3">
+                  <h3 className="text-xl font-bold text-white mb-2 font-heading tracking-wide">Earn Free 75 CP Coins</h3>
+                  <p className="text-contentMuted text-sm font-sans mb-4 max-w-lg">
+                    Watch a short video until the end to claim your reward. No skipping allowed!
+                  </p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold font-mono neon-text-cyan tracking-tight">+75</span>
+                    <span className="text-neon-cyan/70 font-bold font-mono">CPC</span>
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={handleWatchAd}
+                disabled={isAdLoading || processingTask === 'ad_reward'}
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold font-mono tracking-wider transition-all flex-shrink-0 ${
+                  isAdLoading 
+                    ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                    : 'bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]'
+                }`}
+              >
+                {isAdLoading ? 'LOADING...' : 'WATCH & EARN'}
+              </button>
+            </div>
+          </div>
+
+          {/* Welcome Bonus */}
+          <div className="glass-panel p-6 group hover:shadow-glow-emerald hover:border-neon-emerald/30 transition-all duration-300">
+            <div className="flex items-start sm:items-center justify-between gap-6 flex-col sm:flex-row">
+              <div className="flex items-start gap-5 flex-1 w-full">
+                <div className="w-14 h-14 bg-neon-emerald/10 border border-neon-emerald/20 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Gift className="text-neon-emerald drop-shadow-[0_0_8px_rgba(0,255,157,0.6)]" size={28} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2 font-heading tracking-wide">Welcome Bonus</h3>
+                  <p className="text-contentMuted text-sm font-sans mb-4 max-w-lg">
                     Get started with a special one-time bonus for new users!
                   </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-green-400">+500</span>
-                    <span className="text-grey-400">CP Coins</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold font-mono neon-text-emerald tracking-tight">+500</span>
+                    <span className="text-neon-emerald/70 font-bold font-mono">CPC</span>
                   </div>
                 </div>
               </div>
@@ -424,39 +429,39 @@ const handleWatchAd = async () => {
               <button
                 onClick={handleClaimWelcomeBonus}
                 disabled={tasks.find(t => t.type === 'welcome')?.completed || processingTask === 'welcome'}
-                className={`px-6 py-3 rounded-lg font-bold transition-all flex-shrink-0 ${
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold font-mono tracking-wider transition-all flex-shrink-0 ${
                   tasks.find(t => t.type === 'welcome')?.completed
-                    ? 'bg-grey-700 text-grey-400 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
+                    ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                    : 'bg-neon-emerald/10 border border-neon-emerald/50 text-neon-emerald hover:bg-neon-emerald hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,255,157,0.4)]'
                 }`}
               >
-                {processingTask === 'welcome' ? 'Claiming...' : 
-                 tasks.find(t => t.type === 'welcome')?.completed ? 'Claimed' : 'Claim'}
+                {processingTask === 'welcome' ? 'CLAIMING...' : 
+                 tasks.find(t => t.type === 'welcome')?.completed ? 'CLAIMED' : 'CLAIM BONUS'}
               </button>
             </div>
           </div>
 
           {/* Join News Channel */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-start justify-between gap-4">
+          <div className="glass-panel p-6 group hover:shadow-glow-cyan hover:border-neon-cyan/30 transition-all duration-300">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
               <div className="flex items-start gap-4 flex-1">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Bell className="text-blue-400" size={24} />
+                <div className="w-14 h-14 bg-neon-cyan/10 border border-neon-cyan/20 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Bell className="text-neon-cyan drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]" size={28} />
                 </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-1">Join the News Channel</h3>
-                  <p className="text-grey-400 text-sm mb-3">
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-1 font-heading tracking-wide">Join the News Channel</h3>
+                  <p className="text-contentMuted text-sm leading-relaxed mb-3">
                     Stay updated with the latest news and announcements from CP Gram!
                   </p>
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-2xl font-bold text-blue-400">+250</span>
-                    <span className="text-grey-400">CP Coins</span>
+                    <span className="text-2xl font-mono font-bold neon-text-cyan">+250</span>
+                    <span className="text-contentMuted font-bold text-sm">CPC</span>
                   </div>
                   <a 
                     href="https://t.me/cpgram_news" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+                    className="inline-flex items-center gap-2 text-neon-cyan/80 hover:text-neon-cyan text-sm font-bold tracking-wide transition-colors"
                   >
                     @cpgram_news <ExternalLink size={14} />
                   </a>
@@ -466,46 +471,46 @@ const handleWatchAd = async () => {
               <button
                 onClick={handleJoinChannel}
                 disabled={tasks.find(t => t.type === 'join_channel')?.completed || processingTask === 'join_channel'}
-                className={`px-6 py-3 rounded-lg font-bold transition-all flex-shrink-0 ${
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all flex-shrink-0 font-mono tracking-wide ${
                   tasks.find(t => t.type === 'join_channel')?.completed
-                    ? 'bg-grey-700 text-grey-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                    ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                    : 'bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]'
                 }`}
               >
-                {processingTask === 'join_channel' ? 'Verifying...' : 
-                 tasks.find(t => t.type === 'join_channel')?.completed ? 'Joined' : 'Join'}
+                {processingTask === 'join_channel' ? 'VERIFYING...' : 
+                 tasks.find(t => t.type === 'join_channel')?.completed ? 'JOINED' : 'JOIN NOW'}
               </button>
             </div>
           </div>
 
           {/* Claim 5000 CP Coins - NEW INVITE TASK */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-start justify-between gap-4">
+          <div className="glass-panel p-6 group hover:shadow-glow-violet hover:border-neon-violet/30 transition-all duration-300">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
               <div className="flex items-start gap-4 flex-1">
-                <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users className="text-purple-400" size={24} />
+                <div className="w-14 h-14 bg-neon-violet/10 border border-neon-violet/20 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                  <Users className="text-neon-violet drop-shadow-[0_0_8px_rgba(138,43,226,0.6)]" size={28} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-1">Claim 5,000 CP Coins</h3>
-                  <p className="text-grey-400 text-sm mb-3">
+                  <h3 className="text-xl font-bold text-white mb-1 font-heading tracking-wide">Claim 5,000 CP Coins</h3>
+                  <p className="text-contentMuted text-sm leading-relaxed mb-3">
                     Share CP Gram's promotional material on your channel for 12 hours and earn a massive reward!
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-purple-400">+5,000</span>
-                    <span className="text-grey-400">CP Coins</span>
+                    <span className="text-2xl font-mono font-bold neon-text-violet">+5,000</span>
+                    <span className="text-contentMuted font-bold text-sm">CPC</span>
                   </div>
                   
                   {inviteTaskCompleted && (
-                    <div className="mt-3 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
-                      <p className="text-purple-300 text-sm">
-                        ✅ Task completed! Check back later when admin renews this task.
+                    <div className="mt-4 bg-neon-emerald/10 border border-neon-emerald/30 rounded-lg p-3 inline-block">
+                      <p className="text-neon-emerald font-mono text-sm font-bold tracking-wide">
+                        ✅ Task completed! Check back later.
                       </p>
                     </div>
                   )}
 
                   {activeInviteTask && !inviteTaskCompleted && (
-                    <div className="mt-3 bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
-                      <p className="text-purple-300 text-sm flex items-center gap-2">
+                    <div className="mt-4 bg-neon-violet/10 border border-neon-violet/30 rounded-lg p-3 inline-block">
+                      <p className="text-neon-violet font-mono text-sm flex items-center gap-2 font-bold tracking-wide">
                         {activeInviteTask.status === 'pending_posting' && (
                           <>
                             <Clock size={16} />
@@ -514,7 +519,7 @@ const handleWatchAd = async () => {
                         )}
                         {activeInviteTask.status === 'active' && (
                           <>
-                            <Zap size={16} />
+                            <Zap size={16} className="animate-pulse" />
                             Timer running - Click to view
                           </>
                         )}
@@ -533,31 +538,45 @@ const handleWatchAd = async () => {
                   }
                 }}
                 disabled={inviteTaskCompleted || processingTask === 'invite_task'}
-                className={`px-6 py-3 rounded-lg font-bold transition-all flex-shrink-0 ${
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all flex-shrink-0 font-mono tracking-wide ${
                   inviteTaskCompleted
-                    ? 'bg-grey-700 text-grey-400 cursor-not-allowed'
-                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                    : 'bg-neon-violet/10 border border-neon-violet/50 text-neon-violet hover:bg-neon-violet hover:text-charcoal hover:shadow-[0_0_20px_rgba(138,43,226,0.4)]'
                 }`}
               >
-                {processingTask === 'invite_task' ? 'Processing...' : 
-                 inviteTaskCompleted ? 'Completed' :
-                 activeInviteTask ? 'Continue' : 'Claim'}
+                {processingTask === 'invite_task' ? 'PROCESSING...' : 
+                 inviteTaskCompleted ? 'COMPLETED' :
+                 activeInviteTask ? 'CONTINUE' : 'START TASK'}
               </button>
             </div>
           </div>
         </div>
 
         {/* Info Box */}
-        <div className="mt-8 bg-blue-600/10 border border-blue-600/30 rounded-lg p-6">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="text-blue-400 flex-shrink-0 mt-1" size={20} />
+        <div className="mt-12 glass-panel p-8 border-neon-cyan/20 bg-neon-cyan/5">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-neon-cyan/10 rounded-full">
+              <AlertCircle className="text-neon-cyan flex-shrink-0" size={24} />
+            </div>
             <div>
-              <p className="text-blue-300 font-medium mb-2">How it works</p>
-              <ul className="text-blue-200 text-sm space-y-1">
-                <li>• Complete tasks to earn CP Coins instantly</li>
-                <li>• Most tasks can only be claimed once</li>
-                <li>• 5,000 CP task can be renewed by admin</li>
-                <li>• Use CP Coins to pay for cross-promotions</li>
+              <p className="text-white text-lg font-bold mb-3 font-heading">How it works</p>
+              <ul className="text-contentMuted text-sm space-y-2 font-sans">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>
+                  Complete tasks to earn CP Coins instantly
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>
+                  Most tasks can only be claimed once
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>
+                  5,000 CP task can be renewed by admin
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>
+                  Use CP Coins to pay for cross-promotions
+                </li>
               </ul>
             </div>
           </div>
@@ -565,28 +584,28 @@ const handleWatchAd = async () => {
 
         {/* Channel Selector Modal */}
         {showChannelSelector && user?.channels && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6 max-w-md w-full">
-              <h3 className="text-xl font-bold text-white mb-4">Select Channel</h3>
+          <div className="fixed inset-0 bg-obsidian/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
+            <div className="glass-panel p-8 max-w-md w-full animate-fade-in-up border-neon-cyan/30 shadow-[0_0_30px_rgba(0,240,255,0.1)]">
+              <h3 className="text-2xl font-heading font-bold text-white mb-6">Select Channel</h3>
               
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3 mb-8 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
                 {user.channels
                   .filter((ch: any) => ch.status === 'Active' || ch.status === 'approved')
                   .map((channel: any) => (
                     <button
                       key={channel.id}
                       onClick={() => handleSelectChannel(channel.id)}
-                      className="w-full bg-darkBlue-700 hover:bg-darkBlue-600 border border-grey-700 rounded-lg p-4 text-left transition-all"
+                      className="w-full bg-surface hover:bg-neon-cyan/10 border border-surfaceBorder hover:border-neon-cyan/50 rounded-xl p-4 text-left transition-all group"
                     >
-                      <p className="text-white font-bold">{channel.name}</p>
-                      <p className="text-grey-400 text-sm mt-1">{channel.subs?.toLocaleString()} subscribers</p>
+                      <p className="text-white font-bold group-hover:text-neon-cyan transition-colors">{channel.name}</p>
+                      <p className="text-contentMuted font-mono text-sm mt-1">{channel.subs?.toLocaleString()} subs</p>
                     </button>
                   ))}
               </div>
 
               <button
                 onClick={() => setShowChannelSelector(false)}
-                className="w-full bg-grey-700 hover:bg-grey-600 text-white font-bold py-3 rounded-lg"
+                className="w-full btn-secondary"
               >
                 Cancel
               </button>
@@ -596,91 +615,99 @@ const handleWatchAd = async () => {
 
         {/* Invite Task Modal */}
         {showInviteTaskModal && activeInviteTask && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-start justify-between mb-6">
+          <div className="fixed inset-0 bg-obsidian/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
+            <div className="glass-panel p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar animate-fade-in-up border-neon-violet/30 shadow-[0_0_30px_rgba(138,43,226,0.1)]">
+              <div className="flex items-start justify-between mb-8">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-2">Invite Task</h2>
-                  <p className="text-grey-400">Channel: {activeInviteTask.channel_name}</p>
+                  <h2 className="text-3xl font-heading font-bold text-white mb-2">Invite Task</h2>
+                  <p className="text-neon-violet/80 font-mono text-sm">Channel: {activeInviteTask.channel_name}</p>
                 </div>
                 <button 
                   onClick={() => setShowInviteTaskModal(false)}
-                  className="text-grey-400 hover:text-white"
+                  className="w-10 h-10 rounded-full bg-surface border border-surfaceBorder flex items-center justify-center text-contentMuted hover:text-white hover:border-white transition-colors"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="mb-6">
-                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
-                  activeInviteTask.status === 'pending_posting' ? 'bg-yellow-500/20 text-yellow-400' :
-                  activeInviteTask.status === 'active' ? 'bg-green-500/20 text-green-400' :
-                  'bg-gray-500/20 text-gray-400'
+              <div className="mb-8">
+                <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-mono font-bold border ${
+                  activeInviteTask.status === 'pending_posting' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.2)]' :
+                  activeInviteTask.status === 'active' ? 'bg-neon-emerald/10 text-neon-emerald border-neon-emerald/30 shadow-[0_0_10px_rgba(0,255,157,0.2)]' :
+                  'bg-surface text-contentMuted border-surfaceBorder'
                 }`}>
-                  {activeInviteTask.status === 'pending_posting' && <><Clock size={16} />Pending</>}
-                  {activeInviteTask.status === 'active' && <><Zap size={16} />Active</>}
-                  {activeInviteTask.status === 'completed' && <><CheckCircle size={16} />Completed</>}
+                  {activeInviteTask.status === 'pending_posting' && <><Clock size={16} />PENDING POSTING</>}
+                  {activeInviteTask.status === 'active' && <><Zap size={16} />TIMER ACTIVE</>}
+                  {activeInviteTask.status === 'completed' && <><CheckCircle size={16} />COMPLETED</>}
                 </span>
               </div>
 
               {activeInviteTask.status === 'pending_posting' && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <button
                     onClick={handleSendInvitePromo}
                     disabled={processingTask === 'send_promo'}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2"
+                    className="w-full bg-neon-cyan/20 border border-neon-cyan/50 hover:bg-neon-cyan hover:text-charcoal text-neon-cyan py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-3 font-mono tracking-wide"
                   >
                     <Send size={20} />
-                    Get Promo in Telegram
+                    GET PROMO IN TELEGRAM
                   </button>
                   
-                  <div className="bg-darkBlue-900 rounded-lg p-4 border border-grey-700">
-                    <h4 className="text-white font-medium mb-2">📋 Next Steps:</h4>
-                    <ol className="text-grey-300 text-sm space-y-2 list-decimal list-inside">
-                      <li>Click "Get Promo in Telegram"</li>
-                      <li>Forward the message to your channel</li>
-                      <li>Copy the post link from your channel</li>
-                      <li>Submit the link below to start 12-hour timer</li>
+                  <div className="bg-charcoal border border-surfaceBorder rounded-xl p-6">
+                    <h4 className="text-white font-bold mb-4 font-heading flex items-center gap-2">
+                      <Zap className="text-neon-violet" size={18} />
+                      Next Steps
+                    </h4>
+                    <ol className="text-contentMuted text-sm space-y-4 font-sans list-none">
+                      <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">1</span> Click "Get Promo in Telegram"</li>
+                      <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">2</span> Forward the message to your channel</li>
+                      <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">3</span> Copy the post link from your channel</li>
+                      <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">4</span> Submit the link below to start 12-hour timer</li>
                     </ol>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-white text-sm font-medium">Post Link</label>
+                  <div className="space-y-3">
+                    <label className="text-contentMuted text-xs font-bold tracking-widest uppercase ml-1">Post Link URL</label>
                     <input
                       type="url"
                       value={postLink}
                       onChange={(e) => setPostLink(e.target.value)}
                       placeholder="https://t.me/yourchannel/123"
-                      className="w-full bg-darkBlue-900 border border-grey-700 rounded-lg px-4 py-3 text-white"
+                      className="input-glass w-full"
                     />
                     <button
                       onClick={handleVerifyInvitePost}
                       disabled={!postLink.trim() || processingTask === 'verify_post'}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium disabled:opacity-50"
+                      className="w-full bg-neon-emerald/20 border border-neon-emerald/50 hover:bg-neon-emerald hover:text-charcoal text-neon-emerald py-4 rounded-xl font-bold transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed font-mono tracking-wide"
                     >
-                      ✓ Start 12-Hour Timer
+                      ✓ START 12-HOUR TIMER
                     </button>
                   </div>
                 </div>
               )}
 
               {activeInviteTask.status === 'active' && (
-                <div className="space-y-4">
-                  <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-6 text-center">
-                    <Zap className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                    <h4 className="text-white text-xl font-bold mb-2">Task Active!</h4>
-                    <div className="text-3xl font-mono text-green-400 mb-2">
+                <div className="space-y-8">
+                  <div className="bg-neon-emerald/10 border border-neon-emerald/30 shadow-[0_0_20px_rgba(0,255,157,0.15)] rounded-2xl p-10 text-center relative overflow-hidden">
+                    <div className="absolute inset-0 bg-neon-emerald/5 mix-blend-overlay animate-pulse-glow"></div>
+                    <Zap className="w-16 h-16 text-neon-emerald mx-auto mb-6 drop-shadow-[0_0_10px_rgba(0,255,157,0.8)]" />
+                    <h4 className="text-white text-2xl font-heading font-bold mb-4 relative z-10">Task Active!</h4>
+                    <div className="text-5xl font-mono font-bold neon-text-emerald mb-3 tracking-tight relative z-10">
                       {formatTimeLeft(timeLeft)}
                     </div>
-                    <p className="text-grey-400 text-sm">Time remaining</p>
+                    <p className="text-contentMuted font-mono text-sm tracking-widest uppercase relative z-10">Time remaining</p>
                   </div>
 
                   <button
                     onClick={handleCompleteInviteTask}
                     disabled={timeLeft > 0 || processingTask === 'complete_task'}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-medium disabled:opacity-50"
+                    className={`w-full py-5 rounded-xl font-bold font-mono tracking-wide transition-all ${
+                      timeLeft > 0
+                        ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                        : 'bg-neon-violet/20 border border-neon-violet/50 hover:bg-neon-violet hover:text-charcoal text-neon-violet shadow-[0_0_20px_rgba(138,43,226,0.3)]'
+                    }`}
                   >
-                    {timeLeft > 0 ? 'Wait for Timer' : 'Claim 5,000 CP Coins'}
+                    {timeLeft > 0 ? 'WAIT FOR TIMER...' : 'CLAIM 5,000 CP COINS'}
                   </button>
                 </div>
               )}

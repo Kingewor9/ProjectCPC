@@ -48,16 +48,18 @@ export default function HelpPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Help & Support</h1>
-          <p className="text-grey-400">Get answers to common questions about CP Gram</p>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-32 animate-fade-in-up">
+        <div className="mb-10 sm:mb-12">
+          <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Help & Support</h1>
+          <p className="text-contentMuted text-lg font-sans">Get answers to common questions about CP Gram</p>
         </div>
 
         {/* FAQs */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
-            <HelpCircle size={28} className="text-blue-400" />
+          <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white mb-8 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-center">
+              <HelpCircle size={24} className="text-neon-cyan" />
+            </div>
             Frequently Asked Questions
           </h2>
 
@@ -65,15 +67,15 @@ export default function HelpPage() {
             {faqs.map((faq, index) => (
               <details
                 key={index}
-                className="group bg-darkBlue-800 border border-grey-700 rounded-lg cursor-pointer hover:border-blue-600 transition-all"
+                className="group glass-panel rounded-xl cursor-pointer hover:border-neon-cyan/50 transition-all overflow-hidden"
               >
-                <summary className="px-6 py-4 font-bold text-white flex items-center justify-between">
+                <summary className="px-6 py-5 font-heading font-bold text-lg text-white flex items-center justify-between list-none">
                   {faq.question}
-                  <span className="text-blue-400 group-open:rotate-180 transition-transform">
+                  <span className="text-neon-cyan group-open:rotate-180 transition-transform duration-300 w-8 h-8 rounded-full bg-neon-cyan/10 flex items-center justify-center shrink-0 ml-4">
                     ▼
                   </span>
                 </summary>
-                <div className="px-6 pb-4 text-grey-300 border-t border-grey-700 pt-4">
+                <div className="px-6 pb-6 text-contentMuted font-sans border-t border-surfaceBorder/50 pt-4 bg-surface/30">
                   {faq.answer}
                 </div>
               </details>
@@ -82,54 +84,63 @@ export default function HelpPage() {
         </div>
 
         {/* Contact Support */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Mail size={24} className="text-blue-400" />
-              <h3 className="text-lg font-bold text-white">Email Support</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="glass-panel p-6 sm:p-8 hover:border-contentMuted transition-colors group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-neon-emerald/5 rounded-full blur-2xl pointer-events-none group-hover:bg-neon-emerald/10 transition-colors"></div>
+            <div className="flex items-center gap-4 mb-4 relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-neon-emerald/10 border border-neon-emerald/30 flex items-center justify-center">
+                <Mail size={24} className="text-neon-emerald" />
+              </div>
+              <h3 className="text-lg font-heading font-bold text-white">Email Support</h3>
             </div>
-            <p className="text-grey-400 mb-4">
+            <p className="text-contentMuted text-sm font-sans mb-6 relative z-10">
               Have a question or need help? Reach out to our support team.
             </p>
             <a
               href="mailto:support@growthguru.io"
-              className="text-blue-400 hover:text-blue-300 font-medium"
+              className="text-neon-emerald hover:text-white font-mono font-bold text-sm transition-colors relative z-10 flex items-center gap-2 tracking-widest uppercase"
             >
-              ----
+              Email Us
             </a>
           </div>
 
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <MessageCircle size={24} className="text-blue-400" />
-              <h3 className="text-lg font-bold text-white">Telegram Support</h3>
+          <div className="glass-panel p-6 sm:p-8 hover:border-contentMuted transition-colors group relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-neon-cyan/5 rounded-full blur-2xl pointer-events-none group-hover:bg-neon-cyan/10 transition-colors"></div>
+            <div className="flex items-center gap-4 mb-4 relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-center">
+                <MessageCircle size={24} className="text-neon-cyan" />
+              </div>
+              <h3 className="text-lg font-heading font-bold text-white">Telegram</h3>
             </div>
-            <p className="text-grey-400 mb-4">
-              Reach out to our support team on Telegram.
+            <p className="text-contentMuted text-sm font-sans mb-6 relative z-10">
+              Reach out to our support team on Telegram for quick answers.
             </p>
             <a
               href="https://t.me/Mike_cpgram"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 font-medium"
+              className="text-neon-cyan hover:text-white font-mono font-bold text-sm transition-colors relative z-10 flex items-center gap-2"
             >
               @Mike_cpgram
             </a>
           </div>
 
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <FileText size={24} className="text-blue-400" />
-              <h3 className="text-lg font-bold text-white">Documentation</h3>
+          <div className="glass-panel p-6 sm:p-8 hover:border-contentMuted transition-colors group relative overflow-hidden md:col-span-2 lg:col-span-1">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-neon-violet/5 rounded-full blur-2xl pointer-events-none group-hover:bg-neon-violet/10 transition-colors"></div>
+            <div className="flex items-center gap-4 mb-4 relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-neon-violet/10 border border-neon-violet/30 flex items-center justify-center">
+                <FileText size={24} className="text-neon-violet" />
+              </div>
+              <h3 className="text-lg font-heading font-bold text-white">Documentation</h3>
             </div>
-            <p className="text-grey-400 mb-4">
+            <p className="text-contentMuted text-sm font-sans mb-6 relative z-10">
               Read our documentation for detailed information & guidance.
             </p>
             <a
               href="https://cross-promotions-gram.gitbook.io/cross-promotions-gram-docs/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 font-medium"
+              className="text-neon-violet hover:text-white font-mono font-bold text-sm transition-colors relative z-10 flex items-center gap-2 uppercase tracking-widest"
             >
               Read Docs
             </a>

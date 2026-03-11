@@ -322,62 +322,67 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Edit Channel</h1>
-          <p className="text-grey-400">Update your channel settings and preferences</p>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-32 md:pb-12 animate-fade-in-up">
+        <div className="mb-10 sm:mb-12 text-center sm:text-left">
+          <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Edit Channel</h1>
+          <p className="text-contentMuted text-lg font-sans">Update your channel settings and preferences</p>
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
         
         {success && (
-          <div className="mb-6 bg-green-600/10 border border-green-600/30 rounded-lg p-4">
+          <div className="mb-8 bg-neon-emerald/10 border border-neon-emerald/30 rounded-xl p-5 shadow-[0_0_15px_rgba(0,255,157,0.1)]">
             <div className="flex items-center gap-3">
-              <CheckCircle className="text-green-400" size={20} />
-              <p className="text-green-400">{success}</p>
+              <CheckCircle className="text-neon-emerald" size={24} />
+              <p className="text-neon-emerald font-bold tracking-wide">{success}</p>
             </div>
           </div>
         )}
 
-        <div className="space-y-8">
+        <div className="space-y-8 sm:space-y-12">
           {/* Channel Info (Read-only) */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Channel Information</h2>
-            <div className="flex items-start gap-4">
-              <ChannelAvatar 
-                src={channel.avatar} 
-                alt={channel.name}
-                className="w-20 h-20"
-                channelName={channel.name}
-              />
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-2">
+          <div className="glass-panel p-6 sm:p-8 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-neon-cyan/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-neon-cyan/10 transition-colors"></div>
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-6 relative z-10 flex items-center gap-3">
+              <span className="text-2xl">ℹ️</span> Channel Information
+            </h2>
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10">
+              <div className="p-2 bg-surface border border-surfaceBorder rounded-2xl shadow-lg flex-shrink-0">
+                <ChannelAvatar 
+                  src={channel.avatar} 
+                  alt={channel.name}
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl"
+                  channelName={channel.name}
+                />
+              </div>
+              <div className="flex-1 w-full text-center sm:text-left mt-2 sm:mt-0">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between mb-4 gap-4">
                   <div>
-                    <h3 className="text-2xl font-bold text-white">{channel.name}</h3>
-                    <p className="text-grey-400">{channel.username}</p>
+                    <h3 className="text-2xl sm:text-3xl font-heading font-bold text-white mb-1 group-hover:text-neon-cyan transition-colors">{channel.name}</h3>
+                    <p className="text-contentMuted font-mono tracking-wide">{channel.username}</p>
                   </div>
                   {(() => {
                     const isPaused = !!channel.is_paused;
                     const baseStatus = (channel.status || '').toLowerCase();
                     const displayStatus = baseStatus === 'approved' ? (isPaused ? 'Paused' : 'Active') : channel.status;
-                    const badgeClass = displayStatus === 'Active' ? 'bg-green-500/20 text-green-300' :
-                      displayStatus === 'Paused' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-blue-500/20 text-blue-300';
+                    const badgeClass = displayStatus === 'Active' ? 'bg-neon-emerald/20 text-neon-emerald border border-neon-emerald/30 shadow-[0_0_10px_rgba(0,255,157,0.2)]' :
+                      displayStatus === 'Paused' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' : 'bg-surface text-contentMuted border border-surfaceBorder';
 
                     return (
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${badgeClass}`}>
+                      <span className={`px-4 py-1.5 rounded-full text-xs font-mono font-bold tracking-widest ${badgeClass}`}>
                         {String(displayStatus).toUpperCase()}
                       </span>
                     );
                   })()}
                 </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <p className="text-grey-400 text-sm">Subscribers</p>
-                    <p className="text-white font-bold">{channel.subscribers.toLocaleString()}</p>
+                <div className="grid grid-cols-2 gap-4 bg-charcoal/50 rounded-xl p-4 border border-surfaceBorder/50 inline-grid sm:flex">
+                  <div className="px-4">
+                    <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-1">Subscribers</p>
+                    <p className="text-neon-cyan font-mono font-bold text-lg drop-shadow-[0_0_5px_rgba(0,240,255,0.3)]">{channel.subscribers.toLocaleString()}</p>
                   </div>
-                  <div>
-                    <p className="text-grey-400 text-sm">Topic</p>
-                    <p className="text-white font-bold">{channel.topic}</p>
+                  <div className="px-4 border-l border-surfaceBorder/50">
+                    <p className="text-contentMuted text-xs font-bold tracking-widest uppercase mb-1">Topic</p>
+                    <p className="text-white font-bold text-base">{channel.topic}</p>
                   </div>
                 </div>
               </div>
@@ -385,49 +390,53 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
           </div>
 
           {/* Status Toggle */}
-<div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-  <h2 className="text-xl font-bold text-white mb-4">Channel Status</h2>
-  <p className="text-grey-400 text-sm mb-4">
-    {channel.is_paused
-      ? 'Your channel is paused and hidden from the partner listings.'
-      : 'Your channel is active and visible to other users for cross-promotions.'
-    }
-  </p>
-  <button
-    onClick={handleToggleStatus}
-    disabled={submitting}
-    className={`flex items-center gap-2 px-6 py-3 rounded-lg font-bold transition-all ${
-      channel.is_paused
-        ? 'bg-green-600 hover:bg-green-700 text-white'
-        : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-    } disabled:opacity-50 disabled:cursor-not-allowed`}
-  >
-    {channel.is_paused ? (
-      <>
-        <Play size={20} />
-        Activate Channel
-      </>
-    ) : (
-      <>
-        <Pause size={20} />
-        Pause Channel
-      </>
-    )}
-  </button>
-</div>
+          <div className="glass-panel p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-4 flex items-center gap-3">
+              <span className="text-neon-violet">⚡</span> Channel Status
+            </h2>
+            <p className="text-contentMuted text-sm mb-6 leading-relaxed">
+              {channel.is_paused
+                ? 'Your channel is paused and hidden from the partner listings.'
+                : 'Your channel is active and visible to other users for cross-promotions.'
+              }
+            </p>
+            <button
+              onClick={handleToggleStatus}
+              disabled={submitting}
+              className={`flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all tracking-wide ${
+                channel.is_paused
+                  ? 'bg-neon-emerald/20 border border-neon-emerald/50 hover:bg-neon-emerald hover:text-charcoal text-neon-emerald shadow-[0_0_15px_rgba(0,255,157,0.2)]'
+                  : 'bg-yellow-500/20 border border-yellow-500/50 hover:bg-yellow-500 hover:text-charcoal text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {channel.is_paused ? (
+                <>
+                  <Play size={20} className="fill-current" />
+                  ACTIVATE CHANNEL
+                </>
+              ) : (
+                <>
+                  <Pause size={20} className="fill-current" />
+                  PAUSE CHANNEL
+                </>
+              )}
+            </button>
+          </div>
 
           {/* Days Selection */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Accepted Days</h2>
-            <div className="flex flex-wrap gap-2">
+          <div className="glass-panel p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-6 flex items-center gap-3">
+              <span className="text-neon-cyan">📅</span> Accepted Days
+            </h2>
+            <div className="flex flex-wrap gap-3">
               {DAYS.map(day => (
                 <button
                   key={day}
                   onClick={() => toggleDay(day)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`px-5 py-3 rounded-xl font-mono font-bold tracking-wide transition-all duration-300 ${
                     selectedDays.includes(day)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-darkBlue-700 text-grey-400 hover:bg-darkBlue-600'
+                      ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)]'
+                      : 'bg-surface border border-surfaceBorder text-contentMuted hover:border-neon-cyan/30 hover:text-white'
                   }`}
                 >
                   {day.slice(0, 3)}
@@ -437,236 +446,261 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
           </div>
 
           {/* Promos Per Day */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Promotions Per Day</h2>
+          <div className="glass-panel p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-6 flex items-center gap-3">
+              <span className="text-neon-violet">📈</span> Promotions Per Day
+            </h2>
             <select
               value={promosPerDay}
               onChange={(e) => {
                 setPromosPerDay(Number(e.target.value));
                 setSelectedTimeSlots([]);
               }}
-              className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+              className="input-glass w-full text-lg cursor-pointer appearance-none"
             >
               {[1, 2, 3, 4, 5].map(num => (
-                <option key={num} value={num}>{num}</option>
+                <option key={num} value={num} className="bg-charcoal text-white">{num}</option>
               ))}
             </select>
           </div>
 
           {/* Price Settings */}
-<div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-  <h2 className="text-xl font-bold text-white mb-4">Duration Prices</h2>
-  
-  {/* Price range info */}
-  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-4">
-    <p className="text-blue-300 text-sm">
-      <strong>💰 Price Range:</strong> Minimum {MIN_PRICE.toLocaleString()} CP - Maximum {MAX_PRICE.toLocaleString()} CP Coins
-    </p>
-  </div>
-  
-  <div className="space-y-3">
-    {Object.entries(priceSettings).map(([hours, settings]) => {
-      const isInvalidPrice = settings.enabled && (settings.price < MIN_PRICE || settings.price > MAX_PRICE);
-      
-      return (
-        <div key={hours}>
-          <div className="flex items-center gap-4 bg-darkBlue-700 p-4 rounded-lg">
-            <button
-              onClick={() => togglePriceSetting(hours as keyof PriceSettings)}
-              className={`w-12 h-6 rounded-full transition-all relative ${
-                settings.enabled ? 'bg-blue-600' : 'bg-grey-600'
-              }`}
-            >
-              <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
-                settings.enabled ? 'right-0.5' : 'left-0.5'
-              }`} />
-            </button>
-            <span className="text-white font-medium w-20">{hours} hours</span>
-            <input
-              type="number"
-              value={settings.price}
-              onChange={(e) => updatePrice(hours as keyof PriceSettings, Number(e.target.value))}
-              disabled={!settings.enabled}
-              placeholder={`${MIN_PRICE} - ${MAX_PRICE}`}
-              min={MIN_PRICE}
-              max={MAX_PRICE}
-              className={`flex-1 bg-darkBlue-600 border ${
-                isInvalidPrice ? 'border-red-500' : 'border-grey-600'
-              } rounded-lg px-4 py-2 text-white disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-blue-500`}
-            />
-            <span className="text-grey-400">CP</span>
+          <div className="glass-panel p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-6 flex items-center gap-3">
+              <span className="text-neon-emerald">💰</span> Duration Prices
+            </h2>
+            
+            {/* Price range info */}
+            <div className="bg-neon-emerald/5 border border-neon-emerald/20 rounded-xl p-4 mb-8">
+              <p className="text-neon-emerald/80 text-sm font-mono">
+                <strong className="text-neon-emerald mr-2">RANGE:</strong> Minimum {MIN_PRICE.toLocaleString()} CP - Maximum {MAX_PRICE.toLocaleString()} CP Coins
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              {Object.entries(priceSettings).map(([hours, settings]) => {
+                const isInvalidPrice = settings.enabled && (settings.price < MIN_PRICE || settings.price > MAX_PRICE);
+                
+                return (
+                  <div key={hours}>
+                    <div className={`flex flex-col sm:flex-row items-start sm:items-center gap-4 p-5 rounded-xl transition-all duration-300 ${settings.enabled ? 'bg-surface border border-neon-emerald/30 shadow-[0_0_15px_rgba(0,255,157,0.05)]' : 'bg-surface/50 border border-surfaceBorder opacity-70'}`}>
+                      <div className="flex items-center gap-4 min-w-[120px]">
+                        <button
+                          onClick={() => togglePriceSetting(hours as keyof PriceSettings)}
+                          className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 border ${
+                            settings.enabled ? 'bg-neon-emerald/20 border-neon-emerald text-neon-emerald shadow-[0_0_10px_rgba(0,255,157,0.3)]' : 'bg-charcoal border-surfaceBorder'
+                          }`}
+                        >
+                          <div className={`w-5 h-5 bg-white rounded-full absolute top-[1px] transition-all shadow-md ${
+                            settings.enabled ? 'right-[1px] bg-neon-emerald' : 'left-[1px] bg-contentMuted'
+                          }`} />
+                        </button>
+                        <span className={`font-mono font-bold text-lg ${settings.enabled ? 'text-white' : 'text-contentMuted'}`}>{hours}h</span>
+                      </div>
+                      
+                      <div className="flex-1 w-full flex items-center gap-3">
+                        <input
+                          type="number"
+                          value={settings.price}
+                          onChange={(e) => updatePrice(hours as keyof PriceSettings, Number(e.target.value))}
+                          disabled={!settings.enabled}
+                          placeholder={`${MIN_PRICE} - ${MAX_PRICE}`}
+                          min={MIN_PRICE}
+                          max={MAX_PRICE}
+                          className={`flex-1 bg-charcoal border ${
+                            isInvalidPrice ? 'border-red-500/50 focus:border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'border-surfaceBorder focus:border-neon-emerald focus:shadow-[0_0_15px_rgba(0,255,157,0.15)]'
+                          } rounded-xl px-4 py-3 text-white font-mono disabled:opacity-50 disabled:cursor-not-allowed`}
+                        />
+                        <span className="text-neon-emerald font-bold tracking-widest">CP</span>
+                      </div>
+                    </div>
+                    
+                    {/* Validation message */}
+                    {isInvalidPrice && (
+                      <p className="text-red-400 text-xs mt-2 ml-1 font-mono">
+                        {settings.price < MIN_PRICE 
+                          ? `Minimum price is ${MIN_PRICE.toLocaleString()} CP` 
+                          : `Maximum price is ${MAX_PRICE.toLocaleString()} CP`
+                        }
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          
-          {/* Validation message */}
-          {isInvalidPrice && (
-            <p className="text-red-400 text-xs mt-1 ml-20">
-              {settings.price < MIN_PRICE 
-                ? `Minimum price is ${MIN_PRICE.toLocaleString()} CP` 
-                : `Maximum price is ${MAX_PRICE.toLocaleString()} CP`
-              }
-            </p>
-          )}
-        </div>
-      );
-    })}
-  </div>
-</div>
 
           {/* Time Slots */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">Available Time Slots (Select {promosPerDay})</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-64 overflow-y-auto p-2 bg-darkBlue-700 rounded-lg">
+          <div className="glass-panel p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-6 flex items-center gap-3">
+              <span className="text-neon-cyan">⏰</span> Available Time Slots
+            </h2>
+            <p className="text-contentMuted text-sm font-bold tracking-widest uppercase mb-4 ml-1">
+              Select {promosPerDay} <span className="text-neon-cyan ml-2 text-xs">({selectedTimeSlots.length}/{promosPerDay})</span>
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 p-4 bg-surface border border-surfaceBorder rounded-xl max-h-72 overflow-y-auto custom-scrollbar">
               {TIME_SLOTS.map(slot => (
                 <button
                   key={slot}
                   onClick={() => toggleTimeSlot(slot)}
                   disabled={!selectedTimeSlots.includes(slot) && selectedTimeSlots.length >= promosPerDay}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-2 py-3 rounded-lg text-xs font-mono font-bold tracking-wide transition-all ${
                     selectedTimeSlots.includes(slot)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-darkBlue-600 text-grey-400 hover:bg-darkBlue-500 disabled:opacity-30 disabled:cursor-not-allowed'
+                      ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                      : 'bg-charcoal border border-surfaceBorder text-content hover:border-neon-cyan/30 disabled:opacity-30 disabled:cursor-not-allowed'
                   }`}
                 >
                   {slot}
                 </button>
               ))}
             </div>
-            <p className="text-grey-400 text-sm mt-2">
-              Selected: {selectedTimeSlots.length} / {promosPerDay}
-            </p>
           </div>
 
           {/* Promo Materials */}
-          <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-            <h2 className="text-xl font-bold text-white mb-4">
-              Promo Materials ({promoMaterials.length}/3)
+          <div className="glass-panel p-6 sm:p-8">
+            <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-8 flex items-center justify-between">
+              <span className="flex items-center gap-3">
+                <span className="text-2xl">📝</span> Promo Materials
+              </span>
+              <span className="text-sm font-mono text-contentMuted bg-surface px-3 py-1 rounded-full border border-surfaceBorder">
+                <span className="text-white">{promoMaterials.length}</span> / 3
+              </span>
             </h2>
 
-            {promoMaterials.map(promo => (
-              <div key={promo.id} className="bg-darkBlue-700 border border-grey-600 rounded-lg p-4 mb-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-white font-bold">{promo.name}</h3>
-                  <button
-                    onClick={() => removePromo(promo.id)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <X size={20} />
-                  </button>
+            <div className="space-y-4 mb-6">
+              {promoMaterials.map(promo => (
+                <div key={promo.id} className="bg-surface border border-surfaceBorder hover:border-neon-violet/30 rounded-xl p-6 transition-all group">
+                  <div className="flex items-start justify-between mb-4">
+                    <h3 className="text-white font-heading font-bold text-lg group-hover:text-neon-violet transition-colors">{promo.name}</h3>
+                    <button
+                      onClick={() => removePromo(promo.id)}
+                      className="text-contentMuted hover:text-red-500 hover:bg-red-500/10 p-2 rounded-lg transition-all"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <p className="text-contentMuted text-sm mb-4 leading-relaxed">{promo.text}</p>
+                  <div className="flex items-center gap-3 inline-flex bg-charcoal px-4 py-2 rounded-lg border border-surfaceBorder">
+                    <span className="text-contentMuted text-xs font-bold tracking-widest uppercase">CTA:</span>
+                    <span className="text-neon-violet font-mono font-bold text-sm tracking-wide">{promo.cta}</span>
+                  </div>
                 </div>
-                <p className="text-grey-300 text-sm mb-2">{promo.text}</p>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-grey-400">CTA:</span>
-                  <span className="text-blue-400">{promo.cta}</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
             {!showPromoForm && promoMaterials.length < 3 && (
               <button
                 onClick={() => setShowPromoForm(true)}
-                className="w-full bg-darkBlue-700 border border-grey-600 hover:border-blue-600 text-white font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                className="w-full bg-surface border border-surfaceBorder border-dashed hover:border-neon-violet/50 hover:bg-neon-violet/5 text-contentMuted hover:text-white py-5 rounded-xl transition-all flex items-center justify-center gap-3 font-bold tracking-wide"
               >
-                <Plus size={20} />
-                Add Promo Material
+                <Plus className="text-neon-violet" size={24} />
+                ADD PROMO MATERIAL
               </button>
             )}
 
             {showPromoForm && (
-              <div className="bg-darkBlue-700 border border-blue-600/30 rounded-lg p-6 space-y-4">
-                <h3 className="text-white font-bold text-lg mb-4">New Promo</h3>
+              <div className="bg-surface border border-neon-violet/30 rounded-xl p-6 sm:p-8 space-y-6 relative overflow-hidden shadow-[0_0_20px_rgba(138,43,226,0.05)]">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-neon-violet/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">Promo Name</label>
+                <h3 className="text-white font-heading font-bold text-xl mb-6 relative z-10 flex items-center gap-2">
+                  <span className="w-2 h-6 bg-neon-violet rounded-full inline-block"></span>
+                  New Promo
+                </h3>
+                
+                <div className="relative z-10">
+                  <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-2 ml-1">Promo Name</label>
                   <input
                     type="text"
                     value={newPromo.name}
                     onChange={(e) => setNewPromo({...newPromo, name: e.target.value})}
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    placeholder="e.g., Weekly Special"
+                    className="input-glass w-full"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">Promo Text</label>
+                <div className="relative z-10">
+                  <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-2 ml-1">Promo Text</label>
                   <textarea
                     value={newPromo.text}
                     onChange={(e) => setNewPromo({...newPromo, text: e.target.value})}
-                    rows={3}
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    rows={4}
+                    placeholder="Write an engaging message..."
+                    className="input-glass w-full leading-relaxed resize-none"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">Promo Image URL</label>
+                <div className="relative z-10">
+                  <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-2 ml-1">Promo Image URL</label>
                   <input
                     type="text"
                     value={newPromo.image}
                     onChange={(e) => setNewPromo({...newPromo, image: e.target.value})}
                     placeholder="https://example.com/image.jpg"
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="input-glass w-full font-mono text-sm"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">Promo Link</label>
+                <div className="relative z-10">
+                  <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-2 ml-1">Promo Link</label>
                   <input
                     type="text"
                     value={newPromo.link}
                     onChange={(e) => setNewPromo({...newPromo, link: e.target.value})}
                     placeholder={
                       channel?.username && /^-?\d+$/.test(channel.username)
-        ?             "https://t.me/c/1234567890/123 or https://t.me/+InviteCode"
-                     : `https://t.me/${channel.username.replace('@', '')}/123`
+                        ? "https://t.me/c/1234567890/123 or https://t.me/+InviteCode"
+                        : `https://t.me/${channel?.username?.replace('@', '')}/123`
                     }
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="input-glass w-full font-mono text-sm"
                   />
 
                   {/* Helper text for private channels */}
-  {channel?.username && /^-?\d+$/.test(channel.username) && (
-    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-2">
-      <p className="text-blue-300 text-xs">
-        <strong>💡 Private Channel Link:</strong>
-      </p>
-      <ul className="text-grey-300 text-xs mt-1 space-y-1">
-        <li>• Copy a post link from your channel (looks like: t.me/c/1234567890/123)</li>
-        <li>• Or use your channel's invite link (looks like: t.me/+AbCdEfGhIjK)</li>
-      </ul>
-    </div>
-  )}
-  
-  {/* Helper text for public channels */}
-  {channel?.username && !/^-?\d+$/.test(channel.username) && (
-    <p className="text-grey-400 text-xs mt-2">
-      Link must be from your channel (e.g., https://t.me/{channel.username.replace('@', '')}/123)
-    </p>
-  )}
+                  {channel?.username && /^-?\d+$/.test(channel.username) && (
+                    <div className="bg-neon-cyan/5 border border-neon-cyan/20 rounded-xl p-4 mt-3">
+                      <p className="text-neon-cyan/80 text-xs font-bold tracking-wide mb-2">
+                        💡 Private Channel Link:
+                      </p>
+                      <ul className="text-contentMuted text-xs space-y-2 ml-2 font-mono">
+                        <li><span className="opacity-50 mr-2">•</span>Copy a post link from your channel (looks like: t.me/c/1234567890/123)</li>
+                        <li><span className="opacity-50 mr-2">•</span>Or use your channel's invite link (looks like: t.me/+AbCdEfGhIjK)</li>
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Helper text for public channels */}
+                  {channel?.username && !/^-?\d+$/.test(channel.username) && (
+                    <p className="text-contentMuted text-xs mt-3 flex items-start gap-2">
+                      <span className="text-neon-cyan">💡</span> Link must be from your channel (e.g., https://t.me/{channel?.username?.replace('@', '')}/123)
+                    </p>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-grey-300 mb-2">Call-to-Action</label>
+                <div className="relative z-10">
+                  <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-2 ml-1">Call-to-Action</label>
                   <input
                     type="text"
                     value={newPromo.cta}
                     onChange={(e) => setNewPromo({...newPromo, cta: e.target.value})}
                     placeholder="Join Now, Subscribe, Register..."
-                    className="w-full bg-darkBlue-600 border border-grey-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-blue-500"
+                    className="input-glass w-full"
                   />
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-4 pt-4 relative z-10 border-t border-surfaceBorder">
                   <button
                     onClick={handleAddPromo}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-2 rounded-lg transition-all"
+                    className="flex-1 bg-neon-violet/20 border border-neon-violet/50 hover:bg-neon-violet hover:text-white text-neon-violet shadow-[0_0_15px_rgba(138,43,226,0.1)] font-bold py-4 rounded-xl transition-all tracking-wide"
                   >
-                    Create Promo
+                    SAVE PROMO
                   </button>
                   <button
                     onClick={() => {
                       setShowPromoForm(false);
                       setNewPromo({ name: '', text: '', image: '', link: '', cta: '' });
                     }}
-                    className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-all"
+                    className="flex-1 bg-surface border border-surfaceBorder hover:border-white hover:text-white text-contentMuted font-bold py-4 rounded-xl transition-all tracking-wide"
                   >
-                    Cancel
+                    CANCEL
                   </button>
                 </div>
               </div>
@@ -674,72 +708,76 @@ const [previewSuccess, setPreviewSuccess] = useState<string | null>(null);
           </div>
 
           {/* Preview Promo Section */}
-{promoMaterials.length > 0 && (
-  <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-6">
-    <h2 className="text-xl font-bold text-white mb-4">Preview Promo</h2>
-    <p className="text-grey-400 text-sm mb-4">
-      See how your promo will look when the bot posts it on channels
-    </p>
+          {promoMaterials.length > 0 && (
+            <div className="glass-panel p-6 sm:p-8 overflow-hidden relative group">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-neon-cyan/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none group-hover:bg-neon-cyan/10 transition-colors"></div>
+              
+              <h2 className="text-xl sm:text-2xl font-heading font-bold text-white mb-4 flex items-center gap-3 relative z-10">
+                <span className="text-neon-cyan">👀</span> Preview Promo
+              </h2>
+              <p className="text-contentMuted text-sm mb-6 relative z-10">
+                See how your promo will look when the bot posts it on channels
+              </p>
 
-    {previewSuccess && (
-      <div className="mb-4 bg-green-600/10 border border-green-600/30 rounded-lg p-4">
-        <div className="flex items-center gap-3">
-          <CheckCircle className="text-green-400" size={20} />
-          <p className="text-green-400">{previewSuccess}</p>
-        </div>
-      </div>
-    )}
+              {previewSuccess && (
+                <div className="mb-6 bg-neon-emerald/10 border border-neon-emerald/30 rounded-xl p-4 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="text-neon-emerald" size={20} />
+                    <p className="text-neon-emerald font-bold">{previewSuccess}</p>
+                  </div>
+                </div>
+              )}
 
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-grey-300 mb-2">
-          Select Promo to Preview
-        </label>
-        <select
-          value={selectedPreviewPromo}
-          onChange={(e) => setSelectedPreviewPromo(e.target.value)}
-          className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
-        >
-          <option value="">Choose a promo...</option>
-          {promoMaterials.map((promo) => (
-            <option key={promo.id} value={promo.id}>
-              {promo.name}
-            </option>
-          ))}
-        </select>
-      </div>
+              <div className="space-y-6 relative z-10">
+                <div>
+                  <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-3 ml-1">
+                    Select Promo to Preview
+                  </label>
+                  <select
+                    value={selectedPreviewPromo}
+                    onChange={(e) => setSelectedPreviewPromo(e.target.value)}
+                    className="input-glass w-full text-lg cursor-pointer appearance-none"
+                  >
+                    <option value="" className="bg-charcoal text-contentMuted">Choose a promo...</option>
+                    {promoMaterials.map((promo) => (
+                      <option key={promo.id} value={promo.id} className="bg-charcoal text-white">
+                        {promo.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-      <button
-        onClick={handlePreviewPromo}
-        disabled={!selectedPreviewPromo || previewing}
-        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:from-grey-600 disabled:to-grey-700 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
-      >
-        <Send size={20} />
-        {previewing ? 'Sending Preview...' : 'Send Preview to Telegram'}
-      </button>
+                <button
+                  onClick={handlePreviewPromo}
+                  disabled={!selectedPreviewPromo || previewing}
+                  className="w-full bg-neon-cyan/20 border border-neon-cyan/50 hover:bg-neon-cyan hover:text-charcoal hover:shadow-glow-cyan text-neon-cyan font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-3 tracking-widest disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                >
+                  <Send size={20} className={previewing ? "animate-pulse" : ""} />
+                  {previewing ? 'SENDING PREVIEW...' : 'SEND PREVIEW TO TELEGRAM'}
+                </button>
 
-      <p className="text-grey-400 text-xs text-center">
-        The preview will be sent to you via the CP Gram bot
-      </p>
-    </div>
-  </div>
-)}
+                <p className="text-contentMuted text-xs text-center font-mono">
+                  The preview will be sent to you via the CP Gram bot
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Save Button */}
-          <div className="flex gap-4">
+          <div className="flex flex-col-reverse sm:flex-row gap-4 pt-6">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-4 rounded-lg transition-all"
+              className="w-full sm:w-1/3 bg-surface border border-surfaceBorder hover:border-white hover:text-white text-contentMuted font-bold py-5 rounded-2xl transition-all tracking-wide"
             >
-              Cancel
+              CANCEL
             </button>
             <button
               onClick={handleSave}
               disabled={submitting}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-grey-600 disabled:to-grey-700 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-2/3 bg-neon-cyan/20 border border-neon-cyan/50 hover:bg-neon-cyan hover:text-charcoal hover:shadow-glow-cyan text-neon-cyan font-bold py-5 rounded-2xl transition-all flex items-center justify-center gap-3 text-lg tracking-widest disabled:opacity-50 disabled:cursor-not-allowed group"
             >
-              <Save size={20} />
-              {submitting ? 'Saving...' : 'Save Changes'}
+              <Save size={24} className="group-hover:scale-110 transition-transform" />
+              {submitting ? 'SAVING...' : 'SAVE CHANGES'}
             </button>
           </div>
         </div>

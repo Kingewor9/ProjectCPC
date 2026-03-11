@@ -86,23 +86,23 @@ export default function ChannelAvatar({
     const initial = channelName ? channelName.charAt(0).toUpperCase() : '📺';
     return (
       <div
-        className={`${className} rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0`}
+        className={`${className} rounded-xl bg-charcoal border border-surfaceBorder flex items-center justify-center flex-shrink-0 shadow-[inset_0_0_10px_rgba(0,240,255,0.05)]`}
         title={hasError ? `Image failed to load for ${alt}` : `No image for ${alt}`}
       >
         <div className="flex flex-col items-center justify-center">
-          <ImageIcon size={16} className="text-white/70 mb-0.5" />
-          <span className="text-xs font-bold text-white">{initial}</span>
+          <ImageIcon size={18} className="text-neon-cyan/50 mb-1" />
+          <span className="text-xs font-bold font-heading text-content tracking-wider">{initial}</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`${className} rounded-lg bg-grey-700 flex items-center justify-center overflow-hidden flex-shrink-0 relative`}>
+    <div className={`${className} rounded-xl bg-surface border border-surfaceBorder flex items-center justify-center overflow-hidden flex-shrink-0 relative`}>
       {isLoading && (
-        <div className="absolute inset-0 bg-grey-700 flex items-center justify-center z-10">
-          <div className="animate-pulse">
-            <ImageIcon size={20} className="text-grey-600" />
+        <div className="absolute inset-0 bg-surface flex items-center justify-center z-10 backdrop-blur-sm">
+          <div className="animate-pulse-glow">
+            <ImageIcon size={20} className="text-neon-cyan/50" />
           </div>
         </div>
       )}

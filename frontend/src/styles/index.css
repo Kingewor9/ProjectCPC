@@ -2,6 +2,10 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
+:root {
+  --app-bg: #050505;
+}
+
 * {
   @apply box-border;
 }
@@ -11,22 +15,68 @@ html {
 }
 
 body {
-  @apply bg-darkBlue-900 text-grey-200;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  @apply bg-obsidian text-content font-sans;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(138, 43, 226, 0.05), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(0, 240, 255, 0.05), transparent 25%);
+  background-attachment: fixed;
+}
+
+/* Glass & Neon Aesthetics */
+@layer components {
+  .glass-panel {
+    @apply bg-surface backdrop-blur-xl border border-surfaceBorder rounded-2xl shadow-glass-panel relative overflow-hidden;
+  }
+  
+  .glass-panel::before {
+    content: '';
+    @apply absolute inset-0 bg-glass-gradient opacity-50 pointer-events-none;
+  }
+
+  .neon-text-cyan {
+    @apply text-neon-cyan drop-shadow-[0_0_8px_rgba(0,240,255,0.4)];
+  }
+
+  .neon-text-violet {
+    @apply text-neon-violet drop-shadow-[0_0_8px_rgba(138,43,226,0.4)];
+  }
+
+  .neon-text-emerald {
+    @apply text-neon-emerald drop-shadow-[0_0_8px_rgba(0,255,157,0.4)];
+  }
+
+  .btn-primary {
+    @apply bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/30 rounded-lg px-4 py-2 font-medium transition-all duration-300 hover:bg-neon-cyan/20 hover:border-neon-cyan hover:shadow-glow-cyan active:scale-95 flex items-center justify-center gap-2;
+  }
+
+  .btn-secondary {
+    @apply bg-surface hover:bg-surfaceHover text-content border border-surfaceBorder rounded-lg px-4 py-2 font-medium transition-all duration-300 active:scale-95 flex items-center justify-center gap-2;
+  }
+  
+  .input-glass {
+    @apply w-full bg-charcoal/50 border border-surfaceBorder rounded-xl px-4 py-3 text-content placeholder:text-contentMuted focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/50 transition-all font-sans;
+  }
+
+  /* Staggered animation utilities */
+  .stagger-1 { animation-delay: 100ms; }
+  .stagger-2 { animation-delay: 200ms; }
+  .stagger-3 { animation-delay: 300ms; }
+  .stagger-4 { animation-delay: 400ms; }
+  .stagger-5 { animation-delay: 500ms; }
 }
 
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-darkBlue-800;
+  @apply bg-obsidian;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-grey-700 rounded hover:bg-grey-600;
+  @apply bg-surfaceBorder rounded hover:bg-white/10 transition-colors;
 }
 
 /* Smooth transitions */
@@ -34,17 +84,17 @@ input,
 select,
 textarea,
 button {
-  @apply transition-all duration-200;
+  @apply transition-all duration-300;
 }
 
 /* Selection */
 ::selection {
-  @apply bg-blue-600 text-white;
+  @apply bg-neon-cyan/30 text-neon-cyan;
 }
 
 /* Placeholder */
 ::placeholder {
-  @apply text-grey-500;
+  @apply text-contentMuted;
 }
 
 /* Add padding to main content on mobile to prevent content from being hidden behind bottom nav */

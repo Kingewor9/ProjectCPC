@@ -140,15 +140,15 @@ export default function TelegramAuth() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-darkBlue-900 via-darkBlue-800 to-blue-900 flex items-center justify-center p-4">
-        <div className="text-center bg-red-900/20 border border-red-500 rounded-lg p-6 max-w-md">
-          <p className="text-red-400 font-bold mb-2">Authentication Error</p>
-          <p className="text-white text-sm">{error}</p>
+      <div className="min-h-screen bg-obsidian flex items-center justify-center p-4">
+        <div className="text-center glass-panel border-neon-pink/50 p-6 max-w-md shadow-glow-violet">
+          <p className="neon-text-pink font-bold mb-3 text-lg">Authentication Error</p>
+          <p className="text-content font-mono text-sm mb-6">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            className="btn-primary"
           >
-            Retry
+            Retry Connection
           </button>
         </div>
       </div>
@@ -156,10 +156,10 @@ export default function TelegramAuth() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-darkBlue-900 via-darkBlue-800 to-blue-900 flex items-center justify-center">
+    <div className="min-h-screen bg-obsidian flex items-center justify-center">
       <div className="text-center">
         <LoadingSpinner />
-        <p className="text-white mt-4 text-lg">Connecting to Telegram...</p>
+        <p className="text-neon-cyan mt-6 text-lg tracking-widest uppercase font-mono animate-pulse">Connecting to Telegram</p>
       </div>
     </div>
   );

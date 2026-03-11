@@ -143,10 +143,11 @@ export default function RequestsPage() {
 
   return (
     <Layout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8">
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Cross-Promo Requests</h1>
-          <p className="text-grey-400 text-sm sm:text-base">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-32 animate-fade-in-up">
+        {/* Header */}
+        <div className="mb-10 sm:mb-12">
+          <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Cross-Promo Requests</h1>
+          <p className="text-contentMuted text-lg font-sans">
             Manage your incoming and outgoing promotion requests
           </p>
         </div>
@@ -154,88 +155,102 @@ export default function RequestsPage() {
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
 
         {/* Pending Requests */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Clock size={24} className="text-yellow-400" />
-            <h2 className="text-xl sm:text-2xl font-bold text-white">
-              Pending ({pendingRequests.length})
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-6 relative group">
+            <div className="absolute inset-0 bg-yellow-500/20 blur-xl rounded-full translate-x-12 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+            <div className="w-12 h-12 bg-yellow-500/10 border border-yellow-500/30 rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(234,179,8,0.15)] relative z-10">
+              <Clock size={24} className="text-yellow-500" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white relative z-10">
+              Pending <span className="text-yellow-500 ml-1">({pendingRequests.length})</span>
             </h2>
           </div>
 
           {pendingRequests.length === 0 ? (
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg p-8 text-center">
-              <p className="text-grey-400">No pending requests</p>
+            <div className="glass-panel p-16 text-center border-dashed border-2 flex flex-col items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-surface border border-surfaceBorder flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(0,0,0,0.3)]">
+                 <Clock className="text-contentMuted" size={24} />
+              </div>
+              <p className="text-white font-heading font-bold text-xl mb-2">No pending requests</p>
+              <p className="text-contentMuted font-sans">You're all caught up!</p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:gap-6">
-              {pendingRequests.map((request) => (
+            <div className="grid gap-6">
+              {pendingRequests.map((request, idx) => (
                 <div
                   key={request.id}
-                  className="bg-darkBlue-800 border border-grey-700 rounded-lg p-4 sm:p-6 hover:border-yellow-600/50 transition-all"
+                  className="glass-panel p-6 sm:p-8 hover:border-yellow-500/50 hover:shadow-[0_0_20px_rgba(234,179,8,0.1)] transition-all group relative overflow-hidden animate-fade-in-up"
+                  style={{ animationDelay: `${idx * 100}ms` }}
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
-                    <div>
-                      <p className="text-grey-400 text-xs sm:text-sm font-medium mb-2">
-                        FROM {isOutgoingRequest(request) && <span className="text-blue-400">(You)</span>}
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-transparent via-surfaceBorder to-transparent group-hover:via-yellow-500 transition-colors"></div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div className="bg-surface/30 p-4 rounded-xl border border-surfaceBorder">
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2 flex items-center gap-2">
+                        FROM {isOutgoingRequest(request) && <span className="text-neon-cyan px-2 py-0.5 bg-neon-cyan/10 rounded border border-neon-cyan/20">YOU</span>}
                       </p>
-                      <p className="text-white font-bold text-base sm:text-lg">{request.fromChannel}</p>
+                      <p className="text-white font-heading font-bold text-lg sm:text-xl truncate">{request.fromChannel}</p>
                     </div>
 
-                    <div>
-                      <p className="text-grey-400 text-xs sm:text-sm font-medium mb-2">
-                        TO {isIncomingRequest(request) && <span className="text-green-400">(You)</span>}
+                    <div className="bg-surface/30 p-4 rounded-xl border border-surfaceBorder">
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2 flex items-center gap-2">
+                        TO {isIncomingRequest(request) && <span className="text-neon-emerald px-2 py-0.5 bg-neon-emerald/10 rounded border border-neon-emerald/20">YOU</span>}
                       </p>
-                      <p className="text-white font-bold text-base sm:text-lg">{request.toChannel}</p>
+                      <p className="text-white font-heading font-bold text-lg sm:text-xl truncate">{request.toChannel}</p>
                     </div>
 
-                    <div>
-                      <p className="text-grey-400 text-xs sm:text-sm font-medium mb-2">SCHEDULED</p>
-                      <p className="text-white font-bold text-sm sm:text-base">
-                        {request.daySelected} {request.timeSelected}
+                    <div className="bg-surface/30 p-4 rounded-xl border border-surfaceBorder flex flex-col justify-center">
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2">SCHEDULED</p>
+                      <p className="text-white font-mono font-bold tracking-tight text-sm sm:text-base mb-1">
+                        {request.daySelected} <span className="text-neon-cyan">{request.timeSelected}</span>
                       </p>
-                      <p className="text-grey-400 text-xs sm:text-sm mt-1">
-                        Duration: {request.duration}h • Cost: {request.cpcCost} CP
+                      <p className="text-contentMuted text-xs font-mono font-bold">
+                        {request.duration}h • <span className="text-yellow-500">{request.cpcCost} CP</span>
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-darkBlue-700 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-grey-700">
-                    <p className="text-white font-bold mb-2 text-sm sm:text-base">{request.promo.name}</p>
+                  <div className="bg-charcoal/80 rounded-xl p-5 mb-6 border border-surfaceBorder relative">
+                    <span className="absolute top-4 right-4 text-[10px] font-bold tracking-widest uppercase text-contentMuted bg-surface px-2 py-1 rounded">Promo</span>
+                    <p className="text-white font-bold text-base sm:text-lg mb-2 pr-12">{request.promo.name}</p>
                     {request.promo.text && (
-                      <p className="text-grey-300 text-xs sm:text-sm mb-2">{request.promo.text}</p>
+                      <div className="bg-surface/50 p-3 rounded-lg mb-3">
+                        <p className="text-contentMuted text-xs sm:text-sm font-sans whitespace-pre-wrap">{request.promo.text}</p>
+                      </div>
                     )}
                     <a
                       href={request.promo.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 text-xs sm:text-sm break-all"
+                      className="inline-flex items-center text-neon-cyan hover:text-white text-xs sm:text-sm font-mono truncate hover:underline hover:underline-offset-4 transition-colors max-w-full"
                     >
                       {request.promo.link}
                     </a>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex flex-col sm:flex-row gap-4 mt-auto">
                     {isIncomingRequest(request) ? (
                       <>
                         <button
                           onClick={() => openAcceptModal(request)}
                           disabled={accepting === request.id}
-                          className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2.5 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                          className="flex-1 bg-neon-emerald/10 hover:bg-neon-emerald/20 border border-neon-emerald/30 hover:border-neon-emerald text-neon-emerald font-extrabold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 group tracking-widest text-sm"
                         >
-                          <CheckCircle size={18} />
-                          {accepting === request.id ? 'Accepting...' : 'Accept Request'}
+                          <CheckCircle size={18} className="group-hover:scale-110 transition-transform" />
+                          {accepting === request.id ? 'ACCEPTING...' : 'ACCEPT REQUEST'}
                         </button>
                         <button
                           onClick={() => openDeclineModal(request)}
                           disabled={declining === request.id}
-                          className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2.5 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                          className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500 text-red-500 font-extrabold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 group tracking-widest text-sm"
                         >
-                          <XCircle size={18} />
-                          {declining === request.id ? 'Declining...' : 'Decline'}
+                          <XCircle size={18} className="group-hover:scale-110 transition-transform" />
+                          {declining === request.id ? 'DECLINING...' : 'DECLINE'}
                         </button>
                       </>
                     ) : (
-                      <div className="flex-1 text-center py-2 text-grey-400 text-xs sm:text-sm">
+                      <div className="flex-1 text-center py-3.5 bg-surface/50 border border-surfaceBorder border-dashed rounded-xl text-contentMuted text-xs sm:text-sm font-bold tracking-widest uppercase flex items-center justify-center gap-2">
+                        <Clock size={16} className="text-yellow-500/50" />
                         Awaiting response from {request.toChannel}
                       </div>
                     )}
@@ -248,37 +263,43 @@ export default function RequestsPage() {
 
         {/* Accepted Requests */}
         {acceptedRequests.length > 0 && (
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <CheckCircle size={24} className="text-green-400" />
-              <h2 className="text-2xl font-bold text-white">
-                Accepted ({acceptedRequests.length})
+          <div className="mb-12">
+            <div className="flex items-center gap-3 mb-6 relative group">
+              <div className="absolute inset-0 bg-neon-emerald/20 blur-xl rounded-full translate-x-12 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+              <div className="w-12 h-12 bg-neon-emerald/10 border border-neon-emerald/30 rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(0,255,157,0.15)] relative z-10">
+                <CheckCircle size={24} className="text-neon-emerald" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white relative z-10">
+                Accepted <span className="text-neon-emerald ml-1">({acceptedRequests.length})</span>
               </h2>
             </div>
 
             <div className="grid gap-6">
-              {acceptedRequests.map((request) => (
+              {acceptedRequests.map((request, idx) => (
                 <div
                   key={request.id}
-                  className="bg-darkBlue-800 border border-green-600/30 rounded-lg p-6"
+                  className="glass-panel p-6 sm:p-8 hover:border-neon-emerald/50 hover:shadow-[0_0_20px_rgba(0,255,157,0.1)] transition-all group relative overflow-hidden animate-fade-in-up"
+                  style={{ animationDelay: `${(pendingRequests.length + idx) * 100}ms` }}
                 >
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-transparent via-neon-emerald/50 to-transparent group-hover:via-neon-emerald transition-colors"></div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <p className="text-grey-400 text-sm font-medium mb-2">FROM</p>
-                      <p className="text-white font-bold text-lg">{request.fromChannel}</p>
+                    <div className="bg-surface/30 p-4 rounded-xl border border-surfaceBorder/50">
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2">FROM</p>
+                      <p className="text-white font-heading font-bold text-lg sm:text-xl truncate">{request.fromChannel}</p>
                     </div>
 
-                    <div>
-                      <p className="text-grey-400 text-sm font-medium mb-2">TO</p>
-                      <p className="text-white font-bold text-lg">{request.toChannel}</p>
+                    <div className="bg-surface/30 p-4 rounded-xl border border-surfaceBorder/50">
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2">TO</p>
+                      <p className="text-white font-heading font-bold text-lg sm:text-xl truncate">{request.toChannel}</p>
                     </div>
 
-                    <div>
-                      <p className="text-grey-400 text-sm font-medium mb-2">SCHEDULED</p>
-                      <p className="text-white font-bold">
-                        {request.daySelected} {request.timeSelected}
+                    <div className="bg-surface/30 p-4 rounded-xl border border-neon-emerald/20 flex flex-col justify-center">
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2">SCHEDULED</p>
+                      <p className="text-white font-mono font-bold tracking-tight text-sm sm:text-base mb-2">
+                        {request.daySelected} <span className="text-neon-cyan">{request.timeSelected}</span>
                       </p>
-                      <span className="inline-block mt-2 bg-green-600/20 text-green-300 text-xs px-3 py-1 rounded-full">
+                      <span className="inline-block bg-neon-emerald/10 border border-neon-emerald/30 text-neon-emerald text-[10px] sm:text-xs px-3 py-1.5 rounded uppercase tracking-widest font-bold w-max shadow-[0_0_10px_rgba(0,255,157,0.1)]">
                         Campaign Scheduled
                       </span>
                     </div>
@@ -292,32 +313,38 @@ export default function RequestsPage() {
         {/* Rejected Requests */}
         {rejectedRequests.length > 0 && (
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <Zap size={24} className="text-red-400" />
-              <h2 className="text-2xl font-bold text-white">
-                Rejected ({rejectedRequests.length})
+            <div className="flex items-center gap-3 mb-6 relative group">
+              <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full translate-x-12 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+              <div className="w-12 h-12 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center shadow-[0_0_15px_rgba(239,68,68,0.15)] relative z-10">
+                <Zap size={24} className="text-red-500" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white relative z-10">
+                Rejected <span className="text-red-500 ml-1">({rejectedRequests.length})</span>
               </h2>
             </div>
 
             <div className="grid gap-6">
-              {rejectedRequests.map((request) => (
+              {rejectedRequests.map((request, idx) => (
                 <div
                   key={request.id}
-                  className="bg-darkBlue-800 border border-red-600/30 rounded-lg p-6 opacity-75"
+                  className="glass-panel p-6 sm:p-8 opacity-75 hover:opacity-100 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(239,68,68,0.1)] transition-all group relative overflow-hidden animate-fade-in-up"
+                  style={{ animationDelay: `${(pendingRequests.length + acceptedRequests.length + idx) * 100}ms` }}
                 >
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-transparent via-red-500/50 to-transparent group-hover:via-red-500 transition-colors"></div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <p className="text-grey-400 text-sm font-medium mb-2">FROM</p>
-                      <p className="text-white font-bold text-lg">{request.fromChannel}</p>
+                    <div className="bg-surface/20 p-4 rounded-xl border border-surfaceBorder/30">
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2">FROM</p>
+                      <p className="text-contentMuted font-heading font-bold text-lg sm:text-xl truncate">{request.fromChannel}</p>
                     </div>
 
-                    <div>
-                      <p className="text-grey-400 text-sm font-medium mb-2">TO</p>
-                      <p className="text-white font-bold text-lg">{request.toChannel}</p>
+                    <div className="bg-surface/20 p-4 rounded-xl border border-surfaceBorder/30">
+                      <p className="text-contentMuted text-[10px] sm:text-xs font-bold tracking-widest uppercase mb-2">TO</p>
+                      <p className="text-contentMuted font-heading font-bold text-lg sm:text-xl truncate">{request.toChannel}</p>
                     </div>
 
-                    <div>
-                      <span className="inline-block bg-red-600/20 text-red-300 text-xs px-3 py-1 rounded-full">
+                    <div className="flex flex-col justify-center items-start lg:items-end">
+                      <span className="inline-block bg-red-500/10 border border-red-500/30 text-red-500 text-[10px] sm:text-xs px-3 py-1.5 rounded uppercase tracking-widest font-bold">
                         Rejected
                       </span>
                     </div>
@@ -330,30 +357,35 @@ export default function RequestsPage() {
 
         {/* Accept Modal */}
         {showAcceptModal && selectedRequest && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-lg max-w-md w-full p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">Choose Your Promo</h2>
+          <div className="fixed inset-0 bg-obsidian/90 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="glass-panel p-6 sm:p-8 max-w-md w-full relative overflow-hidden shadow-2xl scale-in-center border-neon-emerald/20">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-neon-emerald/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+              
+              <div className="flex items-center justify-between mb-8 relative z-10 border-b border-surfaceBorder pb-4">
+                <h2 className="text-2xl font-heading font-extrabold text-white flex items-center gap-3">
+                  <span className="w-2 h-8 bg-neon-emerald rounded-full"></span>
+                  Choose Promo
+                </h2>
                 <button
                   onClick={closeAcceptModal}
-                  className="text-grey-400 hover:text-white transition-colors"
+                  className="text-contentMuted hover:text-white bg-surface p-2 rounded-full transition-colors"
                 >
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="mb-6">
-                <p className="text-grey-300 mb-4">
-                  {selectedRequest.fromChannel} is offering to post on your channel {selectedRequest.toChannel}. 
+              <div className="mb-8 relative z-10">
+                <p className="text-contentMuted text-sm sm:text-base font-sans mb-6">
+                  <strong className="text-white font-heading font-bold">{selectedRequest.fromChannel}</strong> is offering to post on your channel <strong className="text-neon-cyan font-heading font-bold">{selectedRequest.toChannel}</strong>. 
                   Choose which of your promos they will post:
                 </p>
 
                 {/* Get the recipient channel */}
                 {getRecipientChannel(selectedRequest) ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4 max-h-64 overflow-y-auto custom-scrollbar pr-2">
                     {getRecipientChannel(selectedRequest)!.promos.length === 0 ? (
-                      <div className="bg-yellow-600/10 border border-yellow-600/30 rounded-lg p-4 text-center">
-                        <p className="text-yellow-300 text-sm">
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-5 text-center">
+                        <p className="text-yellow-500 font-bold tracking-wide text-sm">
                           No promos available for {selectedRequest.toChannel}. Please add promos to this channel first.
                         </p>
                       </div>
@@ -362,21 +394,26 @@ export default function RequestsPage() {
                         <button
                           key={promo.id}
                           onClick={() => setSelectedPromo(promo)}
-                          className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                          className={`w-full p-5 rounded-xl border-2 transition-all text-left relative overflow-hidden group ${
                             selectedPromo?.id === promo.id
-                              ? 'border-blue-500 bg-blue-600/10'
-                              : 'border-grey-600 bg-darkBlue-700 hover:border-grey-500'
+                              ? 'border-neon-emerald bg-neon-emerald/5 shadow-[0_0_15px_rgba(0,255,157,0.15)]'
+                              : 'border-surfaceBorder bg-surface/30 hover:border-contentMuted hover:bg-surface/50'
                           }`}
                         >
-                          <p className="text-white font-bold">{promo.name}</p>
-                          {promo.text && <p className="text-grey-400 text-sm mt-1">{promo.text}</p>}
+                          {selectedPromo?.id === promo.id && (
+                            <div className="absolute top-0 right-0 p-2">
+                              <CheckCircle className="text-neon-emerald" size={20} />
+                            </div>
+                          )}
+                          <p className={`font-heading font-bold text-lg mb-2 ${selectedPromo?.id === promo.id ? 'text-neon-emerald' : 'text-white'}`}>{promo.name}</p>
+                          {promo.text && <p className="text-contentMuted text-xs sm:text-sm font-sans line-clamp-2">{promo.text}</p>}
                         </button>
                       ))
                     )}
                   </div>
                 ) : (
-                  <div className="bg-red-600/10 border border-red-600/30 rounded-lg p-4 text-center">
-                    <p className="text-red-300 text-sm">
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-5 text-center">
+                    <p className="text-red-500 font-bold tracking-wide text-sm">
                       Channel not found. This request may be invalid.
                     </p>
                   </div>
@@ -384,20 +421,26 @@ export default function RequestsPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 relative z-10">
                 <button
                   onClick={closeAcceptModal}
-                  className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 rounded-lg transition-colors"
+                  className="w-full sm:w-1/2 bg-surface hover:bg-surface/80 border border-surfaceBorder hover:border-contentMuted text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
                   onClick={handleConfirmAccept}
                   disabled={!selectedPromo || accepting === selectedRequest.id}
-                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="w-full sm:w-1/2 bg-neon-emerald/20 hover:bg-neon-emerald text-neon-emerald hover:text-charcoal border border-neon-emerald font-extrabold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <CheckCircle size={18} />
-                  {accepting === selectedRequest.id ? 'Confirming...' : 'Confirm Accept'}
+                  {accepting === selectedRequest.id ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />
+                  ) : (
+                    <>
+                      <CheckCircle size={18} />
+                      CONFIRM ACCEPT
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -406,31 +449,37 @@ export default function RequestsPage() {
 
         {/* Decline Modal */}
         {showDeclineModal && selectedRequest && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-darkBlue-800 border border-grey-700 rounded-xl max-w-md w-full p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4 sm:mb-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-white">Decline Request</h2>
+          <div className="fixed inset-0 bg-obsidian/90 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="glass-panel p-6 sm:p-8 max-w-md w-full relative overflow-hidden shadow-2xl scale-in-center border-red-500/20">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+              
+              <div className="flex items-center justify-between mb-8 relative z-10 border-b border-surfaceBorder pb-4">
+                <h2 className="text-2xl font-heading font-extrabold text-white flex items-center gap-3">
+                  <span className="w-2 h-8 bg-red-500 rounded-full"></span>
+                  Decline Request
+                </h2>
                 <button
                   onClick={closeDeclineModal}
-                  className="text-grey-400 hover:text-white transition-colors"
+                  className="text-contentMuted hover:text-white bg-surface p-2 rounded-full transition-colors"
                 >
                   <X size={24} />
                 </button>
               </div>
 
-              <div className="mb-4 sm:mb-6">
-                <p className="text-grey-300 text-sm mb-4">
-                  You're about to decline the request from <strong className="text-white">{selectedRequest.fromChannel}</strong>.
+              <div className="mb-8 relative z-10">
+                <p className="text-contentMuted text-sm sm:text-base font-sans mb-6">
+                  You're about to decline the request from <strong className="text-white font-heading font-bold">{selectedRequest.fromChannel}</strong>.
                 </p>
                 
-                <div className="bg-yellow-600/10 border border-yellow-600/30 rounded-lg p-3 mb-4">
-                  <p className="text-yellow-300 text-xs sm:text-sm">
-                    ⚠️ The requester will be notified with your reason. Please be professional and clear.
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6 flex items-start gap-3">
+                  <span className="text-2xl leading-none">⚠️</span>
+                  <p className="text-yellow-500 text-xs sm:text-sm font-bold tracking-wide">
+                    The requester will be notified with your reason. Please be professional and clear.
                   </p>
                 </div>
 
-                <label className="block text-white text-sm font-medium mb-2">
-                  Reason for declining <span className="text-red-400">*</span>
+                <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-3 ml-1">
+                  Reason for declining <span className="text-red-500 normal-case text-lg leading-none">*</span>
                 </label>
                 <textarea
                   value={declineReason}
@@ -438,27 +487,35 @@ export default function RequestsPage() {
                   placeholder="E.g., 'Content doesn't match our channel theme' or 'Already fully booked for this time slot'"
                   rows={4}
                   maxLength={500}
-                  className="w-full bg-darkBlue-700 border border-grey-600 rounded-lg px-3 sm:px-4 py-2 sm:py-3 text-white text-sm placeholder-grey-500 focus:outline-none focus:border-red-500 resize-none"
+                  className="input-glass w-full resize-none bg-surface/50 font-sans"
                 />
-                <p className="text-grey-400 text-xs mt-2">
-                  {declineReason.length}/500 characters
-                </p>
+                <div className="flex justify-end mt-2">
+                  <p className="text-contentMuted text-[10px] font-mono font-bold tracking-widest">
+                    {declineReason.length}/500
+                  </p>
+                </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 relative z-10">
                 <button
                   onClick={closeDeclineModal}
-                  className="flex-1 bg-grey-700 hover:bg-grey-600 text-white font-bold py-2 sm:py-3 rounded-lg transition-colors text-sm sm:text-base"
+                  className="w-full sm:w-1/2 bg-surface hover:bg-surface/80 border border-surfaceBorder hover:border-contentMuted text-white font-bold py-3.5 rounded-xl transition-all disabled:opacity-50"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
                   onClick={handleConfirmDecline}
                   disabled={!declineReason.trim() || declining === selectedRequest.id}
-                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-grey-600 disabled:cursor-not-allowed text-white font-bold py-2 sm:py-3 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                  className="w-full sm:w-1/2 bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white border border-red-500 font-extrabold py-3.5 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <XCircle size={18} />
-                  {declining === selectedRequest.id ? 'Declining...' : 'Confirm Decline'}
+                  {declining === selectedRequest.id ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" />
+                  ) : (
+                    <>
+                      <XCircle size={18} />
+                      CONFIRM DECLINE
+                    </>
+                  )}
                 </button>
               </div>
             </div>

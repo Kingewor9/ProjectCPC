@@ -97,19 +97,20 @@ export default function PromoImage({
   if (!src || src.trim() === '' || hasError) {
     return (
       <div
-        className={`w-full h-48 bg-darkBlue-700 rounded-lg flex flex-col items-center justify-center text-grey-400 mb-3 ${className}`}
+        className={`w-full h-48 bg-charcoal border border-surfaceBorder rounded-2xl flex flex-col items-center justify-center text-contentMuted mb-3 relative overflow-hidden ${className}`}
       >
-        <ImageIcon size={28} className="mb-2" />
-        <span className="text-sm">No promo image</span>
+        <div className="absolute inset-0 bg-glass-gradient opacity-30"></div>
+        <ImageIcon size={32} className="mb-3 text-surfaceBorder drop-shadow-md relative z-10" />
+        <span className="text-sm font-sans tracking-wide relative z-10">No promo image</span>
       </div>
     );
   }
 
   return (
-    <div className={`w-full h-48 bg-darkBlue-900 rounded-lg overflow-hidden relative mb-3 ${className}`}>
+    <div className={`w-full h-48 bg-charcoal border border-surfaceBorder rounded-2xl overflow-hidden relative mb-3 overflow-hidden shadow-glass-panel ${className}`}>
       {isLoading && (
-        <div className="absolute inset-0 bg-darkBlue-700 flex items-center justify-center animate-pulse z-10">
-          <ImageIcon size={28} className="text-grey-600" />
+        <div className="absolute inset-0 bg-surface flex items-center justify-center animate-pulse z-10 backdrop-blur-sm">
+          <ImageIcon size={32} className="text-neon-cyan/20" />
         </div>
       )}
 

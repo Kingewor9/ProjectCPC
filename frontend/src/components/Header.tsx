@@ -18,43 +18,39 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-darkBlue-800 border-b border-grey-700 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <header className="glass-panel !rounded-none !border-t-0 !border-x-0 !border-b-surfaceBorder sticky top-0 z-50 h-16 transition-all duration-300">
+      <div className="w-full h-full px-4 sm:px-6 lg:px-8 max-w-[2000px] mx-auto">
+        <div className="flex justify-between items-center h-full">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center bg-white">
-              <img 
-                src="/logo.jpg" 
-                alt="CP Gram Logo" 
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement!.innerHTML = '<span class="text-blue-600 font-bold text-lg">GG</span>';
-                }}
-              />
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-charcoal border border-surfaceBorder overflow-hidden group-hover:border-neon-cyan/50 transition-colors shadow-glow-cyan">
+              <div className="absolute inset-0 bg-neon-cyan/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <span className="font-heading font-bold text-lg text-white">GG</span>
             </div>
-            <span className="text-xl font-bold text-white hidden sm:inline">CP Gram</span>
+            <span className="text-xl font-heading font-bold font-heading text-white hidden sm:inline tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+              CP Gram
+            </span>
           </Link>
 
           {/* User Info and Actions */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-5">
             {user && (
               <>
-                {/* CPC Balance - Clickable, responsive sizing */}
+                {/* CPC Balance - Neon glowing button */}
                 <button
                   onClick={() => navigate('/cp-coins')}
-                  className="flex items-center gap-2 bg-darkBlue-700 hover:bg-darkBlue-600 px-2 sm:px-4 py-2 rounded-lg transition-all cursor-pointer"
+                  className="group relative flex items-center gap-3 bg-charcoal/50 border border-surfaceBorder hover:border-neon-cyan/50 px-3 sm:px-4 py-1.5 rounded-xl transition-all cursor-pointer overflow-hidden backdrop-blur-md"
                 >
-                  <Wallet size={18} className="text-blue-400" />
+                   <div className="absolute inset-0 bg-neon-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <Wallet size={18} className="text-neon-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.5)] group-hover:scale-110 transition-transform" />
                   {/* Desktop view */}
-                  <div className="hidden sm:block">
-                    <p className="text-xs text-grey-400">CPC Balance</p>
-                    <p className="text-lg font-bold text-white">{user.cpcBalance}</p>
+                  <div className="hidden sm:block text-left">
+                    <p className="text-[10px] uppercase tracking-wider text-contentMuted font-bold">CPC Balance</p>
+                    <p className="text-sm font-mono font-bold text-white tracking-widest leading-tight">{user.cpcBalance.toLocaleString()}</p>
                   </div>
                   {/* Mobile view - just the number */}
                   <div className="sm:hidden">
-                    <p className="text-sm font-bold text-white">{user.cpcBalance}</p>
+                    <p className="text-sm font-mono font-bold text-white tracking-wider">{user.cpcBalance.toLocaleString()}</p>
                   </div>
                 </button>
 
@@ -62,32 +58,35 @@ export default function Header() {
                 <div className="relative">
                   <button
                     onClick={toggleDropdown}
-                    className="flex items-center gap-2 hover:bg-darkBlue-700 rounded-lg p-1 transition-colors"
+                    className="flex items-center gap-3 hover:bg-surface rounded-xl p-1.5 transition-colors border border-transparent hover:border-surfaceBorder"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {/* Desktop user info */}
                       <div className="text-right hidden lg:block">
-                        <p className="text-sm font-medium text-white">{user.name || user.first_name}</p>
-                        <p className="text-xs text-grey-400">@{user.username}</p>
+                        <p className="text-sm font-bold text-white tracking-wide">{user.name || user.first_name}</p>
+                        <p className="text-xs text-neon-cyan/80 font-mono">@{user.username}</p>
                       </div>
                       
                       {/* User avatar */}
-                      {user.photo_url ? (
-                        <img
-                          src={user.photo_url}
-                          alt={user.name}
-                          className="w-10 h-10 rounded-full border-2 border-blue-500"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
-                          {(user.first_name || user.name || 'U')[0].toUpperCase()}
-                        </div>
-                      )}
+                      <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-neon-cyan/20 blur-md scale-110"></div>
+                        {user.photo_url ? (
+                          <img
+                            src={user.photo_url}
+                            alt={user.name}
+                            className="relative w-10 h-10 rounded-full border border-neon-cyan object-cover"
+                          />
+                        ) : (
+                          <div className="relative w-10 h-10 rounded-full bg-charcoal border border-neon-cyan flex items-center justify-center text-neon-cyan font-bold font-heading">
+                            {(user.first_name || user.name || 'U')[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
                       
                       {/* Dropdown chevron - only on mobile */}
                       <ChevronDown 
                         size={16} 
-                        className={`text-grey-400 transition-transform md:hidden ${dropdownOpen ? 'rotate-180' : ''}`}
+                        className={`text-contentMuted transition-transform md:hidden ${dropdownOpen ? 'rotate-180' : ''}`}
                       />
                     </div>
                   </button>
@@ -102,20 +101,20 @@ export default function Header() {
                       />
                       
                       {/* Dropdown Content */}
-                      <div className="absolute right-0 mt-2 w-56 bg-darkBlue-700 rounded-lg shadow-lg border border-grey-700 py-2 z-50 md:hidden">
+                      <div className="absolute right-0 mt-3 w-56 glass-panel py-2 z-50 md:hidden border-surfaceBorder animate-fade-in-up" style={{animationDuration: '0.2s'}}>
                         {/* User Info in Dropdown */}
-                        <div className="px-4 py-3 border-b border-grey-700">
-                          <p className="text-sm font-medium text-white">{user.name || user.first_name}</p>
-                          <p className="text-xs text-grey-400">@{user.username}</p>
+                        <div className="px-4 py-3 border-b border-surfaceBorder bg-charcoal/20">
+                          <p className="text-sm font-bold text-white">{user.name || user.first_name}</p>
+                          <p className="text-xs text-neon-cyan font-mono mt-1">@{user.username}</p>
                         </div>
 
                         {/* Settings */}
                         <Link
                           to="/settings"
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 text-grey-300 hover:bg-darkBlue-600 hover:text-white transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 text-contentMuted hover:bg-surface hover:text-white transition-colors group"
                         >
-                          <Settings size={18} />
+                          <Settings size={18} className="group-hover:text-neon-cyan transition-colors" />
                           <span className="font-medium">Settings</span>
                         </Link>
 
@@ -123,18 +122,18 @@ export default function Header() {
                         <Link
                           to="/help"
                           onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-3 text-grey-300 hover:bg-darkBlue-600 hover:text-white transition-colors"
+                          className="flex items-center gap-3 px-4 py-3 text-contentMuted hover:bg-surface hover:text-white transition-colors group"
                         >
-                          <HelpCircle size={18} />
+                          <HelpCircle size={18} className="group-hover:text-neon-cyan transition-colors" />
                           <span className="font-medium">Help</span>
                         </Link>
 
                         {/* Logout */}
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-grey-300 hover:bg-darkBlue-600 hover:text-red-400 transition-colors border-t border-grey-700 mt-2"
+                          className="w-full flex items-center gap-3 px-4 py-3 text-contentMuted hover:bg-surface hover:text-neon-pink transition-colors border-t border-surfaceBorder mt-2 group"
                         >
-                          <LogOut size={18} />
+                          <LogOut size={18} className="group-hover:text-neon-pink transition-colors" />
                           <span className="font-medium">Logout</span>
                         </button>
                       </div>
@@ -145,10 +144,10 @@ export default function Header() {
                 {/* Desktop Logout Button - Hidden on mobile */}
                 <button
                   onClick={handleLogout}
-                  className="hidden md:block p-2 hover:bg-darkBlue-700 rounded-lg transition-colors text-grey-400 hover:text-red-400"
+                  className="hidden md:flex p-2 items-center justify-center bg-transparent border border-transparent hover:border-surfaceBorder hover:bg-surface rounded-xl transition-all text-contentMuted hover:text-neon-pink group"
                   title="Logout"
                 >
-                  <LogOut size={20} />
+                  <LogOut size={20} className="group-hover:scale-110 transition-transform" />
                 </button>
               </>
             )}
