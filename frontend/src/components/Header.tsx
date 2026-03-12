@@ -25,7 +25,8 @@ export default function Header() {
           <Link to="/" className="flex items-center gap-3 group">
             <div className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-charcoal border border-surfaceBorder overflow-hidden group-hover:border-neon-cyan/50 transition-colors shadow-glow-cyan">
               <div className="absolute inset-0 bg-neon-cyan/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <span className="font-heading font-bold text-lg text-white">GG</span>
+              <img src="/logo.jpg" alt="CP Gram Logo" className="w-full h-full object-cover relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block'; }} />
+              <span className="font-heading font-bold text-lg text-white hidden relative z-10">GG</span>
             </div>
             <span className="text-xl font-heading font-bold font-heading text-white hidden sm:inline tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
               CP Gram
@@ -83,10 +84,10 @@ export default function Header() {
                         )}
                       </div>
                       
-                      {/* Dropdown chevron - only on mobile */}
+                      {/* Dropdown chevron */}
                       <ChevronDown 
                         size={16} 
-                        className={`text-contentMuted transition-transform md:hidden ${dropdownOpen ? 'rotate-180' : ''}`}
+                        className={`text-contentMuted transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
                       />
                     </div>
                   </button>
@@ -96,12 +97,12 @@ export default function Header() {
                     <>
                       {/* Backdrop to close dropdown when clicking outside */}
                       <div 
-                        className="fixed inset-0 z-40 md:hidden"
+                        className="fixed inset-0 z-40"
                         onClick={() => setDropdownOpen(false)}
                       />
                       
                       {/* Dropdown Content */}
-                      <div className="absolute right-0 mt-3 w-56 glass-panel py-2 z-50 md:hidden border-surfaceBorder animate-fade-in-up" style={{animationDuration: '0.2s'}}>
+                      <div className="absolute right-0 mt-3 w-56 glass-panel py-2 z-50 border-surfaceBorder animate-fade-in-up" style={{animationDuration: '0.2s'}}>
                         {/* User Info in Dropdown */}
                         <div className="px-4 py-3 border-b border-surfaceBorder bg-charcoal/20">
                           <p className="text-sm font-bold text-white">{user.name || user.first_name}</p>
@@ -141,14 +142,7 @@ export default function Header() {
                   )}
                 </div>
 
-                {/* Desktop Logout Button - Hidden on mobile */}
-                <button
-                  onClick={handleLogout}
-                  className="hidden md:flex p-2 items-center justify-center bg-transparent border border-transparent hover:border-surfaceBorder hover:bg-surface rounded-xl transition-all text-contentMuted hover:text-neon-pink group"
-                  title="Logout"
-                >
-                  <LogOut size={20} className="group-hover:scale-110 transition-transform" />
-                </button>
+
               </>
             )}
           </div>
