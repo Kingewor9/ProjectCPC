@@ -18,7 +18,7 @@ export default function Header() {
   };
 
   return (
-    <header className="glass-panel !rounded-none !border-t-0 !border-x-0 !border-b-surfaceBorder sticky top-0 z-50 h-16 transition-all duration-300">
+    <header className="glass-panel !rounded-none !border-t-0 !border-x-0 !border-b-surfaceBorder sticky top-0 z-[100] h-16 transition-all duration-300 !overflow-visible">
       <div className="w-full h-full px-4 sm:px-6 lg:px-8 max-w-[2000px] mx-auto">
         <div className="flex justify-between items-center h-full">
           {/* Logo */}
@@ -97,18 +97,17 @@ export default function Header() {
                     <>
                       {/* Backdrop to close dropdown when clicking outside */}
                       <div 
-                        className="fixed inset-0 z-40"
+                        className="fixed inset-0 z-[9998]"
                         onClick={() => setDropdownOpen(false)}
                       />
                       
                       {/* Dropdown Content */}
-                      <div className="absolute right-0 mt-3 w-56 glass-panel py-2 z-50 border-surfaceBorder animate-fade-in-up" style={{animationDuration: '0.2s'}}>
+                      <div className="absolute right-0 top-full mt-2 w-56 bg-surface backdrop-blur-xl border border-surfaceBorder rounded-2xl shadow-glass-panel py-2 z-[9999] animate-fade-in-up" style={{animationDuration: '0.2s'}}>
                         {/* User Info in Dropdown */}
                         <div className="px-4 py-3 border-b border-surfaceBorder bg-charcoal/20">
-                          <p className="text-sm font-bold text-white">{user.name || user.first_name}</p>
-                          <p className="text-xs text-neon-cyan font-mono mt-1">@{user.username}</p>
+                           <p className="text-sm font-bold text-white">{user.name || user.first_name}</p>
+                           <p className="text-xs text-neon-cyan font-mono mt-1">@{user.username}</p>
                         </div>
-
                         {/* Settings */}
                         <Link
                           to="/settings"
