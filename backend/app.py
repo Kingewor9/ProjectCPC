@@ -136,9 +136,12 @@ def _normalize_channel_for_frontend(channel):
     # REFRESH SUBSCRIBER COUNT: Get live data from Telegram
     current_subscribers = channel.get('subscribers', 0)
     telegram_channel_id = channel.get('telegram_id')
-    if telegram_channel_id:
+    # Some older channels may not have `telegram_id`; fall back to username
+    telegram_identifier = telegram_channel_id or channel.get('username') or channel.get('telegram_chat')
+    if telegram_identifier:
         try:
-            fresh_subscribers = refresh_channel_subscribers_from_telegram(telegram_channel_id, TELEGRAM_BOT_TOKEN)
+            # refresh_channel_subscribers_from_telegram accepts numeric ids or @username
+            fresh_subscribers = refresh_channel_subscribers_from_telegram(telegram_identifier, TELEGRAM_BOT_TOKEN)
             if fresh_subscribers is not None:
                 current_subscribers = fresh_subscribers
         except Exception as e:
@@ -202,6 +205,24 @@ def _normalize_channel_for_frontend(channel):
         'telegram_chat': channel.get('username', ''),
         'promos': normalized_promos,
         'promosPerDay': promos_per_day,
+        # Count of completed cross-promotions (frontend expects `xPromos`)
+        'xPromos': campaigns.count_documents({
+            '$and': [
+                {
+                    '$or': [
+                        {'fromChannelId': channel.get('id')},
+                        {'toChannelId': channel.get('id')}
+                    ]
+                },
+                {
+                    '$or': [
+                        {'requester_status': 'completed'},
+                        {'acceptor_status': 'completed'},
+                        {'status': 'completed'}
+                    ]
+                }
+            ]
+        }),
         'xExchanges': requests_col.count_documents({
             'status': 'Accepted',
             '$or': [
