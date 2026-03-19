@@ -21,5 +21,5 @@ def telegram_secret_key():
 
 # Exchange rate configuration (can be moved to config.py)
 STARS_PER_CPC = 0.2  # 0.2 Star = 1 CP Coin
-CPC_PER_STAR = 1   # 1 CP Coin = 0.2 Star
+CPC_PER_STAR = 5   # 5 CP Coins = 1 Star
 MINIMUM_PURCHASE = 500  # Minimum 500 CP Coins
