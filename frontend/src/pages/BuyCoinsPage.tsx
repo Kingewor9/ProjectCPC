@@ -131,7 +131,7 @@ export default function BuyCoinsPage() {
     );
   }
 
-  const quickAmounts = [100, 500, 1000, 2500, 5000, 10000];
+  const quickAmounts = [500, 1000, 2500, 5000, 10000, 15000];
 
   return (
     <Layout>
@@ -149,7 +149,7 @@ export default function BuyCoinsPage() {
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
-        
+
         {success && (
           <div className="mb-8 bg-neon-emerald/10 border border-neon-emerald/30 rounded-xl p-5 shadow-[0_0_15px_rgba(0,255,157,0.1)]">
             <div className="flex items-center gap-3">
@@ -187,8 +187,8 @@ export default function BuyCoinsPage() {
                 Exchange Rate
               </p>
               <div className="flex flex-wrap items-center gap-3 bg-charcoal/50 p-3 rounded-lg border border-surfaceBorder mb-3">
-                <span className="font-bold text-yellow-400 flex items-center gap-1.5"><Star size={18} fill="currentColor"/> 1 Star</span> 
-                <span className="text-contentMuted">=</span> 
+                <span className="font-bold text-yellow-400 flex items-center gap-1.5"><Star size={18} fill="currentColor" /> 1 Star</span>
+                <span className="text-contentMuted">=</span>
                 <span className="font-bold text-neon-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.3)]">1 CP Coin</span>
               </div>
               <p className="text-contentMuted text-sm font-mono flex items-center gap-2">
@@ -232,11 +232,10 @@ export default function BuyCoinsPage() {
                 <button
                   key={amount}
                   onClick={() => setQuickAmount(amount)}
-                  className={`py-3 rounded-xl font-mono font-bold tracking-wide transition-all duration-300 ${
-                    cpcAmount === amount.toString()
+                  className={`py-3 rounded-xl font-mono font-bold tracking-wide transition-all duration-300 ${cpcAmount === amount.toString()
                       ? 'bg-neon-cyan/20 border border-neon-cyan text-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)] transform scale-105'
                       : 'bg-surface border border-surfaceBorder text-contentMuted hover:border-neon-cyan/50 hover:text-white'
-                  }`}
+                    }`}
                 >
                   {amount >= 1000 ? `${amount / 1000}k` : amount}
                 </button>
@@ -254,7 +253,7 @@ export default function BuyCoinsPage() {
                   {(parseInt(cpcAmount) || 0).toLocaleString()} <span className="text-xl text-neon-cyan">CP</span>
                 </p>
               </div>
-              
+
               <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-surface border border-surfaceBorder flex-shrink-0">
                 <ArrowRight className="text-contentMuted" size={24} />
               </div>
@@ -327,7 +326,7 @@ export default function BuyCoinsPage() {
         <div className="bg-neon-emerald/5 border border-neon-emerald/20 rounded-xl p-6 shadow-[0_0_15px_rgba(0,255,157,0.05)]">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
             <div className="w-12 h-12 rounded-full bg-neon-emerald/10 flex items-center justify-center flex-shrink-0">
-               <CheckCircle className="text-neon-emerald" size={24} />
+              <CheckCircle className="text-neon-emerald" size={24} />
             </div>
             <div className="text-sm text-neon-emerald/80 leading-relaxed font-mono">
               <p className="font-bold tracking-widest text-neon-emerald mb-2 uppercase text-base">Secure Payment</p>
