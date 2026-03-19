@@ -187,7 +187,7 @@ export default function BuyCoinsPage() {
                 Exchange Rate
               </p>
               <div className="flex flex-wrap items-center gap-3 bg-charcoal/50 p-3 rounded-lg border border-surfaceBorder mb-3">
-                <span className="font-bold text-yellow-400 flex items-center gap-1.5"><Star size={18} fill="currentColor" /> 1 Star</span>
+                <span className="font-bold text-yellow-400 flex items-center gap-1.5"><Star size={18} fill="currentColor" /> 0.2 Star</span>
                 <span className="text-contentMuted">=</span>
                 <span className="font-bold text-neon-cyan drop-shadow-[0_0_5px_rgba(0,240,255,0.3)]">1 CP Coin</span>
               </div>
@@ -233,8 +233,8 @@ export default function BuyCoinsPage() {
                   key={amount}
                   onClick={() => setQuickAmount(amount)}
                   className={`py-3 rounded-xl font-mono font-bold tracking-wide transition-all duration-300 ${cpcAmount === amount.toString()
-                      ? 'bg-neon-cyan/20 border border-neon-cyan text-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)] transform scale-105'
-                      : 'bg-surface border border-surfaceBorder text-contentMuted hover:border-neon-cyan/50 hover:text-white'
+                    ? 'bg-neon-cyan/20 border border-neon-cyan text-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)] transform scale-105'
+                    : 'bg-surface border border-surfaceBorder text-contentMuted hover:border-neon-cyan/50 hover:text-white'
                     }`}
                 >
                   {amount >= 1000 ? `${amount / 1000}k` : amount}
