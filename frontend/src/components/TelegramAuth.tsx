@@ -9,13 +9,6 @@ export default function TelegramAuth() {
   const [error, setError] = useState<string | null>(null);
   const authAttemptedRef = useRef(false);
 
-  // If already authenticated, redirect to dashboard
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
-
   useEffect(() => {
     // Prevent multiple auth attempts
     if (authAttemptedRef.current) return;
@@ -35,6 +28,10 @@ export default function TelegramAuth() {
 
           if (!tg) {
             console.error('Telegram WebApp not available');
+            if (isAuthenticated) {
+              navigate('/dashboard', { replace: true });
+              return;
+            }
             await handleTestLogin();
             return;
           }
@@ -49,55 +46,55 @@ export default function TelegramAuth() {
           console.log('Init data available:', !!initData);
 
           if (!tgUser || !initData) {
-            console.log('No Telegram data, using test login');
+            console.log('No Telegram data, checking fallback login');
+            if (isAuthenticated) {
+              navigate('/dashboard', { replace: true });
+              return;
+            }
             await handleTestLogin();
             return;
           }
 
-          // Check for user mismatch
+          // Synchronously check if the current Telegram user matches the stored user
+          let shouldLogin = true;
           const storedToken = localStorage.getItem('authToken');
-          if (storedToken) {
+          const storedUserStr = localStorage.getItem('user');
+
+          if (storedToken && storedUserStr) {
             try {
-              // Try to get current user from token
-              const response = await fetch('/api/me', {
-                headers: {
-                  'Authorization': `Bearer ${storedToken}`
-                }
-              });
+              const storedUser = JSON.parse(storedUserStr);
+              // Compare telegram_id or id from storedUser with the current Telegram user's id
+              const storedUserId = String(storedUser.telegram_id || storedUser.id);
+              const currentTgId = String(tgUser.id);
               
-              if (response.ok) {
-                const storedUser = await response.json();
-                
-                // If stored user doesn't match current Telegram user, clear storage
-                if (storedUser.telegram_id !== String(tgUser.id)) {
-                  console.log('User mismatch detected, clearing session');
-                  localStorage.removeItem('authToken');
-                  localStorage.removeItem('user');
-                }
+              if (storedUserId === currentTgId) {
+                console.log('User matches locally cached data, proceeding to dashboard');
+                shouldLogin = false;
+                navigate('/dashboard', { replace: true });
               } else {
-                // Invalid token, clear it
+                console.log('User mismatch detected! Overriding cache for account switch...');
                 localStorage.removeItem('authToken');
                 localStorage.removeItem('user');
               }
             } catch (err) {
-              console.log('Error checking stored user:', err);
+              console.log('Error parsing stored user:', err);
               localStorage.removeItem('authToken');
               localStorage.removeItem('user');
             }
           }
 
-          try {
-            console.log('Attempting login...');
-            
-            // Send initData directly to backend
-            const result = await login({ initData });
-            
-            console.log('Login successful:', result);
-            navigate('/dashboard', { replace: true });
-          } catch (error: any) {
-            console.error('Login failed:', error);
-            setError(error.message || 'Login failed');
-            authAttemptedRef.current = false; // Allow retry
+          if (shouldLogin) {
+            try {
+              console.log('Attempting login via Telegram initData...');
+              // Send initData directly to backend
+              const result = await login({ initData });
+              console.log('Login successful:', result);
+              navigate('/dashboard', { replace: true });
+            } catch (error: any) {
+              console.error('Login failed:', error);
+              setError(error.message || 'Login failed');
+              authAttemptedRef.current = false; // Allow retry
+            }
           }
         };
 
