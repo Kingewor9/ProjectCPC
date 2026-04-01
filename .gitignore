@@ -2,3 +2,4 @@
 implementation_plan for CPgram
 db_check.py
 test_refresh.py
+check_campaigns.py
