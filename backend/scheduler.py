@@ -191,7 +191,7 @@ def check_and_notify_expired_campaigns():
     Runs every minute
     """
     try:
-        now = datetime.datetime.utcnow()
+        now = datetime.utcnow()
         
         # ====== CHECK FOR MISSED 48-HOUR POSTING DEADLINES ======
         check_posting_deadlines(now)
@@ -208,7 +208,7 @@ def check_and_notify_expired_campaigns():
                 continue
             
             duration_hours = campaign.get('duration_hours', 2)
-            expiry_time = requester_posted_at + datetime.timedelta(hours=duration_hours)
+            expiry_time = requester_posted_at + timedelta(hours=duration_hours)
             
             # Check if campaign has expired
             if now >= expiry_time:
@@ -255,7 +255,7 @@ def check_and_notify_expired_campaigns():
                 continue
             
             duration_hours = campaign.get('duration_hours', 2)
-            expiry_time = acceptor_posted_at + datetime.timedelta(hours=duration_hours)
+            expiry_time = acceptor_posted_at + timedelta(hours=duration_hours)
             
             if now >= expiry_time:
                 to_channel_id = campaign.get('toChannelId')
@@ -302,7 +302,7 @@ def check_and_notify_expired_campaigns():
                 continue
             
             duration_hours = task.get('duration_hours', 12)
-            expiry_time = posted_at + datetime.timedelta(hours=duration_hours)
+            expiry_time = posted_at + timedelta(hours=duration_hours)
             
             if now >= expiry_time:
                 user_id = task.get('user_id')
@@ -376,7 +376,7 @@ def check_posting_deadlines(now):
                                 '$set': {
                                     'requester_status': 'expired',
                                     'requester_deadline_notified': True,
-                                    'updated_at': datetime.datetime.utcnow()
+                                    'updated_at': datetime.utcnow()
                                 }
                             }
                         )
@@ -396,7 +396,7 @@ def check_posting_deadlines(now):
                                 '$set': {
                                     'acceptor_status': 'expired',
                                     'acceptor_deadline_notified': True,
-                                    'updated_at': datetime.datetime.utcnow()
+                                    'updated_at': datetime.utcnow()
                                 }
                             }
                         )
@@ -422,7 +422,7 @@ def penalize_user_for_missed_deadline(telegram_id, user_role, campaign_id, partn
             {'telegram_id': telegram_id},
             {
                 '$inc': {'cpcBalance': -penalty},
-                '$set': {'updated_at': datetime.datetime.utcnow()}
+                '$set': {'updated_at': datetime.utcnow()}
             }
         )
         
@@ -452,7 +452,7 @@ def process_invite_campaigns():
     """Process and complete invite campaigns"""
     from app import complete_invite_task
     
-    now = datetime.datetime.utcnow()
+    now = datetime.utcnow()
     
     # Find completed invite campaigns
     completed = campaigns.find({
@@ -597,7 +597,7 @@ def process_followup_messages():
                         {
                             '$set': {
                                 'sequence_active': False,
-                                'completed_at': datetime.datetime.utcnow()
+                                'completed_at': datetime.utcnow()
                             }
                         }
                     )
@@ -615,7 +615,7 @@ def process_followup_messages():
                     # Calculate next message time
                     if next_index < len(FOLLOW_UP_MESSAGES):
                         next_config = FOLLOW_UP_MESSAGES[next_index]
-                        next_message_time = datetime.datetime.utcnow() + datetime.timedelta(
+                        next_message_time = datetime.utcnow() + timedelta(
                             hours=next_config['delay_hours'] - message_config['delay_hours']
                         )
                     else:
@@ -625,14 +625,14 @@ def process_followup_messages():
                     update_data = {
                         'current_message_index': next_index,
                         'messages_sent': user.get('messages_sent', []) + [message_config['message_number']],
-                        'updated_at': datetime.datetime.utcnow()
+                        'updated_at': datetime.utcnow()
                     }
                     
                     if next_message_time:
                         update_data['next_message_at'] = next_message_time
                     else:
                         update_data['sequence_active'] = False
-                        update_data['completed_at'] = datetime.datetime.utcnow()
+                        update_data['completed_at'] = datetime.utcnow()
                     
                     user_onboarding.update_one(
                         {'telegram_id': telegram_id},
