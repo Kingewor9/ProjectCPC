@@ -670,6 +670,60 @@ def start_scheduler():
         id='followup_processor',
         replace_existing=True
     )
+    
+    # ✅ NEW JOB: Refresh channel subscribers periodically in the background
+    s.add_job(
+        refresh_all_channels_subscribers,
+        'interval',
+        minutes=30,
+        id='subscriber_refresher',
+        replace_existing=True
+    )
 
     s.start()
-    logging.info("[SCHEDULER] Scheduler started with follow-up message processing")
+    logging.info("[SCHEDULER] Scheduler started with follow-up message processing and background subscriber refresh")
+
+def refresh_all_channels_subscribers():
+    """Background job to refresh subscriber counts for all channels to avoid API limits on page load"""
+    from models import refresh_channel_subscribers_from_telegram
+    import time
+    
+    logging.info("[SCHEDULER] Starting background channel subscriber refresh")
+    
+    try:
+        # Get all channels
+        all_channels = list(channels.find({}))
+        
+        updated_count = 0
+        failed_count = 0
+        
+        for channel in all_channels:
+            telegram_channel_id = channel.get('telegram_id')
+            telegram_identifier = telegram_channel_id or channel.get('username') or channel.get('telegram_chat')
+            
+            if not telegram_identifier:
+                continue
+                
+            try:
+                fresh_subscribers = refresh_channel_subscribers_from_telegram(telegram_identifier, TELEGRAM_BOT_TOKEN)
+                
+                if fresh_subscribers is not None:
+                    channels.update_one(
+                        {'_id': channel['_id']},
+                        {'$set': {'subscribers': fresh_subscribers}}
+                    )
+                    updated_count += 1
+                else:
+                    failed_count += 1
+                    
+                # Sleep briefly to avoid Telegram's rate limit of ~30 requests per second
+                time.sleep(0.1)
+                
+            except Exception as e:
+                logging.error(f"[SCHEDULER] Error refreshing subscribers for {telegram_identifier}: {e}")
+                failed_count += 1
+                
+        logging.info(f"[SCHEDULER] Finished subscriber refresh: {updated_count} updated, {failed_count} failed")
+        
+    except Exception as e:
+        logging.error(f"[SCHEDULER] Fatal error in refresh_all_channels_subscribers: {e}")

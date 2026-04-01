@@ -115,7 +115,7 @@ def get_proxied_image_url(original_url):
 
 def _normalize_channel_for_frontend(channel):
     """Normalize channel document for frontend consumption"""
-    from models import get_telegram_file_url_from_file_id, refresh_channel_subscribers_from_telegram
+    from models import get_telegram_file_url_from_file_id
     
     # Build duration prices from price_settings
     duration_prices = {}
@@ -135,19 +135,6 @@ def _normalize_channel_for_frontend(channel):
     
     # REFRESH SUBSCRIBER COUNT: Get live data from Telegram
     current_subscribers = channel.get('subscribers', 0)
-    telegram_channel_id = channel.get('telegram_id')
-    # Some older channels may not have `telegram_id`; fall back to username
-    telegram_identifier = telegram_channel_id or channel.get('username') or channel.get('telegram_chat')
-    if telegram_identifier:
-        try:
-            # refresh_channel_subscribers_from_telegram accepts numeric ids or @username
-            fresh_subscribers = refresh_channel_subscribers_from_telegram(telegram_identifier, TELEGRAM_BOT_TOKEN)
-            if fresh_subscribers is not None:
-                current_subscribers = fresh_subscribers
-        except Exception as e:
-            print(f"Failed to refresh subscriber count: {e}")
-            # Fall back to stored count if refresh fails
-            pass
             
     # ADDED: Normalize promos to ensure they have all required fields
     raw_promos = channel.get('promo_materials', [])
