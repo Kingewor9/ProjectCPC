@@ -21,22 +21,26 @@ user_onboarding = db.user_onboarding
 
 
 def ensure_indexes():
-    users.create_index('telegram_id', unique=True)
-    partners.create_index('id', unique=True)
-    requests_col.create_index('status')
-    campaigns.create_index('status')
-    channels.create_index('id', unique=True)
-    channels.create_index('owner_id')
-    channels.create_index('status')
-    user_tasks.create_index('telegram_id', unique=True)
-    transactions.create_index('transaction_id', unique=True)
-    transactions.create_index('telegram_id')
-    transactions.create_index('status')
-    ad_rewards.create_index('user_id')
-    ad_rewards.create_index('timestamp')
-    user_onboarding.create_index('telegram_id', unique=True)
-    user_onboarding.create_index('last_start_at')
-    user_onboarding.create_index('next_message_at')
+    try:
+        users.create_index('telegram_id', unique=True, sparse=True)
+        partners.create_index('id', unique=True, sparse=True)
+        requests_col.create_index('status')
+        campaigns.create_index('status')
+        channels.create_index('id', unique=True, sparse=True)
+        channels.create_index('owner_id')
+        channels.create_index('status')
+        user_tasks.create_index('telegram_id', unique=True, sparse=True)
+        transactions.create_index('transaction_id', unique=True, sparse=True)
+        transactions.create_index('telegram_id')
+        transactions.create_index('status')
+        ad_rewards.create_index('user_id')
+        ad_rewards.create_index('timestamp')
+        user_onboarding.create_index('telegram_id', unique=True, sparse=True)
+        user_onboarding.create_index('last_start_at')
+        user_onboarding.create_index('next_message_at')
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to create some MongoDB indexes: {e}")
 
 
 def init_mock_partners():
