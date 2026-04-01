@@ -3329,16 +3329,18 @@ def debug_channel_avatar(channel_id):
 
 #GET https://your-app.onrender.com/api/debug/channel/ch_xxxxx
     
-if __name__ == '__main__':
-    # Initialize database
-    ensure_indexes()
-    init_mock_partners()
-    
-    # Always start scheduler
+# Initialize database
+ensure_indexes()
+init_mock_partners()
+
+# Check if we should run background tasks (default to yes)
+if os.environ.get('NO_SCHEDULER') != '1':
+    # Always start scheduler inside the worker
     start_scheduler()
 
     # Setup Telegram webhook
     setup_telegram_webhook()
 
+if __name__ == '__main__':
     # Local development server
     app.run(host='0.0.0.0', port=5000, debug=True)
