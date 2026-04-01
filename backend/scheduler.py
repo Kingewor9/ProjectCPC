@@ -677,7 +677,7 @@ def start_scheduler():
         'interval',
         minutes=30,
         id='subscriber_refresher',
-        next_run_time=datetime.utcnow(),
+        next_run_time=datetime.now(),
         replace_existing=True
     )
 
