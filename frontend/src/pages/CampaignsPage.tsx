@@ -61,11 +61,6 @@ export default function CampaignsPage() {
           const remaining = Math.max(0, deadline - now);
           newDeadlines[campaign.id] = remaining;
           
-          // ADDED: If deadline reached, trigger refresh to get updated status
-          if (remaining === 0 && !campaign.status.includes('expired')) {
-            // Debounce the refresh to avoid too many calls
-            setTimeout(() => fetchCampaigns(), 1000);
-          }
         }
       });
       
