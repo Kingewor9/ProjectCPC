@@ -744,87 +744,46 @@ def accept_request(req_id):
     duration = req.get('duration', 2)
     
     try:
-        from models import create_single_manual_campaign
+        import uuid
+        from time_utils import parse_day_time_to_utc, calculate_end_time
         
-        # Create ONE campaign that tracks both users
-        campaign_id = create_single_manual_campaign(
-            request_id=req['_id'],
-            from_channel_id=req.get('fromChannelId'),
-            to_channel_id=req.get('toChannelId'),
-            requester_promo=requester_promo,
-            acceptor_promo=selected_promo,
-            duration_hours=duration,
-            cpc_cost=cpc_cost
-        )
+        daySelected = req.get('daySelected')
+        timeSelected = req.get('timeSelected')
         
-        # --- ADDED: TEMPORARY AUTOMATED POSTING BETA ---
-        try:
-            import uuid
-            from time_utils import parse_day_time_to_utc, calculate_end_time
+        start_at = None
+        end_at = None
+        if daySelected and timeSelected:
+            start_at = parse_day_time_to_utc(daySelected, timeSelected)
+            end_at = calculate_end_time(start_at, duration)
             
-            daySelected = req.get('daySelected')
-            timeSelected = req.get('timeSelected')
-            
-            if daySelected and timeSelected:
-                start_at = parse_day_time_to_utc(daySelected, timeSelected)
-                end_at = calculate_end_time(start_at, duration)
-                
-                # Format chat IDs for both channels
-                from_chat_id = from_ch.get('telegram_id') or from_ch.get('telegram_chat')
-                if isinstance(from_chat_id, str) and not str(from_chat_id).startswith('-') and not str(from_chat_id).startswith('@'):
-                    from_chat_id = f"@{from_chat_id}"
-                    
-                to_chat_id = to_ch.get('telegram_id') or to_ch.get('telegram_chat')
-                if isinstance(to_chat_id, str) and not str(to_chat_id).startswith('-') and not str(to_chat_id).startswith('@'):
-                    to_chat_id = f"@{to_chat_id}"
-                    
-                # Automated campaign 1: Post Acceptor's promo on Requester's channel
-                # Requester's channel is from_chat_id. Acceptor's promo is selected_promo.
-                campaigns.insert_one({
-                    'id': f"auto_{uuid.uuid4().hex[:12]}",
-                    'request_id': req['_id'],
-                    'type': 'regular', 
-                    'status': 'scheduled',
-                    'chat_id': from_chat_id,
-                    'promo': selected_promo,
-                    'start_at': start_at,
-                    'end_at': end_at,
-                    'duration_hours': duration,
-                    'created_at': datetime.datetime.utcnow(),
-                    'updated_at': datetime.datetime.utcnow()
-                })
-                
-                # Automated campaign 2: Post Requester's promo on Acceptor's channel
-                # Acceptor's channel is to_chat_id. Requester's promo is requester_promo.
-                campaigns.insert_one({
-                    'id': f"auto_{uuid.uuid4().hex[:12]}",
-                    'request_id': req['_id'],
-                    'type': 'regular',
-                    'status': 'scheduled',
-                    'chat_id': to_chat_id,
-                    'promo': requester_promo,
-                    'start_at': start_at,
-                    'end_at': end_at,
-                    'duration_hours': duration,
-                    'created_at': datetime.datetime.utcnow(),
-                    'updated_at': datetime.datetime.utcnow()
-                })
-        except Exception as e:
-            import traceback
-            print(f"Failed to create automated campaigns: {e}")
-            traceback.print_exc()
-        # -----------------------------------------------
+        campaign_id = f"cp_auto_{uuid.uuid4().hex[:12]}"
+        
+        campaigns.insert_one({
+            'id': campaign_id,
+            'request_id': req['_id'],
+            'type': 'cross_promo_auto',
+            'status': 'pending_posting',
+            'fromChannelId': req.get('fromChannelId'),
+            'toChannelId': req.get('toChannelId'),
+            'requester_promo': requester_promo,
+            'acceptor_promo': selected_promo,
+            'start_at': start_at,
+            'end_at': end_at,
+            'duration_hours': duration,
+            'cpc_cost': cpc_cost,
+            'created_at': datetime.datetime.utcnow(),
+            'updated_at': datetime.datetime.utcnow()
+        })
         
         # Notify both parties
+        time_msg = f"{daySelected} at {timeSelected.split(' - ')[0]} UTC" if daySelected and timeSelected else "the scheduled time"
+        
         if from_ch and from_ch.get('owner_id'):
             msg = (
                 f"✅ Your cross-promo request was accepted!\n\n"
                 f"Partner: {to_ch.get('name')}\n"
-                f"Next steps:\n"
-                f"1. Check your Campaigns page\n"
-                f"2. Get the promo from Telegram\n"
-                f"3. Post it manually on your channel\n"
-                f"4. Submit your post link to start your campaign"
+                f"The bot has automatically scheduled everything. It will securely post the contents on both channels completely natively at {time_msg}, and safely remove them {duration} hours later!\n"
+                f"No manual action required. Check your Campaigns page for updates."
             )
             try:
                 send_open_button_message(from_ch.get('owner_id'), msg)
@@ -835,11 +794,8 @@ def accept_request(req_id):
             msg = (
                 f"✅ You accepted the request!\n\n"
                 f"Partner: {from_ch.get('name') if from_ch else 'Unknown'}\n"
-                f"Next steps:\n"
-                f"1. Check your Campaigns page\n"
-                f"2. Get the promo from Telegram\n"
-                f"3. Post it manually on your channel\n"
-                f"4. Submit your post link to start your campaign"
+                f"The bot has automatically scheduled everything. It will securely post the contents on both channels completely natively at {time_msg}, and safely remove them {duration} hours later!\n"
+                f"No manual action required. Check your Campaigns page for updates."
             )
             try:
                 send_open_button_message(to_ch.get('owner_id'), msg)

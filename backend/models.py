@@ -681,15 +681,25 @@ def get_user_campaigns(telegram_id):
     for campaign in user_campaigns:
         from_id = campaign.get('fromChannelId')
         to_id = campaign.get('toChannelId')
+        is_auto = campaign.get('type') == 'cross_promo_auto'
         
         if from_id in channel_ids:
             # User is the requester
             campaign['user_role'] = 'requester'
-            campaign['status'] = campaign.get('requester_status', 'pending_posting')
-            campaign['promo'] = campaign.get('acceptor_promo', {})  # Requester posts acceptor's promo
-            campaign['post_verification_link'] = campaign.get('requester_post_link')
-            campaign['actual_start_at'] = campaign.get('requester_posted_at')
-            campaign['actual_end_at'] = campaign.get('requester_ended_at')
+            campaign['promo'] = campaign.get('acceptor_promo', {})  # Requester hosts acceptor's promo
+            
+            if is_auto:
+                campaign['status'] = campaign.get('status', 'pending_posting')
+                campaign['actual_start_at'] = campaign.get('actual_start_at', campaign.get('start_at'))
+                campaign['actual_end_at'] = campaign.get('actual_end_at', campaign.get('end_at'))
+                campaign['post_verification_link'] = None
+                # Set dummy posting_deadline to format UI correctly
+                campaign['posting_deadline'] = campaign.get('start_at')
+            else:
+                campaign['status'] = campaign.get('requester_status', 'pending_posting')
+                campaign['post_verification_link'] = campaign.get('requester_post_link')
+                campaign['actual_start_at'] = campaign.get('requester_posted_at')
+                campaign['actual_end_at'] = campaign.get('requester_ended_at')
             
             # Get partner channel name
             partner_ch = channels.find_one({'id': to_id}, {'name': 1, '_id': 0})
@@ -698,11 +708,20 @@ def get_user_campaigns(telegram_id):
         else:
             # User is the acceptor
             campaign['user_role'] = 'acceptor'
-            campaign['status'] = campaign.get('acceptor_status', 'pending_posting')
-            campaign['promo'] = campaign.get('requester_promo', {})  # Acceptor posts requester's promo
-            campaign['post_verification_link'] = campaign.get('acceptor_post_link')
-            campaign['actual_start_at'] = campaign.get('acceptor_posted_at')
-            campaign['actual_end_at'] = campaign.get('acceptor_ended_at')
+            campaign['promo'] = campaign.get('requester_promo', {})  # Acceptor hosts requester's promo
+            
+            if is_auto:
+                campaign['status'] = campaign.get('status', 'pending_posting')
+                campaign['actual_start_at'] = campaign.get('actual_start_at', campaign.get('start_at'))
+                campaign['actual_end_at'] = campaign.get('actual_end_at', campaign.get('end_at'))
+                campaign['post_verification_link'] = None
+                # Set dummy posting_deadline to format UI correctly
+                campaign['posting_deadline'] = campaign.get('start_at')
+            else:
+                campaign['status'] = campaign.get('acceptor_status', 'pending_posting')
+                campaign['post_verification_link'] = campaign.get('acceptor_post_link')
+                campaign['actual_start_at'] = campaign.get('acceptor_posted_at')
+                campaign['actual_end_at'] = campaign.get('acceptor_ended_at')
             
             # Get partner channel name
             partner_ch = channels.find_one({'id': from_id}, {'name': 1, '_id': 0})

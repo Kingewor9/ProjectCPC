@@ -5,7 +5,7 @@ import ErrorAlert from '../components/ErrorAlert';
 import PromoImage from '../components/PromoImage';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { Zap, Clock, CheckCircle, Send, ExternalLink, StopCircle, AlertCircle } from 'lucide-react';
+import { Zap, Clock, CheckCircle, ExternalLink, AlertCircle } from 'lucide-react';
 
 interface Campaign {
   id: string;
@@ -35,8 +35,7 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-  const [postLink, setPostLink] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
+
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [deadlineTimeLeft, setDeadlineTimeLeft] = useState<{[key: string]: number}>({});
 
@@ -120,58 +119,7 @@ export default function CampaignsPage() {
     }
   };
 
-  const handleSendToTelegram = async (campaign: Campaign) => {
-    setActionLoading(true);
-    try {
-      await apiService.sendCampaignToTelegram(campaign.id);
-      alert('Promo sent to your Telegram! Check your messages and forward it to your channel.');
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Failed to send to Telegram';
-      alert(errorMsg);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleVerifyAndStart = async () => {
-    if (!postLink.trim() || !selectedCampaign) return;
-    
-    setActionLoading(true);
-    try {
-      await apiService.verifyAndStartCampaign(selectedCampaign.id, postLink);
-      alert('Campaign started! Your timer is now running.');
-      setPostLink('');
-      fetchCampaigns();
-      setSelectedCampaign(null);
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Failed to start campaign';
-      alert(errorMsg);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleEndCampaign = async (campaign: Campaign) => {
-    if (timeLeft > 0) {
-      alert(`Please wait for the campaign to complete. Time remaining: ${formatTimeLeft(timeLeft)}`);
-      return;
-    }
-
-    if (!confirm('Campaign duration has ended. Click OK to claim your reward!')) return;
-    
-    setActionLoading(true);
-    try {
-      const result = await apiService.endCampaign(campaign.id);
-      alert(`Campaign completed! You earned ${result.reward} CP Coins!`);
-      fetchCampaigns();
-      setSelectedCampaign(null);
-    } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Failed to end campaign';
-      alert(errorMsg);
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  // Manual posting logic handles completely removed natively.
 
   const formatTimeLeft = (ms: number) => {
     const totalSeconds = Math.ceil(ms / 1000);
@@ -187,11 +135,11 @@ export default function CampaignsPage() {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     
     if (hours > 0) {
-      return `${hours}h ${minutes}m left to post`;
+      return `${hours}h ${minutes}m until bot posts`;
     } else if (minutes > 0) {
-      return `${minutes}m left to post`;
+      return `${minutes}m until bot posts`;
     } else {
-      return 'Expired';
+      return 'Posting Imminently';
     }
   };
 
@@ -307,45 +255,14 @@ export default function CampaignsPage() {
 
             {/* Actions based on status */}
             {campaign.status === 'pending_posting' && (
-              <div className="space-y-6">
-                <button
-                  onClick={() => handleSendToTelegram(campaign)}
-                  disabled={actionLoading}
-                  className="w-full bg-neon-cyan/20 border border-neon-cyan/50 hover:bg-neon-cyan hover:text-charcoal text-neon-cyan py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-3 font-mono tracking-wide disabled:opacity-50"
-                >
-                  <Send size={20} />
-                  GET PROMO IN TELEGRAM
-                </button>
-                
-                <div className="bg-charcoal border border-surfaceBorder rounded-xl p-6">
-                  <h4 className="text-white font-bold mb-4 font-heading flex items-center gap-2">
-                    <Zap className="text-neon-violet" size={18} />
-                    Next Steps
-                  </h4>
-                  <ol className="text-contentMuted text-sm space-y-4 font-sans list-none">
-                    <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">1</span> Click "Get Promo in Telegram"</li>
-                    <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">2</span> Forward the message to your channel</li>
-                    <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">3</span> Copy the post link from your channel</li>
-                    <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">4</span> Submit the link below to start your timer</li>
-                  </ol>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-contentMuted text-xs font-bold tracking-widest uppercase ml-1">Post Link (after you've posted)</label>
-                  <input
-                    type="url"
-                    value={postLink}
-                    onChange={(e) => setPostLink(e.target.value)}
-                    placeholder="https://t.me/yourchannel/123"
-                    className="input-glass w-full"
-                  />
-                  <button
-                    onClick={handleVerifyAndStart}
-                    disabled={!postLink.trim() || actionLoading}
-                    className="w-full bg-neon-emerald/20 border border-neon-emerald/50 hover:bg-neon-emerald hover:text-charcoal text-neon-emerald py-4 rounded-xl font-bold transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed font-mono tracking-wide"
-                  >
-                    ✓ START MY CAMPAIGN
-                  </button>
+              <div className="bg-charcoal border border-surfaceBorder rounded-xl p-6 text-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                <Clock className="w-12 h-12 text-yellow-400 mx-auto mb-4 opacity-80" />
+                <h4 className="text-white font-heading font-bold mb-3 text-lg">Awaiting Bot Execution</h4>
+                <p className="text-contentMuted text-sm font-sans mx-auto max-w-md leading-relaxed">
+                  The CP Gram backend bot is safely monitoring the time. It will natively post this promo content directly to its target channel exactly at the scheduled time! 
+                </p>
+                <div className="mt-5 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 inline-block">
+                  <span className="text-yellow-400 text-xs font-mono tracking-widest uppercase font-bold text-center block">No manual action required</span>
                 </div>
               </div>
             )}
@@ -374,27 +291,20 @@ export default function CampaignsPage() {
                   </a>
                 )}
 
-                <button
-                  onClick={() => handleEndCampaign(campaign)}
-                  disabled={timeLeft > 0 || actionLoading}
-                  className={`w-full py-5 rounded-xl font-bold font-mono tracking-wide transition-all flex items-center justify-center gap-3 ${
-                    timeLeft > 0
-                      ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
-                      : 'bg-red-500/20 border border-red-500/50 hover:bg-red-500 hover:text-white text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
-                  }`}
-                >
-                  <StopCircle size={20} />
-                  {timeLeft > 0 ? 'WAIT FOR TIMER TO COMPLETE' : 'END CAMPAIGN & CLAIM REWARD'}
-                </button>
+                <div className="bg-surface border border-surfaceBorder rounded-xl p-5 text-center mt-6 shadow-inner">
+                  <p className="text-contentMuted text-sm font-sans leading-relaxed tracking-wide">
+                    The background bot will automatically delete the post when the timer reaches zero and instantly dispense your CP Coin rewards directly to your wallet!
+                  </p>
+                </div>
               </div>
             )}
 
             {campaign.status === 'completed' && (
-              <div className="bg-surface border border-surfaceBorder rounded-2xl p-8 text-center">
-                <CheckCircle className="w-16 h-16 text-contentMuted mx-auto mb-4" />
+              <div className="bg-surface border border-surfaceBorder rounded-2xl p-8 text-center shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+                <CheckCircle className="w-16 h-16 text-neon-emerald mx-auto mb-4 drop-shadow-[0_0_10px_rgba(0,255,157,0.3)]" />
                 <h4 className="text-white font-heading font-bold text-xl mb-2">Campaign Completed</h4>
                 <p className="text-contentMuted text-sm">
-                  Reward has been added to your balance
+                  The bot successfully finished the duration and securely credited your CP Coins!
                 </p>
               </div>
             )}

@@ -37,8 +37,10 @@ def check_and_post_campaigns():
     # Find campaigns due in next 2 minutes (to catch any close to posting)
     check_window = now + timedelta(minutes=2)
     to_post = list(campaigns.find({
-        'status': 'scheduled', 
-        'start_at': {'$lte': check_window}
+        '$or': [
+            {'status': 'scheduled', 'start_at': {'$lte': check_window}},
+            {'status': 'pending_posting', 'type': 'cross_promo_auto', 'start_at': {'$lte': check_window}}
+        ]
     }))
     
     logging.info(f"[SCHEDULER] Found {len(to_post)} campaigns to post")
@@ -72,7 +74,69 @@ def check_and_post_campaigns():
             res = None
             
             # Handle different campaign types
-            if campaign_type == 'invite_task':
+            if campaign_type == 'cross_promo_auto':
+                # Bilateral cross-promotion
+                from_id = camp.get('fromChannelId')
+                to_id = camp.get('toChannelId')
+                from_ch = channels.find_one({'id': from_id})
+                to_ch = channels.find_one({'id': to_id})
+                
+                if not from_ch or not to_ch:
+                    logging.error(f"[SCHEDULER] Channels missing for auto campaign {campaign_id}")
+                    campaigns.update_one({'_id': camp['_id']}, {'$set': {'status': 'failed', 'error': 'Missing channels'}})
+                    continue
+                
+                from_chat_id = from_ch.get('telegram_id') or from_ch.get('telegram_chat')
+                if isinstance(from_chat_id, str) and not str(from_chat_id).startswith('-') and not str(from_chat_id).startswith('@'):
+                    from_chat_id = f"@{from_chat_id}"
+                    
+                to_chat_id = to_ch.get('telegram_id') or to_ch.get('telegram_chat')
+                if isinstance(to_chat_id, str) and not str(to_chat_id).startswith('-') and not str(to_chat_id).startswith('@'):
+                    to_chat_id = f"@{to_chat_id}"
+                
+                requester_promo = camp.get('requester_promo', {})
+                acceptor_promo = camp.get('acceptor_promo', {})
+                
+                logging.info(f"[SCHEDULER] Sending bilateral auto-campaign to {from_chat_id} & {to_chat_id}")
+                
+                res_from = send_campaign_post(from_chat_id, acceptor_promo)
+                res_to = send_campaign_post(to_chat_id, requester_promo)
+                
+                from_ok = res_from and res_from.get('ok')
+                to_ok = res_to and res_to.get('ok')
+                
+                if from_ok and to_ok:
+                    req_msg_id = res_from['result'].get('message_id')
+                    acc_msg_id = res_to['result'].get('message_id')
+                    
+                    end_time_calc = camp.get('end_at')
+                    if not end_time_calc:
+                        dur_h = camp.get('duration_hours', 2)
+                        end_time_calc = datetime.utcnow() + timedelta(hours=dur_h)
+                        
+                    campaigns.update_one(
+                        {'_id': camp['_id']}, 
+                        {
+                            '$set': {
+                                'status': 'active',
+                                'requester_message_id': req_msg_id,
+                                'acceptor_message_id': acc_msg_id,
+                                'from_chat_id': from_chat_id,
+                                'to_chat_id': to_chat_id,
+                                'actual_start_at': datetime.utcnow(),
+                                'end_at': end_time_calc
+                            }
+                        }
+                    )
+                else:
+                    err_msg = f"Req Failure: {res_from} | Acc Failure: {res_to}"
+                    logging.error(f"[SCHEDULER] Failed bilateral campaign {campaign_id}: {err_msg}")
+                    campaigns.update_one({'_id': camp['_id']}, {'$set': {'status': 'failed', 'error': err_msg}})
+                
+                # Already handled natively, jump to next campaign loop iteration
+                continue
+                
+            elif campaign_type == 'invite_task':
                 # This is an invite task campaign
                 promo_text = camp.get('promo_text', '')
                 
@@ -148,7 +212,12 @@ def check_and_post_campaigns():
 def cleanup_finished_campaigns():
     """Cleanup finished campaigns and complete invite tasks"""
     now = datetime.utcnow()
-    finished = list(campaigns.find({'status': 'running', 'end_at': {'$lte': now}}))
+    finished = list(campaigns.find({
+        '$or': [
+            {'status': 'running', 'end_at': {'$lte': now}},
+            {'status': 'active', 'type': 'cross_promo_auto', 'end_at': {'$lte': now}}
+        ]
+    }))
     
     logging.info(f"[SCHEDULER] Found {len(finished)} campaigns to cleanup")
     
@@ -158,6 +227,50 @@ def cleanup_finished_campaigns():
             message_id = camp.get('message_id')
             campaign_type = camp.get('type', 'regular')
             
+            if campaign_type == 'cross_promo_auto':
+                from_chat_id = camp.get('from_chat_id')
+                to_chat_id = camp.get('to_chat_id')
+                req_message_id = camp.get('requester_message_id')
+                acc_message_id = camp.get('acceptor_message_id')
+                
+                if from_chat_id and req_message_id:
+                    delete_message(from_chat_id, req_message_id)
+                if to_chat_id and acc_message_id:
+                    delete_message(to_chat_id, acc_message_id)
+                
+                cpc_cost = camp.get('cpc_cost', 0)
+                from_id = camp.get('fromChannelId')
+                to_id = camp.get('toChannelId')
+                from_ch = channels.find_one({'id': from_id})
+                to_ch = channels.find_one({'id': to_id})
+                
+                if from_ch and to_ch:
+                    req_id = from_ch.get('owner_id')
+                    acc_id = to_ch.get('owner_id')
+                    if req_id and acc_id:
+                        users.update_one({'telegram_id': req_id}, {'$inc': {'cpcBalance': 150 - cpc_cost}})
+                        users.update_one({'telegram_id': acc_id}, {'$inc': {'cpcBalance': cpc_cost}})
+                        
+                        from models import increment_channel_exchanges
+                        increment_channel_exchanges(from_id)
+                        increment_channel_exchanges(to_id)
+                        
+                        try:
+                            try:
+                                send_message(req_id, f"✅ Campaign Completed!\nYou earned +150 CP Coins natively from the bot posting!")
+                            except: pass
+                            try:
+                                send_message(acc_id, f"✅ Campaign Completed!\nYou earned +{cpc_cost} CP Coins natively from the bot posting!")
+                            except: pass
+                        except Exception as nerr:
+                            logging.error(f"[SCHEDULER] Msg fail: {str(nerr)}")
+                
+                campaigns.update_one(
+                    {'_id': camp['_id']}, 
+                    {'$set': {'status': 'completed', 'actual_end_at': datetime.utcnow()}}
+                )
+                continue
+                
             # Delete the message
             if chat_id and message_id:
                 logging.info(f"[SCHEDULER] Deleting message {message_id} from {chat_id}")
