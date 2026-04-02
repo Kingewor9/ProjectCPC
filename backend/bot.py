@@ -246,11 +246,8 @@ def send_campaign_post(chat_id, promo):
         promo_image = promo.get('image', '')
         promo_cta = promo.get('cta', 'Learn More')
         
-        # Build caption
-        caption = f"<b>{promo_name}</b>\n\n{promo_text}"
-        
-        # Add powered by footer
-        caption += "\n\n<i>Powered by CP Gram</i>"
+        # Build the message WITHOUT any preview labels or titles to match manual posting
+        caption = f"{promo_text}\n\n<a href='{BOT_URL}'>Powered by CP Gram</a>"
         
         # Create inline keyboard with CTA button
         keyboard = None
