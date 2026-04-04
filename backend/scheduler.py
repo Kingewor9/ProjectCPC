@@ -55,21 +55,7 @@ def check_and_post_campaigns():
             campaign_id = camp.get('id', str(camp.get('_id')))
             logging.info(f"[SCHEDULER] Processing campaign {campaign_id}")
             
-            # Get chat_id with fallbacks
-            chat_id = camp.get('chat_id') or camp.get('telegram_chat_id')
             campaign_type = camp.get('type', 'regular')
-            
-            if not chat_id:
-                error_msg = 'No chat_id provided'
-                logging.error(f"[SCHEDULER] {error_msg} for campaign {campaign_id}")
-                logging.error(f"[SCHEDULER] Campaign data: {camp}")
-                campaigns.update_one(
-                    {'_id': camp['_id']},
-                    {'$set': {'status': 'failed', 'error': error_msg}}
-                )
-                continue
-            
-            logging.info(f"[SCHEDULER] Posting to chat_id: {chat_id}, type: {campaign_type}")
             
             res = None
             
@@ -138,6 +124,18 @@ def check_and_post_campaigns():
                 
             elif campaign_type == 'invite_task':
                 # This is an invite task campaign
+                chat_id = camp.get('chat_id') or camp.get('telegram_chat_id')
+                
+                if not chat_id:
+                    error_msg = 'No chat_id provided'
+                    logging.error(f"[SCHEDULER] {error_msg} for campaign {campaign_id}")
+                    logging.error(f"[SCHEDULER] Campaign data: {camp}")
+                    campaigns.update_one(
+                        {'_id': camp['_id']},
+                        {'$set': {'status': 'failed', 'error': error_msg}}
+                    )
+                    continue
+                
                 promo_text = camp.get('promo_text', '')
                 
                 if not promo_text:
@@ -153,6 +151,18 @@ def check_and_post_campaigns():
                 
             else:
                 # This is a regular cross-promotion campaign
+                chat_id = camp.get('chat_id') or camp.get('telegram_chat_id')
+                
+                if not chat_id:
+                    error_msg = 'No chat_id provided'
+                    logging.error(f"[SCHEDULER] {error_msg} for campaign {campaign_id}")
+                    logging.error(f"[SCHEDULER] Campaign data: {camp}")
+                    campaigns.update_one(
+                        {'_id': camp['_id']},
+                        {'$set': {'status': 'failed', 'error': error_msg}}
+                    )
+                    continue
+                
                 promo = camp.get('promo', {})
                 
                 if not promo:
