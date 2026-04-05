@@ -699,82 +699,125 @@ def process_followup_messages():
         from models import get_pending_followup_messages, FOLLOW_UP_MESSAGES, user_onboarding
         from bot import send_followup_message
         import datetime
-        
+
         pending = get_pending_followup_messages()
-        
+
         if not pending:
             return
-        
+
         logging.info(f"[FOLLOWUP] Processing {len(pending)} pending follow-up messages")
-        
+
         for user in pending:
             try:
                 telegram_id = user.get('telegram_id')
                 current_index = user.get('current_message_index', 0)
-                
-                # Get message config
+
+                # ✅ LOCK: Immediately push next_message_at far into the future
+                # This prevents any concurrent scheduler run from picking up the same user
+                lock_result = user_onboarding.update_one(
+                    {
+                        'telegram_id': telegram_id,
+                        'current_message_index': current_index,  # Only update if index hasn't changed
+                        'sequence_active': True
+                    },
+                    {
+                        '$set': {
+                            'next_message_at': datetime.datetime.utcnow() + datetime.timedelta(days=999),
+                            'processing': True
+                        }
+                    }
+                )
+
+                # If no document was modified, another process already grabbed this user — skip
+                if lock_result.modified_count == 0:
+                    logging.info(f"[FOLLOWUP] Skipping {telegram_id} — already being processed")
+                    continue
+
+                # Check if sequence is complete
                 if current_index >= len(FOLLOW_UP_MESSAGES):
-                    # Sequence complete
                     user_onboarding.update_one(
                         {'telegram_id': telegram_id},
                         {
                             '$set': {
                                 'sequence_active': False,
-                                'completed_at': datetime.utcnow()
+                                'completed_at': datetime.datetime.utcnow(),
+                                'processing': False
                             }
                         }
                     )
                     continue
-                
+
                 message_config = FOLLOW_UP_MESSAGES[current_index]
-                
-                # Send message
+
+                # Send the message
                 result = send_followup_message(telegram_id, message_config)
-                
+
                 if result and result.get('ok'):
-                    # Update onboarding record
                     next_index = current_index + 1
-                    
+
                     # Calculate next message time
                     if next_index < len(FOLLOW_UP_MESSAGES):
                         next_config = FOLLOW_UP_MESSAGES[next_index]
-                        next_message_time = datetime.utcnow() + timedelta(
-                            hours=next_config['delay_hours'] - message_config['delay_hours']
-                        )
+                        # Delay is absolute from start, so calculate gap between this and next
+                        delay_gap = next_config['delay_hours'] - message_config['delay_hours']
+                        next_message_time = datetime.datetime.utcnow() + datetime.timedelta(hours=delay_gap)
                     else:
                         next_message_time = None
-                    
-                    # Update database
+
                     update_data = {
                         'current_message_index': next_index,
                         'messages_sent': user.get('messages_sent', []) + [message_config['message_number']],
-                        'updated_at': datetime.utcnow()
+                        'updated_at': datetime.datetime.utcnow(),
+                        'processing': False  # ✅ Release lock
                     }
-                    
+
                     if next_message_time:
                         update_data['next_message_at'] = next_message_time
                     else:
                         update_data['sequence_active'] = False
-                        update_data['completed_at'] = datetime.utcnow()
-                    
+                        update_data['completed_at'] = datetime.datetime.utcnow()
+
                     user_onboarding.update_one(
                         {'telegram_id': telegram_id},
                         {'$set': update_data}
                     )
-                    
+
                     logging.info(f"[FOLLOWUP] Sent message {message_config['message_number']} to {telegram_id}")
+
                 else:
-                    logging.error(f"[FOLLOWUP] Failed to send to {telegram_id}")
-                    
+                    # ✅ Send failed — release the lock and try again next cycle
+                    logging.error(f"[FOLLOWUP] Failed to send to {telegram_id}, releasing lock")
+                    user_onboarding.update_one(
+                        {'telegram_id': telegram_id},
+                        {
+                            '$set': {
+                                'next_message_at': datetime.datetime.utcnow() + datetime.timedelta(minutes=5),
+                                'processing': False  # ✅ Release lock so it retries
+                            }
+                        }
+                    )
+
             except Exception as e:
                 logging.error(f"[FOLLOWUP] Error processing user {user.get('telegram_id')}: {e}")
-                
+                # ✅ Release lock on exception too
+                try:
+                    user_onboarding.update_one(
+                        {'telegram_id': user.get('telegram_id')},
+                        {
+                            '$set': {
+                                'next_message_at': datetime.datetime.utcnow() + datetime.timedelta(minutes=5),
+                                'processing': False
+                            }
+                        }
+                    )
+                except Exception:
+                    pass
+
     except Exception as e:
         logging.error(f"[FOLLOWUP] Error in process_followup_messages: {e}")
         import traceback
         traceback.print_exc()
-
-
+        
 # Update start_scheduler function
 def start_scheduler():
     if not TELEGRAM_BOT_TOKEN:

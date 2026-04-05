@@ -1156,7 +1156,8 @@ def get_pending_followup_messages():
     pending = list(user_onboarding.find({
         'sequence_active': True,
         'next_message_at': {'$lte': now},
-        'current_message_index': {'$lt': len(FOLLOW_UP_MESSAGES)}
+        'current_message_index': {'$lt': len(FOLLOW_UP_MESSAGES)},
+        'processing': {'$ne': True}  # ✅ Skip users currently being processed
     }))
     
     return pending
