@@ -5,6 +5,15 @@ import datetime
 import uuid
 import logging
 
+try:
+    from langdetect import detect, DetectorFactory
+    from langdetect.lang_detect_exception import LangDetectException
+    DetectorFactory.seed = 0  # Makes detection deterministic
+    LANGDETECT_AVAILABLE = True
+except ImportError:
+    LANGDETECT_AVAILABLE = False
+    logging.warning("[MODELS] langdetect not installed. Falling back to character-based detection. Run: pip install langdetect")
+
 client = MongoClient(MONGO_URI)
 db = client.get_default_database()
 
@@ -150,96 +159,168 @@ def refresh_channel_subscribers_from_telegram(telegram_id, bot_token):
         print(f"Error refreshing channel subscribers: {e}")
         return None
     
+LANGUAGE_CODE_MAP = {
+    'af': 'Afrikaans',
+    'ar': 'Arabic',
+    'bg': 'Bulgarian',
+    'bn': 'Bengali',
+    'ca': 'Catalan',
+    'cs': 'Czech',
+    'cy': 'Welsh',
+    'da': 'Danish',
+    'de': 'German',
+    'el': 'Greek',
+    'en': 'English',
+    'es': 'Spanish',
+    'et': 'Estonian',
+    'fa': 'Persian',
+    'fi': 'Finnish',
+    'fr': 'French',
+    'gu': 'Gujarati',
+    'he': 'Hebrew',
+    'hi': 'Hindi',
+    'hr': 'Croatian',
+    'hu': 'Hungarian',
+    'id': 'Indonesian',
+    'it': 'Italian',
+    'ja': 'Japanese',
+    'kn': 'Kannada',
+    'ko': 'Korean',
+    'lt': 'Lithuanian',
+    'lv': 'Latvian',
+    'mk': 'Macedonian',
+    'ml': 'Malayalam',
+    'mr': 'Marathi',
+    'ms': 'Malay',
+    'mt': 'Maltese',
+    'nl': 'Dutch',
+    'no': 'Norwegian',
+    'pa': 'Punjabi',
+    'pl': 'Polish',
+    'pt': 'Portuguese',
+    'ro': 'Romanian',
+    'ru': 'Russian',
+    'sk': 'Slovak',
+    'sl': 'Slovenian',
+    'so': 'Somali',
+    'sq': 'Albanian',
+    'sr': 'Serbian',
+    'sv': 'Swedish',
+    'sw': 'Swahili',
+    'ta': 'Tamil',
+    'te': 'Telugu',
+    'th': 'Thai',
+    'tl': 'Filipino',
+    'tr': 'Turkish',
+    'uk': 'Ukrainian',
+    'ur': 'Urdu',
+    'vi': 'Vietnamese',
+    'zh-cn': 'Chinese (Simplified)',
+    'zh-tw': 'Chinese (Traditional)',
+    'zh': 'Chinese',
+}
+    
 #To detect channel languages
 def detect_language_from_text(text):
     """
-    Detect language from text using character patterns and common words.
-    Returns language name (e.g., 'English', 'Russian', 'Arabic', etc.)
+    Detect language from text.
+    Uses script-based detection first for non-Latin scripts (fast & reliable),
+    then falls back to langdetect library for Latin-script languages (55+ languages).
+    Returns a human-readable language name e.g. 'English', 'Swahili', 'Hindi'.
     """
-    if not text or len(text.strip()) < 10:
-        return 'English'  # Default fallback
-    
-    text = text.lower()
-    
-    # Count character types
-    cyrillic_count = sum(1 for c in text if '\u0400' <= c <= '\u04FF')
-    arabic_count = sum(1 for c in text if '\u0600' <= c <= '\u06FF')
-    chinese_count = sum(1 for c in text if '\u4E00' <= c <= '\u9FFF')
-    korean_count = sum(1 for c in text if '\uAC00' <= c <= '\uD7AF')
-    hebrew_count = sum(1 for c in text if '\u0590' <= c <= '\u05FF')
-    thai_count = sum(1 for c in text if '\u0E00' <= c <= '\u0E7F')
-    devanagari_count = sum(1 for c in text if '\u0900' <= c <= '\u097F')
-    
-    total_chars = len([c for c in text if c.isalpha()])
-    
-    if total_chars == 0:
+    if not text or len(text.strip()) < 5:
         return 'English'
-    
-    # Calculate percentages
-    cyrillic_percent = (cyrillic_count / total_chars) * 100
-    arabic_percent = (arabic_count / total_chars) * 100
-    chinese_percent = (chinese_count / total_chars) * 100
-    korean_percent = (korean_count / total_chars) * 100
-    hebrew_percent = (hebrew_count / total_chars) * 100
-    thai_percent = (thai_count / total_chars) * 100
-    devanagari_percent = (devanagari_count / total_chars) * 100
-    
-    # Detect based on character frequency (threshold: 30%)
-    if cyrillic_percent > 30:
-        return 'Russian'
-    elif arabic_percent > 30:
+
+    stripped = text.strip()
+
+    # ── Step 1: Script-based detection (instant, no library needed) ──
+    # These scripts are visually distinct and don't need ML to identify.
+
+    def _char_ratio(start, end):
+        count = sum(1 for c in stripped if start <= c <= end)
+        total = sum(1 for c in stripped if c.isalpha())
+        return (count / total * 100) if total else 0
+
+    if _char_ratio('\u0600', '\u06FF') > 25:   # Arabic / Urdu / Persian share this block
+        # Distinguish Urdu (Pakistan) and Persian (Iran) from Arabic
+        urdu_chars   = sum(1 for c in stripped if '\u0600' <= c <= '\u06FF' and c in 'ﭘﭙﭺﭻﭼﭽﮊﮋﮔﮕﮬﮭﮮﮯ')
+        persian_chars = sum(1 for c in stripped if c in 'پچژگ')
+        if urdu_chars > 2:
+            return 'Urdu'
+        if persian_chars > 2:
+            return 'Persian'
         return 'Arabic'
-    elif chinese_percent > 30:
-        return 'Chinese'
-    elif korean_percent > 30:
-        return 'Korean'
-    elif hebrew_percent > 30:
-        return 'Hebrew'
-    elif thai_percent > 30:
-        return 'Thai'
-    elif devanagari_percent > 30:
-        return 'Hindi'
-    
-    # Check for common language-specific words
-    # Spanish
-    spanish_words = ['el', 'la', 'de', 'en', 'que', 'es', 'por', 'con', 'para', 'una', 'como']
-    spanish_matches = sum(1 for word in spanish_words if f' {word} ' in f' {text} ')
-    
-    # French
-    french_words = ['le', 'la', 'de', 'et', 'est', 'un', 'une', 'dans', 'pour', 'qui', 'avec']
-    french_matches = sum(1 for word in french_words if f' {word} ' in f' {text} ')
-    
-    # German
-    german_words = ['der', 'die', 'das', 'und', 'in', 'ist', 'den', 'von', 'zu', 'mit', 'auf']
-    german_matches = sum(1 for word in german_words if f' {word} ' in f' {text} ')
-    
-    # Portuguese
-    portuguese_words = ['o', 'a', 'de', 'e', 'é', 'do', 'da', 'em', 'um', 'para', 'com']
-    portuguese_matches = sum(1 for word in portuguese_words if f' {word} ' in f' {text} ')
-    
-    # Italian
-    italian_words = ['il', 'di', 'e', 'la', 'per', 'un', 'è', 'in', 'che', 'non', 'con']
-    italian_matches = sum(1 for word in italian_words if f' {word} ' in f' {text} ')
-    
-    # Turkish
-    turkish_words = ['bir', 've', 'bu', 'için', 'ile', 'da', 'de', 'mi', 'var', 'olan']
-    turkish_matches = sum(1 for word in turkish_words if f' {word} ' in f' {text} ')
-    
-    # Find language with most matches (minimum 3 matches required)
-    language_scores = {
-        'Spanish': spanish_matches,
-        'French': french_matches,
-        'German': german_matches,
-        'Portuguese': portuguese_matches,
-        'Italian': italian_matches,
-        'Turkish': turkish_matches
+
+    if _char_ratio('\u0900', '\u097F') > 25:   return 'Hindi'        # Devanagari
+    if _char_ratio('\u0980', '\u09FF') > 25:   return 'Bengali'
+    if _char_ratio('\u0A00', '\u0A7F') > 25:   return 'Punjabi'
+    if _char_ratio('\u0A80', '\u0AFF') > 25:   return 'Gujarati'
+    if _char_ratio('\u0B00', '\u0B7F') > 25:   return 'Odia'
+    if _char_ratio('\u0B80', '\u0BFF') > 25:   return 'Tamil'
+    if _char_ratio('\u0C00', '\u0C7F') > 25:   return 'Telugu'
+    if _char_ratio('\u0C80', '\u0CFF') > 25:   return 'Kannada'
+    if _char_ratio('\u0D00', '\u0D7F') > 25:   return 'Malayalam'
+    if _char_ratio('\u0400', '\u04FF') > 25:   # Cyrillic — many languages share it
+        # Attempt finer detection via langdetect if available
+        if LANGDETECT_AVAILABLE:
+            try:
+                code = detect(stripped)
+                return LANGUAGE_CODE_MAP.get(code, 'Russian')  # Default Cyrillic → Russian
+            except LangDetectException:
+                pass
+        return 'Russian'
+
+    if _char_ratio('\u4E00', '\u9FFF') > 10:   return 'Chinese'
+    if _char_ratio('\u3040', '\u30FF') > 10:   return 'Japanese'
+    if _char_ratio('\uAC00', '\uD7AF') > 10:   return 'Korean'
+    if _char_ratio('\u0590', '\u05FF') > 25:   return 'Hebrew'
+    if _char_ratio('\u0E00', '\u0E7F') > 25:   return 'Thai'
+    if _char_ratio('\u1000', '\u109F') > 25:   return 'Burmese'
+    if _char_ratio('\u10A0', '\u10FF') > 25:   return 'Georgian'
+    if _char_ratio('\u0530', '\u058F') > 25:   return 'Armenian'
+    if _char_ratio('\u1200', '\u137F') > 25:   return 'Amharic'   # Ethiopia
+    if _char_ratio('\u0D80', '\u0DFF') > 25:   return 'Sinhala'   # Sri Lanka
+
+    # ── Step 2: Use langdetect for Latin-script and remaining languages ──
+    if LANGDETECT_AVAILABLE and len(stripped) >= 20:
+        try:
+            code = detect(stripped)
+            name = LANGUAGE_CODE_MAP.get(code)
+            if name:
+                return name
+            # langdetect returned a code we don't have mapped — return the code itself
+            # so it's still useful rather than silently defaulting to English
+            return code.upper()
+        except LangDetectException:
+            pass
+
+    # ── Step 3: Last-resort keyword matching for common African/regional languages ──
+    # These are often short texts that langdetect struggles with
+    lower = stripped.lower()
+
+    swahili_words  = ['na', 'wa', 'ya', 'kwa', 'ni', 'la', 'za', 'pia', 'sana', 'hii', 'kama']
+    hausa_words    = ['da', 'na', 'mai', 'ne', 'ce', 'shi', 'ta', 'sun', 'suna', 'wani']
+    yoruba_words   = ['ti', 'ni', 'si', 'pe', 'ati', 'fun', 'naa', 'lo', 'bi', 'tabi']
+    igbo_words     = ['na', 'nke', 'ya', 'bu', 'ka', 'ha', 'ọ', 'ma', 'n\'', 'dị']
+    amharic_latin  = ['ነ', 'የ', 'እና', 'ወ', 'አ']  # fallback if Ethiopic script wasn't caught
+
+    def _keyword_ratio(words):
+        tokens = lower.split()
+        if not tokens:
+            return 0
+        return sum(1 for t in tokens if t in words) / len(tokens)
+
+    scores = {
+        'Swahili':  _keyword_ratio(swahili_words),
+        'Hausa':    _keyword_ratio(hausa_words),
+        'Yoruba':   _keyword_ratio(yoruba_words),
+        'Igbo':     _keyword_ratio(igbo_words),
     }
-    
-    max_lang = max(language_scores, key=language_scores.get)
-    if language_scores[max_lang] >= 3:
-        return max_lang
-    
-    # Default to English if no clear detection
+
+    best_lang = max(scores, key=scores.get)
+    if scores[best_lang] >= 0.15:   # At least 15% of words match
+        return best_lang
+
     return 'English'
 
 def validate_channel_with_telegram(username, bot_token):
