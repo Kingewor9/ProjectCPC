@@ -1048,7 +1048,7 @@ FOLLOW_UP_MESSAGES = [
         'text': (
             "<b>You never get forced into a promotion on CP Gram.</b>\n\n"
             "Every request can be accepted or declined.\n\n"
-            "No auto-posting. No random promos.\n\n"
+            "No auto-posting without your consent. No random promos.\n\n"
             "Your channel rules still apply — always."
         ),
         'cta_text': '🚀 Open CP Gram',
