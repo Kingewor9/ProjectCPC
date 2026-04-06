@@ -9,11 +9,7 @@ export default function HelpPage() {
     },
     {
       question: 'What happens when I accept a request?',
-      answer: 'When you accept a request, the campaign is added to your scheduled campaigns. And you are expected to post the promotion manually within 48 hours of accepting the request.',
-    },
-    {
-      question: 'What happens if I fail to post within 48 hours?',
-      answer: 'If you fail to post the promotion within 48 hours of accepting the request, your CPC balance will be deducted as a penalty, and your account may be reviewed for further actions.',
+      answer: 'When you accept a request, the campaign is added to your scheduled campaigns. And the CP Gram bot is expected to post the promotion on your channel at the scheduled time. Your CPC balance will be deducted at the end of the campaign.',
     },
     {
       question: 'What is CPC and how do I earn it?',
