@@ -28,7 +28,7 @@ export default function Header() {
               <img src="/logo.jpg" alt="CP Gram Logo" className="w-full h-full object-cover relative z-10" onError={(e) => { e.currentTarget.style.display = 'none'; (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'block'; }} />
               <span className="font-heading font-bold text-lg text-white hidden relative z-10">GG</span>
             </div>
-            <span className="text-xl font-heading font-bold font-heading text-white hidden sm:inline tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
+            <span className="text-xl font-heading font-bold text-white hidden sm:inline tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">
               CP Gram
             </span>
           </Link>

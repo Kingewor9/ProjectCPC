@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import Layout from '../components/Layout';
 import { Bell, Lock, Globe, Check } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -22,6 +24,7 @@ const SUPPORTED_LANGUAGES = [
 
 export default function SettingsPage() {
   const { user, fetchUser } = useAuth();
+  const { t } = useTranslation();
   const [settings, setSettings] = useState({
     emailNotifications: true,
     pushNotifications: false,
@@ -39,9 +42,10 @@ export default function SettingsPage() {
   useEffect(() => {
     if (user?.preferred_language) {
       setSelectedLanguage(user.preferred_language);
+      i18n.changeLanguage(user.preferred_language);
     } else if (user?.language_code) {
-      // Fallback to Telegram language if available
       setSelectedLanguage(user.language_code);
+      i18n.changeLanguage(user.language_code);
     }
   }, [user]);
 
@@ -58,6 +62,9 @@ export default function SettingsPage() {
     setIsSaving(true);
     setSaveSuccess(false);
 
+    // Immediately change the language UI
+    i18n.changeLanguage(languageCode);
+
     try {
       const result = await apiService.updateUserSettings({
         preferred_language: languageCode
@@ -65,17 +72,14 @@ export default function SettingsPage() {
 
       if (result.ok) {
         setSaveSuccess(true);
-        // Refresh user data to get updated language
         await fetchUser();
-        
-        // Clear success message after 3 seconds
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        setError('Failed to save language preference');
+        setError(t('failedToSaveLanguage'));
       }
     } catch (err: any) {
       console.error('Error updating language:', err);
-      setError(err.message || 'Failed to save language preference');
+      setError(err.message || t('failedToSaveLanguage'));
     } finally {
       setIsSaving(false);
     }
@@ -83,16 +87,15 @@ export default function SettingsPage() {
 
   const handleThemeChange = (theme: string) => {
     setSelectedTheme(theme);
-    // TODO: Implement theme switching logic
   };
 
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-32">
         <div className="mb-10 sm:mb-12 animate-fade-in-up">
-          <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Settings</h1>
+          <h1 className="text-4xl sm:text-5xl font-heading font-extrabold text-white mb-3 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">{t('settings')}</h1>
           <p className="text-contentMuted text-lg font-sans">
-            Manage your account preferences and notifications
+            {t('managePreferences')}
           </p>
         </div>
 
@@ -103,8 +106,8 @@ export default function SettingsPage() {
               <Check className="text-neon-emerald" size={16} />
             </div>
             <div>
-              <p className="text-white font-bold mb-1">Preferences Updated</p>
-              <p className="text-neon-emerald/80 text-sm font-sans">Settings saved successfully!</p>
+              <p className="text-white font-bold mb-1">{t('preferencesUpdated')}</p>
+              <p className="text-neon-emerald/80 text-sm font-sans">{t('settingsSavedSuccess')}</p>
             </div>
           </div>
         )}
@@ -116,7 +119,7 @@ export default function SettingsPage() {
               <span className="text-red-500 font-bold">!</span>
             </div>
             <div>
-              <p className="text-white font-bold mb-1">Error</p>
+              <p className="text-white font-bold mb-1">{t('errorLabel')}</p>
               <p className="text-red-400 text-sm font-sans">{error}</p>
             </div>
           </div>
@@ -129,7 +132,7 @@ export default function SettingsPage() {
                <div className="absolute inset-0 bg-neon-cyan/20 translate-y-[100%] group-hover:translate-y-0 transition-transform"></div>
                <Globe size={24} className="text-neon-cyan relative z-10" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white">Account</h2>
+            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white">{t('account')}</h2>
           </div>
 
           <div className="space-y-6">
@@ -139,9 +142,9 @@ export default function SettingsPage() {
               
               <div className="flex items-center justify-between mb-6 relative z-10">
                 <div>
-                  <h3 className="text-lg sm:text-xl font-heading font-bold text-white mb-1">Language</h3>
+                  <h3 className="text-lg sm:text-xl font-heading font-bold text-white mb-1">{t('language')}</h3>
                   <p className="text-contentMuted text-sm font-sans">
-                    Choose your preferred language for the interface
+                    {t('chooseLanguage')}
                   </p>
                 </div>
                 {isSaving && (
@@ -185,13 +188,13 @@ export default function SettingsPage() {
               <div className="absolute top-0 right-0 w-64 h-64 bg-neon-violet/5 rounded-full blur-3xl pointer-events-none group-hover:bg-neon-violet/10 transition-colors duration-1000"></div>
               
               <h3 className="text-lg sm:text-xl font-heading font-bold text-white mb-6 flex items-center gap-3 relative z-10">
-                Theme
+                {t('theme')}
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 relative z-10">
                 {[
-                  { value: 'dark', label: 'Dark Neon', description: 'Current aesthetic' },
-                  { value: 'light', label: 'Light', description: 'Coming soon' },
-                  { value: 'auto', label: 'Auto', description: 'System default' }
+                  { value: 'dark', label: t('darkNeon'), description: t('currentAesthetic') },
+                  { value: 'light', label: t('light'), description: t('comingSoon') },
+                  { value: 'auto', label: t('auto'), description: t('systemDefault') }
                 ].map((theme) => (
                   <button
                     key={theme.value}
@@ -219,30 +222,30 @@ export default function SettingsPage() {
                <div className="absolute inset-0 bg-neon-emerald/20 translate-y-[100%] group-hover:translate-y-0 transition-transform"></div>
                <Bell size={24} className="text-neon-emerald relative z-10" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white">Notifications</h2>
+            <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white">{t('notifications')}</h2>
           </div>
 
           <div className="space-y-4">
             {[
               {
                 key: 'emailNotifications',
-                label: 'Email Notifications',
-                description: 'Receive important updates and alerts directly to your inbox.',
+                label: t('emailNotifications'),
+                description: t('emailNotificationsDesc'),
               },
               {
                 key: 'pushNotifications',
-                label: 'Push Notifications',
-                description: 'Get real-time alerts on your device for immediate actions.',
+                label: t('pushNotifications'),
+                description: t('pushNotificationsDesc'),
               },
               {
                 key: 'campaignUpdates',
-                label: 'Campaign Updates',
-                description: 'Stay updated when campaigns start, run, and complete successfully.',
+                label: t('campaignUpdates'),
+                description: t('campaignUpdatesDesc'),
               },
               {
                 key: 'weeklyReport',
-                label: 'Weekly Report',
-                description: 'Receive a comprehensive summary of your performance metrics every week.',
+                label: t('weeklyReport'),
+                description: t('weeklyReportDesc'),
               },
             ].map((item) => (
               <div
