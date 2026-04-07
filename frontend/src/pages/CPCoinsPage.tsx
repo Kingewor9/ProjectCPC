@@ -11,7 +11,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorAlert from '../components/ErrorAlert';
 import { useAuth } from '../hooks/useAuth';
 import apiService from '../services/api';
-import { Wallet, Gift, Users, Bell, CheckCircle, ExternalLink, AlertCircle, Send, Clock, Zap } from 'lucide-react';
+import { Wallet, Gift, Users, Bell, CheckCircle, ExternalLink, AlertCircle, Clock, Zap } from 'lucide-react';
 
 interface Task {
   id: string;
@@ -22,6 +22,13 @@ interface Task {
   completed: boolean;
   actionText: string;
 }
+
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
+  const start = i.toString().padStart(2, '0');
+  const end = ((i + 1) % 24).toString().padStart(2, '0');
+  return `${start}:00 - ${end}:00 UTC`;
+});
 
 interface InviteTask {
   id: string;
@@ -54,7 +61,10 @@ export default function CPCoinsPage() {
   const [showChannelSelector, setShowChannelSelector] = useState(false);
   const [showInviteTaskModal, setShowInviteTaskModal] = useState(false);
   const [activeInviteTask, setActiveInviteTask] = useState<InviteTask | null>(null);
-  const [postLink, setPostLink] = useState('');
+
+  const [selectedChannelIdForInvite, setSelectedChannelIdForInvite] = useState<string | null>(null);
+  const [daySelected, setDaySelected] = useState('Monday');
+  const [timeSelected, setTimeSelected] = useState('09:00 - 10:00 UTC');
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [inviteTaskCompleted, setInviteTaskCompleted] = useState(false);
 
@@ -84,24 +94,24 @@ export default function CPCoinsPage() {
   }, [activeInviteTask]);
 
   // Initialize Adsgram.....
-useEffect(() => {
-  if (window.Adsgram) {
-    const blockId = import.meta.env.VITE_ADSGRAM_BLOCK_ID;
-    
-    if (!blockId) {
-      console.error('Adsgram Block ID not configured');
-      setError('Ad system not configured. Please contact support.');
-      return;
+  useEffect(() => {
+    if (window.Adsgram) {
+      const blockId = import.meta.env.VITE_ADSGRAM_BLOCK_ID;
+
+      if (!blockId) {
+        console.error('Adsgram Block ID not configured');
+        setError('Ad system not configured. Please contact support.');
+        return;
+      }
+
+      adControllerRef.current = window.Adsgram.init({
+        blockId: blockId, // ✅ From environment variable
+        debug: import.meta.env.DEV // Automatically true in dev, false in production
+      });
+
+      console.log('Adsgram initialized with block ID:', blockId);
     }
-    
-    adControllerRef.current = window.Adsgram.init({ 
-      blockId: blockId, // ✅ From environment variable
-      debug: import.meta.env.DEV // Automatically true in dev, false in production
-    });
-    
-    console.log('Adsgram initialized with block ID:', blockId);
-  }
-}, []);
+  }, []);
 
   const fetchTasks = async () => {
     try {
@@ -131,10 +141,10 @@ useEffect(() => {
 
     try {
       const result = await apiService.claimWelcomeBonus();
-      
+
       if (result.ok) {
         setSuccess(`🎉 Welcome bonus claimed! +${result.reward} CP Coins added to your balance.`);
-        setTasks(prev => prev.map(task => 
+        setTasks(prev => prev.map(task =>
           task.type === 'welcome' ? { ...task, completed: true } : task
         ));
         await fetchUser();
@@ -156,10 +166,10 @@ useEffect(() => {
       setTimeout(async () => {
         try {
           const result = await apiService.verifyChannelJoin();
-          
+
           if (result.ok) {
             setSuccess(`✅ Channel join verified! +${result.reward} CP Coins added to your balance.`);
-            setTasks(prev => prev.map(task => 
+            setTasks(prev => prev.map(task =>
               task.type === 'join_channel' ? { ...task, completed: true } : task
             ));
             await fetchUser();
@@ -182,7 +192,7 @@ useEffect(() => {
       return;
     }
 
-    const eligibleChannels = user.channels.filter((ch: any) => 
+    const eligibleChannels = user.channels.filter((ch: any) =>
       ch.status === 'Active' || ch.status === 'approved'
     );
 
@@ -195,77 +205,33 @@ useEffect(() => {
   };
 
   const handleSelectChannel = async (channelId: string) => {
+    setSelectedChannelIdForInvite(channelId);
+  };
+
+  const handleConfirmSchedule = async () => {
+    if (!selectedChannelIdForInvite) return;
+
     setShowChannelSelector(false);
     setProcessingTask('invite_task');
     setError(null);
 
     try {
-      const result = await apiService.initiateInviteTask(channelId);
-      
+      const result = await apiService.initiateInviteTask(
+        selectedChannelIdForInvite,
+        daySelected,
+        timeSelected
+      );
+
       if (result.ok) {
         await fetchInviteTaskStatus();
         setShowInviteTaskModal(true);
-        setSuccess('Invite task initiated! Get the promo and post it.');
+        setSuccess('Invite task securely scheduled! The bot will handle everything natively.');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to initiate invite task');
     } finally {
       setProcessingTask(null);
-    }
-  };
-
-  const handleSendInvitePromo = async () => {
-    if (!activeInviteTask) return;
-
-    setProcessingTask('send_promo');
-    try {
-      await apiService.sendInvitePromoToTelegram(activeInviteTask.id);
-      alert('Promo sent to your Telegram! Forward it to your channel.');
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Failed to send promo');
-    } finally {
-      setProcessingTask(null);
-    }
-  };
-
-  const handleVerifyInvitePost = async () => {
-    if (!postLink.trim() || !activeInviteTask) return;
-
-    setProcessingTask('verify_post');
-    try {
-      await apiService.verifyAndStartInviteTask(activeInviteTask.id, postLink);
-      setSuccess('Post verified! Timer started. Admin notified.');
-      setPostLink('');
-      await fetchInviteTaskStatus();
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Failed to verify post');
-    } finally {
-      setProcessingTask(null);
-    }
-  };
-
-  const handleCompleteInviteTask = async () => {
-    if (!activeInviteTask) return;
-
-    if (timeLeft > 0) {
-      alert(`Please wait for the timer to complete. Time remaining: ${formatTimeLeft(timeLeft)}`);
-      return;
-    }
-
-    if (!confirm('Timer complete! Click OK to claim your 5,000 CP Coins!')) return;
-
-    setProcessingTask('complete_task');
-    try {
-      const result = await apiService.completeInviteTask(activeInviteTask.id);
-      setSuccess(`🎉 Invite task completed! +${result.reward} CP Coins added!`);
-      await fetchUser();
-      await fetchInviteTaskStatus();
-      setShowInviteTaskModal(false);
-      setInviteTaskCompleted(true);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Failed to complete task');
-    } finally {
-      setProcessingTask(null);
+      setSelectedChannelIdForInvite(null);
     }
   };
 
@@ -285,39 +251,39 @@ useEffect(() => {
   }
 
   // Ad watch handler
-const handleWatchAd = async () => {
-  if (!adControllerRef.current) {
-    setError("Ad system not ready. Please refresh.");
-    return;
-  }
+  const handleWatchAd = async () => {
+    if (!adControllerRef.current) {
+      setError("Ad system not ready. Please refresh.");
+      return;
+    }
 
-  setIsAdLoading(true);
+    setIsAdLoading(true);
 
-  adControllerRef.current.show()
-    .then(async (result: any) => {
-     console.log('Ad completed:', result);
-      // User finished the ad
-      setProcessingTask('ad_reward');
-      try {
-        const res = await apiService.claimAdReward(); 
-        if (res.ok) {
-          setSuccess(`🎉 Awesome! +${res.reward} CP Coins added to your balance.`);
-          await fetchUser();
+    adControllerRef.current.show()
+      .then(async (result: any) => {
+        console.log('Ad completed:', result);
+        // User finished the ad
+        setProcessingTask('ad_reward');
+        try {
+          const res = await apiService.claimAdReward();
+          if (res.ok) {
+            setSuccess(`🎉 Awesome! +${res.reward} CP Coins added to your balance.`);
+            await fetchUser();
+          }
+        } catch (err: any) {
+          setError(err.response?.data?.error || "Failed to claim ad reward");
+        } finally {
+          setProcessingTask(null);
         }
-      } catch (err: any) {
-        setError(err.response?.data?.error || "Failed to claim ad reward");
-      } finally {
-        setProcessingTask(null);
-      }
-    })
-    .catch((result: any) => {
-      console.error("Ad error:", result);
-      setError("You must watch the ad until the end to claim rewards.");
-    })
-    .finally(() => {
-      setIsAdLoading(false);
-    });
-};
+      })
+      .catch((result: any) => {
+        console.error("Ad error:", result);
+        setError("You must watch the ad until the end to claim rewards.");
+      })
+      .finally(() => {
+        setIsAdLoading(false);
+      });
+  };
 
   return (
     <Layout>
@@ -328,7 +294,7 @@ const handleWatchAd = async () => {
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
-        
+
         {success && (
           <div className="mb-6 bg-neon-emerald/10 border border-neon-emerald/30 shadow-[0_0_15px_rgba(0,255,157,0.1)] rounded-xl p-4">
             <div className="flex items-start gap-3">
@@ -354,7 +320,7 @@ const handleWatchAd = async () => {
               </div>
             </div>
           </div>
-          
+
           <button
             onClick={() => window.location.href = '/buy-coins'}
             className="btn-primary w-full sm:w-auto relative z-10 text-lg px-8 py-4"
@@ -392,15 +358,14 @@ const handleWatchAd = async () => {
                   </div>
                 </div>
               </div>
-              
+
               <button
                 onClick={handleWatchAd}
                 disabled={isAdLoading || processingTask === 'ad_reward'}
-                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold font-mono tracking-wider transition-all flex-shrink-0 ${
-                  isAdLoading 
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold font-mono tracking-wider transition-all flex-shrink-0 ${isAdLoading
                     ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
                     : 'bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]'
-                }`}
+                  }`}
               >
                 {isAdLoading ? 'LOADING...' : 'WATCH & EARN'}
               </button>
@@ -425,18 +390,17 @@ const handleWatchAd = async () => {
                   </div>
                 </div>
               </div>
-              
+
               <button
                 onClick={handleClaimWelcomeBonus}
                 disabled={tasks.find(t => t.type === 'welcome')?.completed || processingTask === 'welcome'}
-                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold font-mono tracking-wider transition-all flex-shrink-0 ${
-                  tasks.find(t => t.type === 'welcome')?.completed
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold font-mono tracking-wider transition-all flex-shrink-0 ${tasks.find(t => t.type === 'welcome')?.completed
                     ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
                     : 'bg-neon-emerald/10 border border-neon-emerald/50 text-neon-emerald hover:bg-neon-emerald hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,255,157,0.4)]'
-                }`}
+                  }`}
               >
-                {processingTask === 'welcome' ? 'CLAIMING...' : 
-                 tasks.find(t => t.type === 'welcome')?.completed ? 'CLAIMED' : 'CLAIM BONUS'}
+                {processingTask === 'welcome' ? 'CLAIMING...' :
+                  tasks.find(t => t.type === 'welcome')?.completed ? 'CLAIMED' : 'CLAIM BONUS'}
               </button>
             </div>
           </div>
@@ -457,9 +421,9 @@ const handleWatchAd = async () => {
                     <span className="text-2xl font-mono font-bold neon-text-cyan">+250</span>
                     <span className="text-contentMuted font-bold text-sm">CPC</span>
                   </div>
-                  <a 
-                    href="https://t.me/cpgram_news" 
-                    target="_blank" 
+                  <a
+                    href="https://t.me/cpgram_news"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 text-neon-cyan/80 hover:text-neon-cyan text-sm font-bold tracking-wide transition-colors"
                   >
@@ -467,18 +431,17 @@ const handleWatchAd = async () => {
                   </a>
                 </div>
               </div>
-              
+
               <button
                 onClick={handleJoinChannel}
                 disabled={tasks.find(t => t.type === 'join_channel')?.completed || processingTask === 'join_channel'}
-                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all flex-shrink-0 font-mono tracking-wide ${
-                  tasks.find(t => t.type === 'join_channel')?.completed
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all flex-shrink-0 font-mono tracking-wide ${tasks.find(t => t.type === 'join_channel')?.completed
                     ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
                     : 'bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]'
-                }`}
+                  }`}
               >
-                {processingTask === 'join_channel' ? 'VERIFYING...' : 
-                 tasks.find(t => t.type === 'join_channel')?.completed ? 'JOINED' : 'JOIN NOW'}
+                {processingTask === 'join_channel' ? 'VERIFYING...' :
+                  tasks.find(t => t.type === 'join_channel')?.completed ? 'JOINED' : 'JOIN NOW'}
               </button>
             </div>
           </div>
@@ -499,7 +462,7 @@ const handleWatchAd = async () => {
                     <span className="text-2xl font-mono font-bold neon-text-violet">+5,000</span>
                     <span className="text-contentMuted font-bold text-sm">CPC</span>
                   </div>
-                  
+
                   {inviteTaskCompleted && (
                     <div className="mt-4 bg-neon-emerald/10 border border-neon-emerald/30 rounded-lg p-3 inline-block">
                       <p className="text-neon-emerald font-mono text-sm font-bold tracking-wide">
@@ -528,7 +491,7 @@ const handleWatchAd = async () => {
                   )}
                 </div>
               </div>
-              
+
               <button
                 onClick={() => {
                   if (activeInviteTask) {
@@ -538,15 +501,14 @@ const handleWatchAd = async () => {
                   }
                 }}
                 disabled={inviteTaskCompleted || processingTask === 'invite_task'}
-                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all flex-shrink-0 font-mono tracking-wide ${
-                  inviteTaskCompleted
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all flex-shrink-0 font-mono tracking-wide ${inviteTaskCompleted
                     ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
                     : 'bg-neon-violet/10 border border-neon-violet/50 text-neon-violet hover:bg-neon-violet hover:text-charcoal hover:shadow-[0_0_20px_rgba(138,43,226,0.4)]'
-                }`}
+                  }`}
               >
-                {processingTask === 'invite_task' ? 'PROCESSING...' : 
-                 inviteTaskCompleted ? 'COMPLETED' :
-                 activeInviteTask ? 'CONTINUE' : 'START TASK'}
+                {processingTask === 'invite_task' ? 'PROCESSING...' :
+                  inviteTaskCompleted ? 'COMPLETED' :
+                    activeInviteTask ? 'CONTINUE' : 'START TASK'}
               </button>
             </div>
           </div>
@@ -586,29 +548,91 @@ const handleWatchAd = async () => {
         {showChannelSelector && user?.channels && (
           <div className="fixed inset-0 bg-obsidian/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
             <div className="glass-panel p-8 max-w-md w-full animate-fade-in-up border-neon-cyan/30 shadow-[0_0_30px_rgba(0,240,255,0.1)]">
-              <h3 className="text-2xl font-heading font-bold text-white mb-6">Select Channel</h3>
-              
-              <div className="space-y-3 mb-8 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
-                {user.channels
-                  .filter((ch: any) => ch.status === 'Active' || ch.status === 'approved')
-                  .map((channel: any) => (
-                    <button
-                      key={channel.id}
-                      onClick={() => handleSelectChannel(channel.id)}
-                      className="w-full bg-surface hover:bg-neon-cyan/10 border border-surfaceBorder hover:border-neon-cyan/50 rounded-xl p-4 text-left transition-all group"
-                    >
-                      <p className="text-white font-bold group-hover:text-neon-cyan transition-colors">{channel.name}</p>
-                      <p className="text-contentMuted font-mono text-sm mt-1">{channel.subs?.toLocaleString()} subs</p>
-                    </button>
-                  ))}
-              </div>
 
-              <button
-                onClick={() => setShowChannelSelector(false)}
-                className="w-full btn-secondary"
-              >
-                Cancel
-              </button>
+              {!selectedChannelIdForInvite ? (
+                <>
+                  <h3 className="text-2xl font-heading font-bold text-white mb-6">Select Channel</h3>
+
+                  <div className="space-y-3 mb-8 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                    {user.channels
+                      .filter((ch: any) => ch.status === 'Active' || ch.status === 'approved')
+                      .map((channel: any) => (
+                        <button
+                          key={channel.id}
+                          onClick={() => handleSelectChannel(channel.id)}
+                          className="w-full bg-surface hover:bg-neon-cyan/10 border border-surfaceBorder hover:border-neon-cyan/50 rounded-xl p-4 text-left transition-all group"
+                        >
+                          <p className="text-white font-bold group-hover:text-neon-cyan transition-colors">{channel.name}</p>
+                          <p className="text-contentMuted font-mono text-sm mt-1">{channel.subs?.toLocaleString()} subs</p>
+                        </button>
+                      ))}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setShowChannelSelector(false);
+                      setSelectedChannelIdForInvite(null);
+                    }}
+                    className="w-full btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-2xl font-heading font-bold text-white mb-6">Schedule Time Slot</h3>
+                  <div className="space-y-6 mb-8">
+                    <div>
+                      <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-2 ml-1">
+                        Select Day
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={daySelected}
+                          onChange={(e) => setDaySelected(e.target.value)}
+                          className="input-glass w-full text-white appearance-none"
+                        >
+                          {DAYS_OF_WEEK.map(day => (
+                            <option key={day} value={day} className="bg-charcoal text-white">{day}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold tracking-widest uppercase text-contentMuted mb-2 ml-1">
+                        Select Time (UTC)
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={timeSelected}
+                          onChange={(e) => setTimeSelected(e.target.value)}
+                          className="input-glass w-full appearance-none tracking-widest font-mono text-neon-cyan"
+                        >
+                          {TIME_SLOTS.map(slot => (
+                            <option key={slot} value={slot} className="bg-charcoal text-white tracking-widest">{slot}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => setSelectedChannelIdForInvite(null)}
+                      className="w-full btn-secondary"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleConfirmSchedule}
+                      disabled={processingTask === 'invite_task'}
+                      className="w-full bg-neon-cyan/20 border border-neon-cyan/50 hover:bg-neon-cyan hover:text-charcoal text-neon-cyan py-3 rounded-xl font-bold transition-all disabled:opacity-50"
+                    >
+                      {processingTask === 'invite_task' ? 'SAVING...' : 'SCHEDULE BOT'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -622,7 +646,7 @@ const handleWatchAd = async () => {
                   <h2 className="text-3xl font-heading font-bold text-white mb-2">Invite Task</h2>
                   <p className="text-neon-violet/80 font-mono text-sm">Channel: {activeInviteTask.channel_name}</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setShowInviteTaskModal(false)}
                   className="w-10 h-10 rounded-full bg-surface border border-surfaceBorder flex items-center justify-center text-contentMuted hover:text-white hover:border-white transition-colors"
                 >
@@ -631,11 +655,10 @@ const handleWatchAd = async () => {
               </div>
 
               <div className="mb-8">
-                <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-mono font-bold border ${
-                  activeInviteTask.status === 'pending_posting' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.2)]' :
-                  activeInviteTask.status === 'active' ? 'bg-neon-emerald/10 text-neon-emerald border-neon-emerald/30 shadow-[0_0_10px_rgba(0,255,157,0.2)]' :
-                  'bg-surface text-contentMuted border-surfaceBorder'
-                }`}>
+                <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-mono font-bold border ${activeInviteTask.status === 'pending_posting' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.2)]' :
+                    activeInviteTask.status === 'active' ? 'bg-neon-emerald/10 text-neon-emerald border-neon-emerald/30 shadow-[0_0_10px_rgba(0,255,157,0.2)]' :
+                      'bg-surface text-contentMuted border-surfaceBorder'
+                  }`}>
                   {activeInviteTask.status === 'pending_posting' && <><Clock size={16} />PENDING POSTING</>}
                   {activeInviteTask.status === 'active' && <><Zap size={16} />TIMER ACTIVE</>}
                   {activeInviteTask.status === 'completed' && <><CheckCircle size={16} />COMPLETED</>}
@@ -643,45 +666,14 @@ const handleWatchAd = async () => {
               </div>
 
               {activeInviteTask.status === 'pending_posting' && (
-                <div className="space-y-6">
-                  <button
-                    onClick={handleSendInvitePromo}
-                    disabled={processingTask === 'send_promo'}
-                    className="w-full bg-neon-cyan/20 border border-neon-cyan/50 hover:bg-neon-cyan hover:text-charcoal text-neon-cyan py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-3 font-mono tracking-wide"
-                  >
-                    <Send size={20} />
-                    GET PROMO IN TELEGRAM
-                  </button>
-                  
-                  <div className="bg-charcoal border border-surfaceBorder rounded-xl p-6">
-                    <h4 className="text-white font-bold mb-4 font-heading flex items-center gap-2">
-                      <Zap className="text-neon-violet" size={18} />
-                      Next Steps
-                    </h4>
-                    <ol className="text-contentMuted text-sm space-y-4 font-sans list-none">
-                      <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">1</span> Click "Get Promo in Telegram"</li>
-                      <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">2</span> Forward the message to your channel</li>
-                      <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">3</span> Copy the post link from your channel</li>
-                      <li className="flex gap-3"><span className="text-neon-violet font-mono font-bold">4</span> Submit the link below to start 12-hour timer</li>
-                    </ol>
-                  </div>
-
-                  <div className="space-y-3">
-                    <label className="text-contentMuted text-xs font-bold tracking-widest uppercase ml-1">Post Link URL</label>
-                    <input
-                      type="url"
-                      value={postLink}
-                      onChange={(e) => setPostLink(e.target.value)}
-                      placeholder="https://t.me/yourchannel/123"
-                      className="input-glass w-full"
-                    />
-                    <button
-                      onClick={handleVerifyInvitePost}
-                      disabled={!postLink.trim() || processingTask === 'verify_post'}
-                      className="w-full bg-neon-emerald/20 border border-neon-emerald/50 hover:bg-neon-emerald hover:text-charcoal text-neon-emerald py-4 rounded-xl font-bold transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed font-mono tracking-wide"
-                    >
-                      ✓ START 12-HOUR TIMER
-                    </button>
+                <div className="bg-charcoal border border-surfaceBorder rounded-xl p-6 text-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                  <Clock className="w-12 h-12 text-yellow-400 mx-auto mb-4 opacity-80" />
+                  <h4 className="text-white font-heading font-bold mb-3 text-lg">Awaiting Bot Execution</h4>
+                  <p className="text-contentMuted text-sm font-sans mx-auto max-w-md leading-relaxed">
+                    The CP Gram backend bot is safely monitoring the scheduler block. It will natively post the invite material and start counting your 12 hours exactly on your selected time!
+                  </p>
+                  <div className="mt-5 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 inline-block">
+                    <span className="text-yellow-400 text-xs font-mono tracking-widest uppercase font-bold text-center block">Zero manual action needed.</span>
                   </div>
                 </div>
               )}
@@ -698,17 +690,11 @@ const handleWatchAd = async () => {
                     <p className="text-contentMuted font-mono text-sm tracking-widest uppercase relative z-10">Time remaining</p>
                   </div>
 
-                  <button
-                    onClick={handleCompleteInviteTask}
-                    disabled={timeLeft > 0 || processingTask === 'complete_task'}
-                    className={`w-full py-5 rounded-xl font-bold font-mono tracking-wide transition-all ${
-                      timeLeft > 0
-                        ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
-                        : 'bg-neon-violet/20 border border-neon-violet/50 hover:bg-neon-violet hover:text-charcoal text-neon-violet shadow-[0_0_20px_rgba(138,43,226,0.3)]'
-                    }`}
-                  >
-                    {timeLeft > 0 ? 'WAIT FOR TIMER...' : 'CLAIM 5,000 CP COINS'}
-                  </button>
+                  <div className="bg-surface border border-surfaceBorder rounded-xl p-5 text-center mt-6 shadow-inner">
+                    <p className="text-contentMuted text-sm font-sans leading-relaxed tracking-wide">
+                      The background bot will automatically delete the post when the timer reaches zero and instantly dispense your 5000 CP Coin reward directly to your wallet!
+                    </p>
+                  </div>
                 </div>
               )}
             </div>

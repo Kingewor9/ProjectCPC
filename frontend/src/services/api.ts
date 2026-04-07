@@ -342,10 +342,10 @@ async getInviteTaskStatus(): Promise<any> {
   return response.data;
 }
 
-async initiateInviteTask(channelId: string): Promise<any> {
+async initiateInviteTask(channelId: string, daySelected: string, timeSelected: string): Promise<any> {
   const response = await this.api.post(
     '/api/tasks/invite/initiate',
-    { channel_id: channelId }
+    { channel_id: channelId, daySelected, timeSelected }
   );
   return response.data;
 }

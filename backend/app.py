@@ -1648,11 +1648,18 @@ def initiate_invite_task():
     telegram_id = request.telegram_id
     data = request.json or {}
     channel_id = data.get('channel_id')
+    day_selected = data.get('daySelected')
+    time_selected = data.get('timeSelected')
     
     if not channel_id:
         return jsonify({'error': 'Channel ID is required'}), 400
+        
+    if not day_selected or not time_selected:
+        return jsonify({'error': 'Scheduling day and time are strictly required'}), 400
     
     try:
+        from time_utils import parse_day_time_to_utc, calculate_end_time
+        
         # Check if task already completed
         task_record = user_tasks.find_one({'user_id': telegram_id})
         
@@ -1669,8 +1676,11 @@ def initiate_invite_task():
         status_raw = (channel.get('status') or '').lower()
         if status_raw not in ['approved', 'active']:
             return jsonify({'error': 'Channel must be active to complete this task'}), 400
+            
+        start_at = parse_day_time_to_utc(day_selected, time_selected)
+        end_at = calculate_end_time(start_at, 12)
         
-        # Create invite task campaign (similar to regular campaigns but for invite task)
+        # Create invite task campaign
         invite_task_id = f"invite_{uuid.uuid4().hex[:12]}"
         
         invite_task = {
@@ -1680,8 +1690,10 @@ def initiate_invite_task():
             'channel_id': channel_id,
             'channel_name': channel.get('name'),
             'telegram_chat_id': channel.get('telegram_id'),
-            'status': 'pending_posting',
+            'status': 'scheduled',
             'duration_hours': 12,
+            'start_at': start_at,
+            'end_at': end_at,
             'reward': 5000,
             'promo': {
                 'name': 'CP Gram Promo',

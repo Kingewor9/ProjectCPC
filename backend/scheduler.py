@@ -136,7 +136,8 @@ def check_and_post_campaigns():
                     )
                     continue
                 
-                promo_text = camp.get('promo_text', '')
+                promo_data = camp.get('promo', {})
+                promo_text = promo_data.get('text', '')
                 
                 if not promo_text:
                     logging.error(f"[SCHEDULER] No promo_text for invite campaign {campaign_id}")
