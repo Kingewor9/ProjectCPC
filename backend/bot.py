@@ -175,7 +175,7 @@ def send_campaign_promo_for_posting(chat_id, promo_text, promo_link, promo_image
         logging.exception(f'[BOT] Failed to send campaign promo to {chat_id}')
         return None
             
-def send_invite_campaign_post(chat_id, promo_text, bot_url):
+def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
     """
     Send an invite campaign post with CP Gram branding
     This is specifically for the invite task feature
@@ -183,7 +183,7 @@ def send_invite_campaign_post(chat_id, promo_text, bot_url):
     Args:
         chat_id: Telegram channel/chat ID where to post
         promo_text: The promotional text to display
-        bot_url: URL to the CP Gram app
+        BOT_URL: URL to the CP Gram app
     
     Returns:
         Response from Telegram API with message details
@@ -198,7 +198,7 @@ def send_invite_campaign_post(chat_id, promo_text, bot_url):
         # Create inline keyboard with call-to-action button
         keyboard = {
             'inline_keyboard': [[
-                {'text': '🚀 Join CP Gram Now', 'url': bot_url}
+                {'text': '🚀 Join CP Gram Now', 'url': BOT_URL}
             ]]
         }
         

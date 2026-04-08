@@ -353,7 +353,7 @@ export default function CPCoinsPage() {
                     Watch a short video until the end to claim your reward. No skipping allowed!
                   </p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold font-mono neon-text-cyan tracking-tight">+75</span>
+                    <span className="text-3xl font-bold font-mono neon-text-cyan tracking-tight">+150</span>
                     <span className="text-neon-cyan/70 font-bold font-mono">CPC</span>
                   </div>
                 </div>
