@@ -340,7 +340,7 @@ export default function CPCoinsPage() {
 
         {/* Tasks List */}
         <div className="space-y-6">
-          {/* Earn Free 75 CP Coins Ad Task */}
+          {/* Earn Free 150 CP Coins Ad Task */}
           <div className="glass-panel p-6 group hover:shadow-glow-cyan hover:border-neon-cyan/30 transition-all duration-300">
             <div className="flex items-start sm:items-center justify-between gap-6 flex-col sm:flex-row">
               <div className="flex items-start gap-5 flex-1 w-full">
@@ -348,7 +348,7 @@ export default function CPCoinsPage() {
                   <Zap className="text-neon-cyan drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]" size={28} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-2 font-heading tracking-wide">Earn Free 75 CP Coins</h3>
+                  <h3 className="text-xl font-bold text-white mb-2 font-heading tracking-wide">Earn Free 150 CP Coins</h3>
                   <p className="text-contentMuted text-sm font-sans mb-4 max-w-lg">
                     Watch a short video until the end to claim your reward. No skipping allowed!
                   </p>
@@ -363,8 +363,8 @@ export default function CPCoinsPage() {
                 onClick={handleWatchAd}
                 disabled={isAdLoading || processingTask === 'ad_reward'}
                 className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold font-mono tracking-wider transition-all flex-shrink-0 ${isAdLoading
-                    ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
-                    : 'bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]'
+                  ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                  : 'bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]'
                   }`}
               >
                 {isAdLoading ? 'LOADING...' : 'WATCH & EARN'}
@@ -395,8 +395,8 @@ export default function CPCoinsPage() {
                 onClick={handleClaimWelcomeBonus}
                 disabled={tasks.find(t => t.type === 'welcome')?.completed || processingTask === 'welcome'}
                 className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold font-mono tracking-wider transition-all flex-shrink-0 ${tasks.find(t => t.type === 'welcome')?.completed
-                    ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
-                    : 'bg-neon-emerald/10 border border-neon-emerald/50 text-neon-emerald hover:bg-neon-emerald hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,255,157,0.4)]'
+                  ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                  : 'bg-neon-emerald/10 border border-neon-emerald/50 text-neon-emerald hover:bg-neon-emerald hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,255,157,0.4)]'
                   }`}
               >
                 {processingTask === 'welcome' ? 'CLAIMING...' :
@@ -436,8 +436,8 @@ export default function CPCoinsPage() {
                 onClick={handleJoinChannel}
                 disabled={tasks.find(t => t.type === 'join_channel')?.completed || processingTask === 'join_channel'}
                 className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all flex-shrink-0 font-mono tracking-wide ${tasks.find(t => t.type === 'join_channel')?.completed
-                    ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
-                    : 'bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]'
+                  ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                  : 'bg-neon-cyan/10 border border-neon-cyan/50 text-neon-cyan hover:bg-neon-cyan hover:text-charcoal hover:shadow-[0_0_20px_rgba(0,240,255,0.4)]'
                   }`}
               >
                 {processingTask === 'join_channel' ? 'VERIFYING...' :
@@ -502,8 +502,8 @@ export default function CPCoinsPage() {
                 }}
                 disabled={inviteTaskCompleted || processingTask === 'invite_task'}
                 className={`w-full sm:w-auto px-8 py-4 rounded-xl font-bold transition-all flex-shrink-0 font-mono tracking-wide ${inviteTaskCompleted
-                    ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
-                    : 'bg-neon-violet/10 border border-neon-violet/50 text-neon-violet hover:bg-neon-violet hover:text-charcoal hover:shadow-[0_0_20px_rgba(138,43,226,0.4)]'
+                  ? 'bg-surface border border-surfaceBorder text-contentMuted cursor-not-allowed'
+                  : 'bg-neon-violet/10 border border-neon-violet/50 text-neon-violet hover:bg-neon-violet hover:text-charcoal hover:shadow-[0_0_20px_rgba(138,43,226,0.4)]'
                   }`}
               >
                 {processingTask === 'invite_task' ? 'PROCESSING...' :
@@ -656,8 +656,8 @@ export default function CPCoinsPage() {
 
               <div className="mb-8">
                 <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-mono font-bold border ${activeInviteTask.status === 'pending_posting' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.2)]' :
-                    activeInviteTask.status === 'active' ? 'bg-neon-emerald/10 text-neon-emerald border-neon-emerald/30 shadow-[0_0_10px_rgba(0,255,157,0.2)]' :
-                      'bg-surface text-contentMuted border-surfaceBorder'
+                  activeInviteTask.status === 'active' ? 'bg-neon-emerald/10 text-neon-emerald border-neon-emerald/30 shadow-[0_0_10px_rgba(0,255,157,0.2)]' :
+                    'bg-surface text-contentMuted border-surfaceBorder'
                   }`}>
                   {activeInviteTask.status === 'pending_posting' && <><Clock size={16} />PENDING POSTING</>}
                   {activeInviteTask.status === 'active' && <><Zap size={16} />TIMER ACTIVE</>}

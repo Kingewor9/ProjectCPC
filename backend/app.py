@@ -1973,7 +1973,7 @@ def claim_ad_reward():
             return jsonify({'error': f'Daily limit reached. You can watch up to {MAX_ADS_PER_DAY} ads per day.'}), 400
         
         # Reward amount
-        reward = 75
+        reward = 150
         
         # Update user balance
         users.update_one(
