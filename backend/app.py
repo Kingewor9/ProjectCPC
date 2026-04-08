@@ -293,13 +293,22 @@ def complete_invite_task(campaign_id, telegram_id):
         
         print(f"Invite task completed for user {telegram_id}, rewarded {reward} CP")
         
-        # Notify user
+        # Notify admin
         if BOT_ADMIN_CHAT_ID:
             send_message(
                 BOT_ADMIN_CHAT_ID,
                 f"✅ Invite task completed!\n"
-                f"User {telegram_id} earned {reward} CP Coins"
+                f"User {telegram_id} earned {reward} CP Coins."
             )
+            
+        # Notify user directly
+        send_message(
+            telegram_id,
+            f"🎉 <b>Invite Task Completed!</b>\n\n"
+            f"Your 12-hour cross promotion interval has elapsed!\n"
+            f"The bot has automatically deleted the post and instantly deposited +<b>{reward} CP Coins</b> into your account."
+        )
+        
         
     except Exception as e:
         print(f"Error completing invite task: {e}")
@@ -1665,6 +1674,15 @@ def initiate_invite_task():
         
         if task_record and task_record.get('invite_task_completed'):
             return jsonify({'error': 'Invite task already completed. Wait for admin to renew it.'}), 400
+            
+        # Check if user already has an active, scheduled, or pending invite task
+        existing_invite = campaigns.find_one({
+            'user_id': telegram_id,
+            'type': 'invite_task',
+            'status': {'$in': ['scheduled', 'pending_posting', 'active']}
+        })
+        if existing_invite:
+            return jsonify({'error': 'You already have an invite task currently scheduled or in progress.'}), 400
         
         # Verify channel belongs to user
         channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
@@ -1719,6 +1737,33 @@ def initiate_invite_task():
         }
         
         campaigns.insert_one(invite_task)
+        
+        try:
+            from bot import send_message
+            from config import ADMIN_TELEGRAM_ID
+            
+            # Formulate local time representation
+            time_str = f"{day_selected} at {time_selected.split(' - ')[0]} UTC"
+            
+            # Send notification to the user
+            user_msg = (
+                f"📅 <b>Invite Task Scheduled!</b>\n\n"
+                f"You have securely locked in the CP Gram promotional post for channel '{channel.get('name')}'.\n"
+                f"<b>Time:</b> {time_str}\n\n"
+                f"The system bot will natively append the post and strictly monitor it under our background scheduler! Wait for your 5000 CPC."
+            )
+            send_message(telegram_id, user_msg)
+            
+            # Send notification to the Admin
+            admin_msg = (
+                f"🚀 <b>New Auto-Invite Task Dispatched</b>\n\n"
+                f"<b>User TG:</b> <code>{telegram_id}</code>\n"
+                f"<b>Channel:</b> {channel.get('name')}\n"
+                f"<b>Locked For:</b> {time_str}"
+            )
+            send_message(ADMIN_TELEGRAM_ID, admin_msg)
+        except Exception as notify_err:
+            print(f"Error firing scheduled notifications: {notify_err}")
         
         return jsonify({
             'ok': True,
