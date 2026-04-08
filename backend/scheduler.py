@@ -2,7 +2,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
 from models import campaigns, channels, users, requests_col
 from bot import  send_message, send_photo, delete_message, send_broadcast_message, send_invite_campaign_post, send_campaign_post, send_open_button_message
-from config import APP_URL, TELEGRAM_BOT_TOKEN
+from config import APP_URL, BOT_URL, TELEGRAM_BOT_TOKEN
 import logging
 import threading
 
@@ -148,7 +148,7 @@ def check_and_post_campaigns():
                     continue
                 
                 logging.info(f"[SCHEDULER] Sending invite campaign to {chat_id}")
-                res = send_invite_campaign_post(chat_id, promo_text, APP_URL)
+                res = send_invite_campaign_post(chat_id, promo_text, BOT_URL)
                 
             else:
                 # This is a regular cross-promotion campaign

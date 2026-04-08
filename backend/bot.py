@@ -192,8 +192,8 @@ def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
         # CP Gram branded image URL
         image_url = "https://ibb.co/Y7V6fX6c"
         
-        # Build the caption with professional formatting
-        caption = f"<b>🚀 Grow Your Channel with CP Gram!</b>\n\n{promo_text}"
+        # Build the caption directly from the submitted promo text
+        caption = f"{promo_text}"
         
         # Create inline keyboard with call-to-action button
         keyboard = {
