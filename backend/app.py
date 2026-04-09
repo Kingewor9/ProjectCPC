@@ -1675,14 +1675,14 @@ def initiate_invite_task():
         if task_record and task_record.get('invite_task_completed'):
             return jsonify({'error': 'Invite task already completed. Wait for admin to renew it.'}), 400
             
-        # Check if user already has an active, scheduled, or pending invite task
+        # Check if user already has an active, scheduled, pending, completed, or ended invite task
         existing_invite = campaigns.find_one({
             'user_id': telegram_id,
             'type': 'invite_task',
-            'status': {'$in': ['scheduled', 'pending_posting', 'active']}
+            'status': {'$in': ['scheduled', 'pending_posting', 'active', 'ended', 'completed']}
         })
         if existing_invite:
-            return jsonify({'error': 'You already have an invite task currently scheduled or in progress.'}), 400
+            return jsonify({'error': 'You have already participated in the invite task campaign.'}), 400
         
         # Verify channel belongs to user
         channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
@@ -1881,30 +1881,33 @@ def verify_invite_post_and_start(task_id):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/tasks/invite/<task_id>/complete', methods=['POST'])
-@token_required
-def complete_invite_task_endpoint(task_id):
-    """Complete invite task and give reward"""
-    telegram_id = request.telegram_id
-    
+def complete_invite_task(task_id, telegram_id=None):
+    """Core logic to complete an invite task and reward the user."""
     try:
+        from bot import send_open_button_message, send_message
         invite_task = campaigns.find_one({'id': task_id, 'type': 'invite_task'})
         
         if not invite_task:
-            return jsonify({'error': 'Invite task not found'}), 404
+            return {'ok': False, 'error': 'Invite task not found', 'status_code': 404}
+            
+        # Use provided telegram_id or get it from task
+        user_id = telegram_id or invite_task.get('user_id')
         
-        # Verify user owns this task
-        if invite_task.get('user_id') != telegram_id:
-            return jsonify({'error': 'Unauthorized'}), 403
-        
+        if not user_id:
+            return {'ok': False, 'error': 'User ID not found', 'status_code': 400}
+            
+        # Verify user owns this task if telegram_id was explicitly provided
+        if telegram_id and invite_task.get('user_id') != telegram_id:
+            return {'ok': False, 'error': 'Unauthorized', 'status_code': 403}
+            
         # Check if already rewarded
         if invite_task.get('reward_given'):
-            return jsonify({'error': 'Reward already claimed'}), 400
-        
+            return {'ok': False, 'error': 'Reward already claimed', 'status_code': 400}
+            
         # Give reward
         reward = invite_task.get('reward', 5000)
         users.update_one(
-            {'telegram_id': telegram_id},
+            {'telegram_id': user_id},
             {
                 '$inc': {'cpcBalance': reward},
                 '$set': {'updated_at': datetime.datetime.utcnow()}
@@ -1927,7 +1930,7 @@ def complete_invite_task_endpoint(task_id):
         
         # Mark in user_tasks that invite task is completed
         user_tasks.update_one(
-            {'user_id': telegram_id},
+            {'user_id': user_id},
             {
                 '$set': {
                     'invite_task_completed': True,
@@ -1940,19 +1943,31 @@ def complete_invite_task_endpoint(task_id):
         # Notify user
         msg = f"✅ Invite Task Completed!\n\nYou earned {reward} CP Coins!"
         try:
-            send_open_button_message(telegram_id, msg)
+            send_open_button_message(str(user_id), msg)
         except:
-            send_message(telegram_id, msg)
-        
-        return jsonify({
+            send_message(str(user_id), msg)
+            
+        return {
             'ok': True,
             'message': 'Task completed!',
             'reward': reward
-        })
-        
+        }
     except Exception as e:
-        print(f"Error completing invite task: {e}")
-        return jsonify({'error': str(e)}), 500
+        print(f"Error in complete_invite_task logic: {e}")
+        return {'ok': False, 'error': str(e), 'status_code': 500}
+
+@app.route('/api/tasks/invite/<task_id>/complete', methods=['POST'])
+@token_required
+def complete_invite_task_endpoint(task_id):
+    """Complete invite task and give reward"""
+    telegram_id = request.telegram_id
+    result = complete_invite_task(task_id, telegram_id)
+    
+    if result.get('ok'):
+        return jsonify(result)
+    else:
+        status_code = result.get('status_code', 500)
+        return jsonify({'error': result.get('error')}), status_code
 
 
 @app.route('/api/tasks/invite/status', methods=['GET'])
@@ -1962,16 +1977,24 @@ def get_invite_task_status():
     telegram_id = request.telegram_id
     
     try:
-        # Check if task is completed
+        # Check if task is marked completed in user_tasks
         task_record = user_tasks.find_one({'user_id': telegram_id})
         is_completed = task_record.get('invite_task_completed', False) if task_record else False
         
-        # Check if there's an active invite task
-        active_task = campaigns.find_one({
+        # Check if there's any invite task in campaigns
+        existing_task = campaigns.find_one({
             'user_id': telegram_id,
-            'type': 'invite_task',
-            'status': {'$in': ['pending_posting', 'active']}
-        }, {'_id': 0})
+            'type': 'invite_task'
+        }, {'_id': 0}, sort=[('created_at', -1)])
+        
+        active_task = None
+        
+        if existing_task:
+            status = existing_task.get('status')
+            if status in ['ended', 'completed', 'failed']:
+                is_completed = True
+            elif status in ['scheduled', 'pending_posting', 'active']:
+                active_task = existing_task
         
         # Convert datetime to ISO strings
         if active_task:

@@ -32,7 +32,7 @@ const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => {
 
 interface InviteTask {
   id: string;
-  status: 'pending_posting' | 'active' | 'completed';
+  status: 'scheduled' | 'pending_posting' | 'active' | 'completed';
   posted_at?: string;
   duration_hours: number;
   reward: number;
@@ -474,6 +474,12 @@ export default function CPCoinsPage() {
                   {activeInviteTask && !inviteTaskCompleted && (
                     <div className="mt-4 bg-neon-violet/10 border border-neon-violet/30 rounded-lg p-3 inline-block">
                       <p className="text-neon-violet font-mono text-sm flex items-center gap-2 font-bold tracking-wide">
+                        {activeInviteTask.status === 'scheduled' && (
+                          <>
+                            <Clock size={16} />
+                            Task Scheduled - Click to view
+                          </>
+                        )}
                         {activeInviteTask.status === 'pending_posting' && (
                           <>
                             <Clock size={16} />
@@ -655,17 +661,18 @@ export default function CPCoinsPage() {
               </div>
 
               <div className="mb-8">
-                <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-mono font-bold border ${activeInviteTask.status === 'pending_posting' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30 shadow-[0_0_10px_rgba(234,179,8,0.2)]' :
+                <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-mono font-bold border ${['scheduled', 'pending_posting'].includes(activeInviteTask.status) ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
                   activeInviteTask.status === 'active' ? 'bg-neon-emerald/10 text-neon-emerald border-neon-emerald/30 shadow-[0_0_10px_rgba(0,255,157,0.2)]' :
                     'bg-surface text-contentMuted border-surfaceBorder'
                   }`}>
+                  {activeInviteTask.status === 'scheduled' && <><Clock size={16} />SCHEDULED</>}
                   {activeInviteTask.status === 'pending_posting' && <><Clock size={16} />PENDING POSTING</>}
                   {activeInviteTask.status === 'active' && <><Zap size={16} />TIMER ACTIVE</>}
                   {activeInviteTask.status === 'completed' && <><CheckCircle size={16} />COMPLETED</>}
                 </span>
               </div>
 
-              {activeInviteTask.status === 'pending_posting' && (
+              {['scheduled', 'pending_posting'].includes(activeInviteTask.status) && (
                 <div className="bg-charcoal border border-surfaceBorder rounded-xl p-6 text-center shadow-[0_0_15px_rgba(0,0,0,0.5)]">
                   <Clock className="w-12 h-12 text-yellow-400 mx-auto mb-4 opacity-80" />
                   <h4 className="text-white font-heading font-bold mb-3 text-lg">Awaiting Bot Execution</h4>
