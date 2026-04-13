@@ -190,7 +190,7 @@ def send_invite_campaign_post(chat_id, promo_text, BOT_URL):
     """
     try:
         # CP Gram branded image URL
-        image_url = "https://ibb.co/Y7V6fX6c"
+        image_url = "https://ibb.co/gbn6kctV"
         
         # Build the caption directly from the submitted promo text
         caption = f"{promo_text}"
