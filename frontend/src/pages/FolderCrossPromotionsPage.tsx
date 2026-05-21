@@ -13,7 +13,7 @@ export default function FolderCrossPromotionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState('');
@@ -42,11 +42,11 @@ export default function FolderCrossPromotionsPage() {
       setError('Please select a channel');
       return;
     }
-    
+
     setSubmitting(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       const res = await apiService.submitFolderPromo(selectedChannelId);
       if (res.ok) {
@@ -84,7 +84,7 @@ export default function FolderCrossPromotionsPage() {
               Join exclusive mass cross-promotions based on your channel's niche.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => setShowSubmitModal(true)}
             className="btn-primary flex items-center gap-2"
           >
@@ -94,7 +94,7 @@ export default function FolderCrossPromotionsPage() {
         </div>
 
         {error && <ErrorAlert message={error} onDismiss={() => setError(null)} />}
-        
+
         {success && (
           <div className="mb-6 bg-neon-emerald/10 border border-neon-emerald/30 shadow-[0_0_15px_rgba(0,255,157,0.1)] rounded-xl p-4 flex items-center gap-3">
             <CheckCircle className="text-neon-emerald" size={20} />
@@ -118,13 +118,13 @@ export default function FolderCrossPromotionsPage() {
         </div>
 
         <h2 className="text-2xl font-heading font-bold text-white mb-6">Your Registrations</h2>
-        
+
         {registrations.length === 0 ? (
           <div className="glass-panel p-12 text-center">
             <Folder className="w-16 h-16 text-contentMuted mx-auto mb-4 opacity-50" />
             <h3 className="text-xl font-bold text-white mb-2">No Registrations Yet</h3>
             <p className="text-contentMuted mb-6">Submit a channel to join the folder cross promotions.</p>
-            <button 
+            <button
               onClick={() => setShowSubmitModal(true)}
               className="btn-primary"
             >
@@ -141,26 +141,25 @@ export default function FolderCrossPromotionsPage() {
                     <p className="text-xs text-contentMuted uppercase tracking-wider font-mono mt-1">Niche: {reg.niche}</p>
                   </div>
                 </div>
-                
+
                 <div className="mb-4">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wide border ${
-                    reg.status === 'approved' ? 'bg-neon-emerald/10 text-neon-emerald border-neon-emerald/30' :
-                    reg.status === 'rejected' ? 'bg-neon-pink/10 text-neon-pink border-neon-pink/30' :
-                    'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
-                  }`}>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wide border ${reg.status === 'approved' ? 'bg-neon-emerald/10 text-neon-emerald border-neon-emerald/30' :
+                      reg.status === 'rejected' ? 'bg-neon-pink/10 text-neon-pink border-neon-pink/30' :
+                        'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                    }`}>
                     {reg.status === 'approved' && <CheckCircle size={14} />}
                     {reg.status === 'pending' && <Clock size={14} />}
                     {reg.status === 'rejected' && <AlertCircle size={14} />}
                     {reg.status.toUpperCase()}
                   </span>
                 </div>
-                
+
                 {reg.status === 'rejected' && reg.admin_reason && (
                   <div className="bg-neon-pink/10 border border-neon-pink/20 rounded p-3 text-sm text-neon-pink/80 mb-2">
                     <span className="font-bold">Reason:</span> {reg.admin_reason}
                   </div>
                 )}
-                
+
                 <div className="text-xs text-contentMuted font-mono">
                   Submitted: {new Date(reg.created_at).toLocaleDateString()}
                 </div>
@@ -174,7 +173,7 @@ export default function FolderCrossPromotionsPage() {
           <div className="fixed inset-0 bg-obsidian/90 backdrop-blur-md flex items-center justify-center p-4 z-50">
             <div className="glass-panel p-8 max-w-md w-full animate-fade-in-up border-neon-cyan/30">
               <h2 className="text-2xl font-bold text-white mb-6 font-heading">Submit for Folder Promo</h2>
-              
+
               <div className="mb-6 bg-charcoal rounded-xl p-4 border border-surfaceBorder cursor-pointer transition-colors" onClick={() => navigate('/cp-coins')}>
                 <div className="flex justify-between items-center">
                   <span className="text-contentMuted font-bold text-sm tracking-widest uppercase">Your Balance</span>
@@ -194,8 +193,8 @@ export default function FolderCrossPromotionsPage() {
                   <label className="block text-xs font-bold tracking-widest text-contentMuted uppercase mb-2 ml-1">
                     Select Channel
                   </label>
-                  <select 
-                    value={selectedChannelId} 
+                  <select
+                    value={selectedChannelId}
                     onChange={e => setSelectedChannelId(e.target.value)}
                     className="input-glass w-full"
                   >
@@ -208,14 +207,14 @@ export default function FolderCrossPromotionsPage() {
               )}
 
               <div className="flex gap-4">
-                <button 
+                <button
                   onClick={() => setShowSubmitModal(false)}
                   className="btn-secondary w-full"
                   disabled={submitting}
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={handleSubmit}
                   disabled={submitting || !selectedChannelId || (user?.cpcBalance || 0) < 10000}
                   className="btn-primary w-full disabled:opacity-50"
@@ -230,3 +229,5 @@ export default function FolderCrossPromotionsPage() {
     </Layout>
   );
 }
+
+//for deployment sake

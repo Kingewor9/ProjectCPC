@@ -59,7 +59,7 @@ function AppContent() {
       <Route path="/folder-promotions" element={<ProtectedRoute><FolderCrossPromotionsPage /></ProtectedRoute>} />
       <Route path="/admin/folder-promotions" element={<ProtectedRoute><AdminFolderPromosPage /></ProtectedRoute>} />
       {/* ... other routes */}
-      
+
       {/* Redirect any unknown routes to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -75,3 +75,5 @@ function App() {
 }
 
 export default App;
+
+//for deployment sake
