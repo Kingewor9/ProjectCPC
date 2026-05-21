@@ -411,6 +411,52 @@ async getTransaction(transactionId: string): Promise<any> {
 }
 
 
+// --- Folder Promos ---
+
+async getFolderPromoConfigs(): Promise<any> {
+  const response = await this.api.get('/api/folder-promos/configs');
+  return response.data;
+}
+
+async submitFolderPromo(channelId: string): Promise<any> {
+  const response = await this.api.post('/api/folder-promos/submit', {
+    channel_id: channelId
+  });
+  return response.data;
+}
+
+async getUserFolderPromos(): Promise<any> {
+  const response = await this.api.get('/api/folder-promos/registrations');
+  return response.data;
+}
+
+// Admin Folder Promos
+async adminGetFolderPromoConfigs(): Promise<any> {
+  const response = await this.api.get('/api/admin/folder-promos/configs');
+  return response.data;
+}
+
+async adminSaveFolderPromoConfig(config: any): Promise<any> {
+  const response = await this.api.post('/api/admin/folder-promos/configs', config);
+  return response.data;
+}
+
+async adminGetFolderPromoRegistrations(): Promise<any> {
+  const response = await this.api.get('/api/admin/folder-promos/registrations');
+  return response.data;
+}
+
+async adminApproveFolderPromo(regId: string): Promise<any> {
+  const response = await this.api.post(`/api/admin/folder-promos/${regId}/approve`);
+  return response.data;
+}
+
+async adminRejectFolderPromo(regId: string, reason: string): Promise<any> {
+  const response = await this.api.post(`/api/admin/folder-promos/${regId}/reject`, { reason });
+  return response.data;
+}
+
+
   // --- Auth Utilities ---
 
   // Get token

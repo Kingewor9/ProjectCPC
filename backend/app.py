@@ -15,7 +15,7 @@ import io
 import requests as http_requests
 from models import channels, validate_channel_with_telegram, add_user_channel
 from config import ADMIN_TELEGRAM_ID
-from models import user_tasks
+from models import user_tasks, folder_promo_configs, folder_promo_registrations
 import uuid
 import json
 import logging
@@ -3423,6 +3423,194 @@ def debug_channel_avatar(channel_id):
 
 #GET https://your-app.onrender.com/api/debug/channel/ch_xxxxx
     
+# ==========================================
+# FOLDER CROSS PROMOTIONS
+# ==========================================
+
+@app.route('/api/folder-promos/configs', methods=['GET'])
+@token_required
+def get_folder_promo_configs():
+    try:
+        configs = list(folder_promo_configs.find({}, {'_id': 0}))
+        return jsonify(configs)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/folder-promos/submit', methods=['POST'])
+@token_required
+def submit_folder_promo():
+    telegram_id = request.telegram_id
+    data = request.json or {}
+    channel_id = data.get('channel_id')
+    
+    if not channel_id:
+        return jsonify({'error': 'Channel ID is required'}), 400
+        
+    user = users.find_one({'telegram_id': telegram_id})
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+        
+    if user.get('cpcBalance', 0) < 10000:
+        return jsonify({'error': 'Insufficient CP Coins balance. You need 10,000 CPC.'}), 400
+        
+    channel = channels.find_one({'id': channel_id, 'owner_id': telegram_id})
+    if not channel:
+        return jsonify({'error': 'Channel not found or not owned by you'}), 404
+        
+    if channel.get('status') != 'approved':
+        return jsonify({'error': 'Only approved channels can be registered.'}), 400
+        
+    niche = channel.get('topic')
+    if not niche:
+        return jsonify({'error': 'Channel does not have a niche (topic) set.'}), 400
+        
+    # Check if already registered
+    existing_reg = folder_promo_registrations.find_one({
+        'channel_id': channel_id,
+        'niche': niche
+    })
+    
+    if existing_reg:
+        if existing_reg.get('status') == 'pending':
+            return jsonify({'error': 'Channel is already submitted and pending approval.'}), 400
+        elif existing_reg.get('status') == 'approved':
+            return jsonify({'error': 'Channel is already approved for this niche folder promotion.'}), 400
+            
+    # Deduct coins
+    users.update_one({'telegram_id': telegram_id}, {'$inc': {'cpcBalance': -10000}})
+    
+    reg_id = f"fp_{uuid.uuid4().hex[:12]}"
+    
+    if existing_reg and existing_reg.get('status') == 'rejected':
+        # Re-submit
+        folder_promo_registrations.update_one(
+            {'_id': existing_reg['_id']},
+            {'$set': {
+                'status': 'pending',
+                'admin_reason': None,
+                'updated_at': datetime.datetime.utcnow()
+            }}
+        )
+    else:
+        # Create new registration
+        folder_promo_registrations.insert_one({
+            'id': reg_id,
+            'user_telegram_id': telegram_id,
+            'channel_id': channel_id,
+            'channel_name': channel.get('name'),
+            'niche': niche,
+            'status': 'pending',
+            'admin_reason': None,
+            'paid_amount': 10000,
+            'created_at': datetime.datetime.utcnow(),
+            'updated_at': datetime.datetime.utcnow()
+        })
+        
+    return jsonify({'ok': True, 'message': 'Channel submitted successfully'})
+
+@app.route('/api/folder-promos/registrations', methods=['GET'])
+@token_required
+def get_user_folder_promos():
+    telegram_id = request.telegram_id
+    try:
+        registrations = list(folder_promo_registrations.find({'user_telegram_id': telegram_id}, {'_id': 0}))
+        return jsonify(registrations)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/folder-promos/configs', methods=['GET', 'POST'])
+@admin_required
+def admin_folder_promo_configs():
+    if request.method == 'GET':
+        configs = list(folder_promo_configs.find({}, {'_id': 0}))
+        return jsonify(configs)
+    
+    if request.method == 'POST':
+        data = request.json or {}
+        niche = data.get('niche')
+        if not niche:
+            return jsonify({'error': 'Niche is required'}), 400
+            
+        folder_promo_configs.update_one(
+            {'niche': niche},
+            {'$set': {
+                'niche': niche,
+                'text': data.get('text', ''),
+                'image_url': data.get('image_url', ''),
+                'folder_link': data.get('folder_link', ''),
+                'cta_text': data.get('cta_text', 'Join Folder'),
+                'updated_at': datetime.datetime.utcnow()
+            }},
+            upsert=True
+        )
+        return jsonify({'ok': True})
+
+@app.route('/api/admin/folder-promos/registrations', methods=['GET'])
+@admin_required
+def admin_get_folder_promo_registrations():
+    registrations = list(folder_promo_registrations.find({}, {'_id': 0}).sort('created_at', -1))
+    return jsonify(registrations)
+
+@app.route('/api/admin/folder-promos/<reg_id>/approve', methods=['POST'])
+@admin_required
+def approve_folder_promo(reg_id):
+    reg = folder_promo_registrations.find_one({'id': reg_id})
+    if not reg:
+        return jsonify({'error': 'Registration not found'}), 404
+        
+    folder_promo_registrations.update_one(
+        {'id': reg_id},
+        {'$set': {
+            'status': 'approved',
+            'admin_reason': None,
+            'updated_at': datetime.datetime.utcnow()
+        }}
+    )
+    
+    # Notify user
+    try:
+        msg = f"✅ Your channel <b>{reg.get('channel_name')}</b> was approved for Folder Cross Promotions in the {reg.get('niche')} niche."
+        send_open_button_message(reg.get('user_telegram_id'), msg)
+    except Exception as e:
+        logging.error(f"Failed to notify user: {e}")
+        
+    return jsonify({'ok': True})
+
+@app.route('/api/admin/folder-promos/<reg_id>/reject', methods=['POST'])
+@admin_required
+def reject_folder_promo(reg_id):
+    data = request.json or {}
+    reason = data.get('reason', 'Does not meet criteria.')
+    
+    reg = folder_promo_registrations.find_one({'id': reg_id})
+    if not reg:
+        return jsonify({'error': 'Registration not found'}), 404
+        
+    if reg.get('status') == 'rejected':
+        return jsonify({'error': 'Already rejected'}), 400
+        
+    folder_promo_registrations.update_one(
+        {'id': reg_id},
+        {'$set': {
+            'status': 'rejected',
+            'admin_reason': reason,
+            'updated_at': datetime.datetime.utcnow()
+        }}
+    )
+    
+    # Refund the user
+    refund_amount = reg.get('paid_amount', 10000)
+    users.update_one({'telegram_id': reg.get('user_telegram_id')}, {'$inc': {'cpcBalance': refund_amount}})
+    
+    # Notify user
+    try:
+        msg = f"❌ Your channel <b>{reg.get('channel_name')}</b> was declined for Folder Cross Promotions.\n\nReason: {reason}\n\nYour {refund_amount} CPC has been refunded."
+        send_open_button_message(reg.get('user_telegram_id'), msg)
+    except Exception as e:
+        logging.error(f"Failed to notify user: {e}")
+        
+    return jsonify({'ok': True})
+
 # Initialize database
 ensure_indexes()
 init_mock_partners()

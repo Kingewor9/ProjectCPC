@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ChannelAvatar from '../components/ChannelAvatar';
 import { useAuth } from '../hooks/useAuth';
-import { TrendingUp, Send, Zap, Users, Plus, Shield, Radio } from 'lucide-react';
+import { TrendingUp, Send, Zap, Users, Plus, Shield, Radio, Folder } from 'lucide-react';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -141,6 +141,19 @@ export default function DashboardPage() {
                 <p className="text-xs text-contentMuted group-hover:text-neon-emerald/80 transition-colors">Connect your telegram channel</p>
               </div>
             </button>
+            
+            <button
+              onClick={() => navigate('/folder-promotions')}
+              className="glass-panel p-6 hover:shadow-glow-cyan hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all flex flex-col items-center justify-center gap-3 group text-center"
+            >
+              <div className="w-14 h-14 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Folder size={24} className="text-neon-cyan drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-white mb-1">Folder Promos</p>
+                <p className="text-xs text-contentMuted group-hover:text-neon-cyan/80 transition-colors">Mass cross-promotion by niche</p>
+              </div>
+            </button>
 
             {/* Admin Panel Button only visible to admins */}
             {user?.isAdmin && (
@@ -154,6 +167,22 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-lg font-bold text-white mb-1">Admin Panel</p>
                   <p className="text-xs text-contentMuted group-hover:text-neon-pink/80 transition-colors">Moderate channels & users</p>
+                </div>
+              </button>
+            )}
+            
+            {/* Admin Folder Promos */}
+            {user?.isAdmin && (
+              <button
+                onClick={() => navigate('/admin/folder-promotions')}
+                className="glass-panel p-6 hover:shadow-glow-pink hover:border-neon-pink/50 hover:bg-neon-pink/5 transition-all flex flex-col items-center justify-center gap-3 group text-center"
+              >
+                <div className="w-14 h-14 rounded-full bg-neon-pink/10 border border-neon-pink/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Folder size={24} className="text-neon-pink drop-shadow-[0_0_8px_rgba(255,0,85,0.6)]" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white mb-1">Admin Folders</p>
+                  <p className="text-xs text-contentMuted group-hover:text-neon-pink/80 transition-colors">Manage folder promos</p>
                 </div>
               </button>
             )}

@@ -1,7 +1,7 @@
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
-from models import campaigns, channels, users, requests_col
-from bot import  send_message, send_photo, delete_message, send_broadcast_message, send_invite_campaign_post, send_campaign_post, send_open_button_message
+from models import campaigns, channels, users, requests_col, folder_promo_configs, folder_promo_registrations
+from bot import  send_message, send_photo, delete_message, send_broadcast_message, send_invite_campaign_post, send_campaign_post, send_open_button_message, send_folder_promo_post
 from config import APP_URL, BOT_URL, TELEGRAM_BOT_TOKEN
 import logging
 import threading
@@ -22,6 +22,17 @@ def start_scheduler():
         'interval',
         minutes=1,
         id='expiry_notifier',
+        replace_existing=True
+    )
+    
+    # FOLDER PROMO WEEKLY JOB
+    s.add_job(
+        run_weekly_folder_promos,
+        'cron',
+        day_of_week='sat',
+        hour=16,
+        minute=0,
+        id='folder_promo_runner',
         replace_existing=True
     )
 
@@ -226,7 +237,8 @@ def cleanup_finished_campaigns():
     finished = list(campaigns.find({
         '$or': [
             {'status': 'running', 'end_at': {'$lte': now}},
-            {'status': 'active', 'type': 'cross_promo_auto', 'end_at': {'$lte': now}}
+            {'status': 'active', 'type': 'cross_promo_auto', 'end_at': {'$lte': now}},
+            {'status': 'active', 'type': 'folder_promo', 'end_at': {'$lte': now}}
         ]
     }))
     
@@ -302,6 +314,21 @@ def cleanup_finished_campaigns():
                     logging.info(f"[SCHEDULER] Completing invite task for user {user_id}")
                     from app import complete_invite_task
                     complete_invite_task(campaign_id, user_id)
+            elif campaign_type == 'folder_promo':
+                user_id = camp.get('user_id')
+                if user_id:
+                    logging.info(f"[SCHEDULER] Completing folder promo for user {user_id}")
+                    reward = 350
+                    users.update_one({'telegram_id': user_id}, {'$inc': {'cpcBalance': reward}})
+                    try:
+                        send_message(
+                            user_id,
+                            f"🎉 <b>Folder Cross Promotion Completed!</b>\n\n"
+                            f"Your 12-hour folder cross promotion interval has elapsed!\n"
+                            f"The bot has automatically deleted the post and deposited +<b>{reward} CP Coins</b>. The next session is on Saturday 16:00 UTC."
+                        )
+                    except:
+                        pass
             
             logging.info(f"[SCHEDULER] Successfully cleaned up campaign {camp.get('id')}")
             
@@ -895,3 +922,64 @@ def refresh_all_channels_subscribers():
         
     except Exception as e:
         logging.error(f"[SCHEDULER] Fatal error in refresh_all_channels_subscribers: {e}")
+
+def run_weekly_folder_promos():
+    """
+    Run weekly folder promotions on Saturdays at 16:00 UTC
+    """
+    logging.info("[SCHEDULER] Running weekly folder promos...")
+    now = datetime.utcnow()
+    
+    try:
+        # Get all distinct niches with approved registrations
+        active_niches = folder_promo_registrations.distinct("niche", {"status": "approved"})
+        
+        for niche in active_niches:
+            config = folder_promo_configs.find_one({"niche": niche})
+            if not config:
+                logging.warning(f"[SCHEDULER] No folder promo config found for niche: {niche}. Skipping.")
+                continue
+                
+            promo_text = config.get("text", "")
+            promo_link = config.get("folder_link", "")
+            promo_image = config.get("image_url", "")
+            
+            # Get all approved channels for this niche
+            approved_regs = list(folder_promo_registrations.find({"niche": niche, "status": "approved"}))
+            
+            for reg in approved_regs:
+                channel_id = reg.get("channel_id")
+                user_id = reg.get("user_telegram_id")
+                channel = channels.find_one({"id": channel_id})
+                
+                if channel:
+                    chat_id = channel.get("telegram_id") or channel.get("username") or channel.get("telegram_chat")
+                    if chat_id:
+                        # Append formatting for chat_id if necessary
+                        if isinstance(chat_id, str) and not chat_id.startswith('-') and not chat_id.startswith('@'):
+                            chat_id = f"@{chat_id}"
+                            
+                        logging.info(f"[SCHEDULER] Sending folder promo for niche {niche} to {chat_id}")
+                        result = send_folder_promo_post(chat_id, promo_text, promo_link, promo_image, BOT_URL)
+                        
+                        if result and result.get('ok'):
+                            message_id = result.get('result', {}).get('message_id')
+                            
+                            # Create a campaign entry for this 12-hour period
+                            campaign_id = f"fp_camp_{user_id}_{niche}_{int(now.timestamp())}"
+                            
+                            campaigns.insert_one({
+                                'id': campaign_id,
+                                'type': 'folder_promo',
+                                'status': 'active',
+                                'user_id': user_id,
+                                'channel_id': channel_id,
+                                'chat_id': chat_id,
+                                'message_id': message_id,
+                                'start_at': now,
+                                'end_at': now + timedelta(hours=12),
+                                'created_at': now
+                            })
+                            
+    except Exception as e:
+        logging.error(f"[SCHEDULER] Fatal error in run_weekly_folder_promos: {e}")

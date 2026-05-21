@@ -21,6 +21,8 @@ import CPCoinsPage from './pages/CPCoinsPage';
 import BuyCoinsPage from './pages/BuyCoinsPage';
 import EditChannelPage from './pages/EditChannelPage';
 import BroadcastMessagePage from './pages/BroadcastMessagePage';
+import FolderCrossPromotionsPage from './pages/FolderCrossPromotionsPage';
+import AdminFolderPromosPage from './pages/AdminFolderPromosPage';
 
 // Language loader component
 function AppContent() {
@@ -54,6 +56,8 @@ function AppContent() {
       <Route path="/edit-channel/:channelId" element={<ProtectedRoute><EditChannelPage /></ProtectedRoute>} />
       <Route path="/add-channel" element={<ProtectedRoute><AddChannelPage /></ProtectedRoute>} />
       <Route path="/admin/broadcast" element={<BroadcastMessagePage />} />
+      <Route path="/folder-promotions" element={<ProtectedRoute><FolderCrossPromotionsPage /></ProtectedRoute>} />
+      <Route path="/admin/folder-promotions" element={<ProtectedRoute><AdminFolderPromosPage /></ProtectedRoute>} />
       {/* ... other routes */}
       
       {/* Redirect any unknown routes to home */}

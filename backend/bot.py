@@ -445,3 +445,50 @@ def send_followup_message(chat_id, message_config):
     except Exception as e:
         logging.exception(f'[BOT] Failed to send follow-up message to {chat_id}')
         return None
+
+def send_folder_promo_post(chat_id, promo_text, promo_link, promo_image, bot_url):
+    """
+    Send a folder cross promotion post with CP Gram branding
+    """
+    try:
+        # Build the caption
+        caption = f"{promo_text}\n\n<a href='{bot_url}'>Powered by CP Gram</a>"
+        
+        # Create inline keyboard with call-to-action button
+        keyboard = None
+        if promo_link:
+            keyboard = {
+                'inline_keyboard': [[
+                    {'text': 'Join Channels', 'url': promo_link}
+                ]]
+            }
+        
+        # Send photo with caption and button
+        logging.info(f"[BOT] Sending folder promo to chat_id: {chat_id}")
+        
+        if promo_image:
+            result = send_photo(
+                chat_id=chat_id,
+                photo_url=promo_image,
+                caption=caption,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+        else:
+            result = send_message(
+                chat_id=chat_id,
+                text=caption,
+                parse_mode='HTML',
+                reply_markup=keyboard
+            )
+
+        if result and result.get('ok'):
+            logging.info(f"[BOT] Successfully posted folder promo to {chat_id}, message_id: {result.get('result', {}).get('message_id')}")
+        else:
+            logging.error(f"[BOT] Failed to post folder promo to {chat_id}: {result}")
+        
+        return result
+    
+    except Exception as e:
+        logging.exception(f'[BOT] Failed to send folder promo post to {chat_id}')
+        return None

@@ -27,6 +27,8 @@ user_tasks = db.user_tasks
 transactions = db.transactions
 ad_rewards = db.ad_rewards
 user_onboarding = db.user_onboarding
+folder_promo_configs = db.folder_promo_configs
+folder_promo_registrations = db.folder_promo_registrations
 
 
 def ensure_indexes():
