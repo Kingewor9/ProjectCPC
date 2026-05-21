@@ -3519,6 +3519,7 @@ def get_user_folder_promos():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/admin/folder-promos/configs', methods=['GET', 'POST'])
+@token_required
 @admin_required
 def admin_folder_promo_configs():
     if request.method == 'GET':
@@ -3546,12 +3547,14 @@ def admin_folder_promo_configs():
         return jsonify({'ok': True})
 
 @app.route('/api/admin/folder-promos/registrations', methods=['GET'])
+@token_required
 @admin_required
 def admin_get_folder_promo_registrations():
     registrations = list(folder_promo_registrations.find({}, {'_id': 0}).sort('created_at', -1))
     return jsonify(registrations)
 
 @app.route('/api/admin/folder-promos/<reg_id>/approve', methods=['POST'])
+@token_required
 @admin_required
 def approve_folder_promo(reg_id):
     reg = folder_promo_registrations.find_one({'id': reg_id})
@@ -3577,6 +3580,7 @@ def approve_folder_promo(reg_id):
     return jsonify({'ok': True})
 
 @app.route('/api/admin/folder-promos/<reg_id>/reject', methods=['POST'])
+@token_required
 @admin_required
 def reject_folder_promo(reg_id):
     data = request.json or {}

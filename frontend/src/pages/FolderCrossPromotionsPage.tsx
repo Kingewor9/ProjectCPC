@@ -35,7 +35,7 @@ export default function FolderCrossPromotionsPage() {
     }
   };
 
-  const eligibleChannels = user?.channels?.filter((ch: any) => ch.status === 'approved') || [];
+  const eligibleChannels = user?.channels?.filter((ch: any) => ch.status === 'Active') || [];
 
   const handleSubmit = async () => {
     if (!selectedChannelId) {
@@ -108,7 +108,7 @@ export default function FolderCrossPromotionsPage() {
             <div>
               <h3 className="text-lg font-bold text-white mb-2">How it works</h3>
               <ul className="space-y-2 text-contentMuted text-sm list-disc pl-4">
-                <li>Submit your approved channel. The system automatically groups it into its respective niche folder.</li>
+                <li>Submit your active channel. The system automatically groups it into its respective niche folder.</li>
                 <li>A fee of 10,000 CPC is required upon submission. It is fully refunded if admins reject your submission.</li>
                 <li>Every Saturday at 16:00 UTC, the bot automatically posts the folder link to all approved channels in the niche.</li>
                 <li>After 12 hours, the bot automatically deletes the promo post and rewards you with 350 CPC!</li>
@@ -186,7 +186,7 @@ export default function FolderCrossPromotionsPage() {
               {eligibleChannels.length === 0 ? (
                 <div className="bg-surface border border-surfaceBorder p-4 rounded-xl text-center mb-6">
                   <Users className="w-8 h-8 text-contentMuted mx-auto mb-2" />
-                  <p className="text-contentMuted text-sm">You don't have any approved channels.</p>
+                  <p className="text-contentMuted text-sm">You don't have any active channels.</p>
                 </div>
               ) : (
                 <div className="mb-6">
@@ -198,7 +198,7 @@ export default function FolderCrossPromotionsPage() {
                     onChange={e => setSelectedChannelId(e.target.value)}
                     className="input-glass w-full"
                   >
-                    <option value="">-- Choose an approved channel --</option>
+                    <option value="">-- Choose an active channel --</option>
                     {eligibleChannels.map((ch: any) => (
                       <option key={ch.id} value={ch.id}>{ch.name} ({ch.topic})</option>
                     ))}
