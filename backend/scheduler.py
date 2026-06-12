@@ -25,12 +25,11 @@ def start_scheduler():
         replace_existing=True
     )
     
-    # FOLDER PROMO WEEKLY JOB
+    # FOLDER PROMO DAILY RUNS (06:00, 12:00, 16:00, 22:00 UTC)
     s.add_job(
         run_weekly_folder_promos,
         'cron',
-        day_of_week='sat',
-        hour=16,
+        hour='6,12,16,22',
         minute=0,
         id='folder_promo_runner',
         replace_existing=True
@@ -325,7 +324,7 @@ def cleanup_finished_campaigns():
                             user_id,
                             f"🎉 <b>Folder Cross Promotion Completed!</b>\n\n"
                             f"Your 12-hour folder cross promotion interval has elapsed!\n"
-                            f"The bot has automatically deleted the post and deposited +<b>{reward} CP Coins</b>. The next session is on Saturday 16:00 UTC."
+                            f"The bot has automatically deleted the post and deposited +<b>{reward} CP Coins</b>. Next sessions are at 06:00, 12:00, 16:00 and 22:00 UTC daily."
                         )
                     except:
                         pass
@@ -875,6 +874,16 @@ def start_scheduler():
         replace_existing=True
     )
 
+    # FOLDER PROMO DAILY RUNS (06:00, 12:00, 16:00, 22:00 UTC)
+    s.add_job(
+        run_weekly_folder_promos,
+        'cron',
+        hour='6,12,16,22',
+        minute=0,
+        id='folder_promo_runner',
+        replace_existing=True
+    )
+
     s.start()
     logging.info("[SCHEDULER] Scheduler started with follow-up message processing and background subscriber refresh")
 
@@ -982,4 +991,4 @@ def run_weekly_folder_promos():
                             })
                             
     except Exception as e:
-        logging.error(f"[SCHEDULER] Fatal error in run_weekly_folder_promos: {e}")
+        logging.error(f"[SCHEDULER] Fatal error in run_weekly_folder_promos: {e}")
